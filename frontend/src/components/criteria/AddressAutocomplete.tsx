@@ -150,15 +150,15 @@ export function AddressAutocomplete({
         className={className}
       />
       {open && predictions.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
+        <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-white/[0.08] bg-black/70 backdrop-blur-2xl shadow-2xl">
           {predictions.map((p, i) => (
             <li
               key={p.place_id}
               onMouseDown={() => handleSelect(p)}
-              className={`cursor-pointer px-2.5 py-1.5 text-xs transition-colors ${
+              className={`cursor-pointer px-3 py-2 text-xs transition-colors first:rounded-t-xl last:rounded-b-xl ${
                 i === activeIndex
-                  ? "bg-accent text-accent-foreground"
-                  : "hover:bg-accent/50"
+                  ? "bg-white/[0.08] text-foreground"
+                  : "hover:bg-white/[0.05] text-muted-foreground"
               }`}
             >
               {p.description}

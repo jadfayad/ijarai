@@ -8,8 +8,9 @@ import { DeckGL } from "@deck.gl/react";
 import { PolygonLayer } from "@deck.gl/layers";
 
 luma.registerAdapters([webgl2Adapter]);
-import { MapPin, Briefcase, Plane } from "lucide-react";
+import { MapPin, Briefcase, Plane, Compass, Sparkles } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { CellPopup } from "./CellPopup";
 import { GRID_RESOLUTION_CONFIG, type CommuteParams } from "@/lib/types";
@@ -82,8 +83,18 @@ function createSquarePolygon(
 }
 
 export function MapView() {
-  const { criteria, scoreData, setSelectedCellId, selectedCellId, scoreThreshold, setScoreThreshold, gridResolution } =
-    useCriteriaStore();
+  const {
+    criteria,
+    scoreData,
+    setSelectedCellId,
+    scoreThreshold,
+    setScoreThreshold,
+    gridResolution,
+    loading,
+    generate,
+  } = useCriteriaStore();
+
+  const hasActiveCriteria = criteria.some((c) => c.enabled);
 
   const destinations = useMemo(
     () =>
@@ -159,7 +170,9 @@ export function MapView() {
 
   const visibleCount = useMemo(() => {
     if (!scoreData?.features?.length) return 0;
-    return scoreData.features.filter((f) => f.properties.score >= scoreThreshold).length;
+    return scoreData.features.filter(
+      (f) => f.properties.score >= scoreThreshold
+    ).length;
   }, [scoreData, scoreThreshold]);
 
   const totalCount = scoreData?.features?.length ?? 0;
@@ -202,13 +215,18 @@ export function MapView() {
           {destinations.map((d) => {
             const Icon = ICON_MAP[d.icon] ?? MapPin;
             return (
-              <Marker key={d.id} longitude={d.lng} latitude={d.lat} anchor="bottom">
+              <Marker
+                key={d.id}
+                longitude={d.lng}
+                latitude={d.lat}
+                anchor="bottom"
+              >
                 <div className="flex flex-col items-center group">
-                  <div className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg ring-2 ring-white/30 transition-transform group-hover:scale-110">
+                  <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg shadow-primary/30 ring-2 ring-white/20 transition-transform group-hover:scale-110">
                     <Icon size={16} />
                   </div>
                   {d.label && (
-                    <span className="mt-1 px-1.5 py-0.5 rounded bg-background/90 text-[10px] font-medium text-foreground shadow-sm border border-border whitespace-nowrap max-w-[150px] truncate">
+                    <span className="mt-1.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-medium text-white shadow-lg border border-white/[0.08] whitespace-nowrap max-w-[150px] truncate">
                       {d.label}
                     </span>
                   )}
@@ -232,14 +250,14 @@ export function MapView() {
       )}
 
       {scoreData && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-background/85 backdrop-blur-md rounded-xl px-5 py-3 shadow-lg border border-border min-w-[300px] max-w-[400px]">
-          <div className="flex items-center justify-between mb-2">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-black/50 backdrop-blur-2xl rounded-2xl px-6 py-4 shadow-2xl border border-white/[0.08] min-w-[320px] max-w-[420px]">
+          <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground">
               Min score
             </span>
-            <span className="text-xs font-semibold tabular-nums">
+            <span className="text-sm font-semibold tabular-nums">
               {Math.round(scoreThreshold * 100)}%
-              <span className="text-muted-foreground font-normal ml-1.5">
+              <span className="text-muted-foreground font-normal text-xs ml-1.5">
                 ({visibleCount}/{totalCount})
               </span>
             </span>
@@ -259,12 +277,55 @@ export function MapView() {
 
       {!scoreData && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-background/80 backdrop-blur-sm rounded-xl px-8 py-6 text-center max-w-sm">
-            <h3 className="text-lg font-semibold mb-2">Welcome to OptimHouse</h3>
-            <p className="text-muted-foreground text-sm">
-              Configure your preferences in the sidebar and click
-              &ldquo;Generate Heatmap&rdquo; to find your ideal location in Dubai.
+          <div className="bg-black/50 backdrop-blur-2xl border border-white/[0.1] rounded-3xl px-10 py-8 text-center max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+            <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
+              <Compass className="text-primary" size={26} />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              Welcome to OptimHouse
+            </h3>
+            <p className="text-muted-foreground text-sm leading-relaxed mb-5">
+              Configure your preferences in the sidebar, then generate your
+              personalized heatmap to find the ideal location in Dubai.
             </p>
+            <Button
+              className="pointer-events-auto h-11 px-8 text-sm font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 border-0"
+              size="lg"
+              onClick={generate}
+              disabled={loading || !hasActiveCriteria}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  Computing...
+                </span>
+              ) : !hasActiveCriteria ? (
+                <span className="flex items-center gap-2">
+                  <Sparkles size={16} />
+                  Enable a criterion to continue
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Sparkles size={16} />
+                  Generate Heatmap
+                </span>
+              )}
+            </Button>
           </div>
         </div>
       )}

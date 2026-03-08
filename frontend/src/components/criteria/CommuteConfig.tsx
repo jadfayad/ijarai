@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { Car, TrainFront } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { Label } from "@/components/ui/label";
@@ -28,17 +29,17 @@ export function CommuteConfig({ criterion }: Props) {
   );
 
   return (
-    <div className="space-y-2 pt-1">
+    <div className="space-y-2.5 pt-1">
       <AddressAutocomplete
         value={params.label ?? ""}
         onSelect={handleSelect}
         placeholder="Search for a destination..."
-        className="text-xs h-8"
+        className="text-xs h-8 rounded-lg bg-white/[0.04] border-white/[0.08] placeholder:text-muted-foreground/50"
       />
 
-      <div className="flex gap-2">
-        <Label className="text-xs text-muted-foreground">Mode:</Label>
-        <div className="flex gap-1">
+      <div className="flex items-center gap-2">
+        <Label className="text-xs text-muted-foreground shrink-0">Mode</Label>
+        <div className="flex gap-1.5">
           {(["car", "transit"] as const).map((mode) => (
             <button
               key={mode}
@@ -47,21 +48,22 @@ export function CommuteConfig({ criterion }: Props) {
                   params: { ...params, mode },
                 })
               }
-              className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-all duration-200 ${
                 params.mode === mode
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted border-transparent hover:border-border"
+                  ? "bg-primary/15 text-primary border-primary/30"
+                  : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.1]"
               }`}
             >
-              {mode === "car" ? "Car" : "Public Transit"}
+              {mode === "car" ? <Car size={12} /> : <TrainFront size={12} />}
+              {mode === "car" ? "Car" : "Transit"}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Label className="text-xs text-muted-foreground">Time:</Label>
-        <div className="flex gap-1">
+      <div className="flex items-center gap-2">
+        <Label className="text-xs text-muted-foreground shrink-0">Time</Label>
+        <div className="flex gap-1.5">
           {(["peak", "off_peak"] as const).map((tod: TimeOfDay) => (
             <button
               key={tod}
@@ -70,10 +72,10 @@ export function CommuteConfig({ criterion }: Props) {
                   params: { ...params, time_of_day: tod },
                 })
               }
-              className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${
+              className={`text-xs px-2.5 py-1 rounded-lg border transition-all duration-200 ${
                 params.time_of_day === tod
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted border-transparent hover:border-border"
+                  ? "bg-primary/15 text-primary border-primary/30"
+                  : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.1]"
               }`}
             >
               {tod === "peak" ? "Peak" : "Off-Peak"}

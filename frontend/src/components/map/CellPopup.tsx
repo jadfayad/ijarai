@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { X } from "lucide-react";
 
 const SCORE_LABELS: Record<string, string> = {
   s_commute_car_peak: "Commute Car (Peak)",
@@ -51,25 +51,25 @@ function ScoreBar({
   metric?: string | null;
 }) {
   const pct = Math.round(value * 100);
-  const color =
+  const barColor =
     pct >= 70
-      ? "bg-green-500"
+      ? "from-emerald-500 to-emerald-400"
       : pct >= 45
-        ? "bg-yellow-500"
-        : "bg-red-500";
+        ? "from-amber-500 to-yellow-400"
+        : "from-red-500 to-red-400";
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground w-28 shrink-0 truncate">
         {label}
       </span>
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full ${color}`}
+          className={`h-full rounded-full bg-gradient-to-r ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs font-mono w-16 text-right truncate">
+      <span className="text-xs font-mono w-16 text-right truncate tabular-nums">
         {metric ?? `${pct}%`}
       </span>
     </div>
@@ -90,31 +90,30 @@ export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
   );
 
   return (
-    <Card
-      className="absolute z-50 w-72 shadow-xl"
+    <div
+      className="absolute z-50 w-72 bg-black/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden"
       style={{ left: x + 10, top: y - 10 }}
     >
-      <CardHeader className="pb-2 pt-3 px-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">
-            Overall: {Math.round(score * 100)}%
-          </CardTitle>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-lg leading-none"
-          >
-            &times;
-          </button>
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+        <div>
+          <span className="text-xs text-muted-foreground">Overall Score</span>
+          <p className="text-lg font-semibold tabular-nums">
+            {Math.round(score * 100)}%
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="px-4 pb-3 space-y-1.5">
+        <button
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+      <div className="px-4 pb-4 pt-1 space-y-2">
         {breakdownKeys.map((key) => {
           const metricKey = key.replace(/^s_/, "m_");
           const metricValue = properties[metricKey] as number | undefined;
           const metric =
-            metricValue !== undefined
-              ? formatMetric(key, metricValue)
-              : null;
+            metricValue !== undefined ? formatMetric(key, metricValue) : null;
 
           return (
             <ScoreBar
@@ -125,7 +124,7 @@ export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
             />
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

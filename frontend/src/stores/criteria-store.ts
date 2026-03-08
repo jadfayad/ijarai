@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { computeScores } from "@/lib/api";
+import { GRID_RESOLUTION_CONFIG } from "@/lib/types";
 import type { CriterionConfig, GridResolution, ScoreResponse } from "@/lib/types";
 
 const DEFAULT_CRITERIA: CriterionConfig[] = [
@@ -8,7 +10,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     label: "Commute to Office",
     description: "Travel time from each area to your workplace",
     weight: 8,
-    enabled: true,
+    enabled: false,
     params: {
       destination: { lat: 25.2048, lng: 55.2708 },
       mode: "car" as const,
@@ -53,7 +55,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     label: "Nearby Amenities",
     description: "Gyms, cafes, beaches, pools, parks nearby",
     weight: 6,
-    enabled: true,
+    enabled: false,
     params: { categories: ["gym", "cafe", "beach", "park"] },
     icon: "trees",
   },
@@ -63,7 +65,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     label: "Budget / Rent",
     description: "Match areas to your monthly rent budget",
     weight: 9,
-    enabled: true,
+    enabled: false,
     params: { max_monthly_rent: 7000 },
     icon: "wallet",
   },
@@ -73,7 +75,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     label: "Neighborhood Quality",
     description: "Overall reputation and livability of the area",
     weight: 5,
-    enabled: true,
+    enabled: false,
     params: {},
     icon: "star",
   },
@@ -106,9 +108,10 @@ interface CriteriaStore {
   setSelectedCellId: (cellId: string | null) => void;
   setScoreThreshold: (threshold: number) => void;
   setGridResolution: (resolution: GridResolution) => void;
+  generate: () => Promise<void>;
 }
 
-export const useCriteriaStore = create<CriteriaStore>((set) => ({
+export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   criteria: DEFAULT_CRITERIA,
   scoreData: null,
   loading: false,
@@ -130,4 +133,34 @@ export const useCriteriaStore = create<CriteriaStore>((set) => ({
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
   setScoreThreshold: (threshold) => set({ scoreThreshold: threshold }),
   setGridResolution: (resolution) => set({ gridResolution: resolution }),
+
+  generate: async () => {
+    const { criteria, gridResolution } = get();
+    set({ loading: true, error: null });
+
+    try {
+      const activeCriteria = criteria
+        .filter((c) => c.enabled && c.weight > 0)
+        .map((c) => ({
+          type: c.type,
+          weight: c.weight,
+          params: c.params as Record<string, unknown>,
+        }));
+
+      if (activeCriteria.length === 0) {
+        set({ error: "Enable at least one criterion", loading: false });
+        return;
+      }
+
+      const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
+      const data = await computeScores({ criteria: activeCriteria, cell_size_m });
+      set({ scoreData: data });
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Failed to compute scores",
+      });
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
