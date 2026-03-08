@@ -20,7 +20,9 @@ BAND_SCORES = {600: 1.0, 1200: 0.85, 1800: 0.65, 2700: 0.45, 3600: 0.25, 5400: 0
 # Peak traffic stretches effective travel times by this factor (Dubai urban estimate)
 PEAK_MULTIPLIER = 1.4
 
-_commute_cache: dict[tuple, dict[str, float]] = {}
+_ScoreResult = tuple[dict[str, float], dict[str, float]]
+
+_commute_cache: dict[tuple, _ScoreResult] = {}
 
 DUBAI_TZ = timezone(timedelta(hours=4))
 
@@ -57,7 +59,7 @@ def _distance_score(dist_km: float, max_km: float = 50) -> float:
 async def _score_via_ors_isochrone(
     centroids: list[dict], dest_lat: float, dest_lng: float,
     is_peak: bool = True,
-) -> dict[str, float]:
+) -> _ScoreResult:
     """Fetch isochrone bands from ORS and score cells by containment."""
     if not ORS_API_KEY:
         return _score_by_distance(centroids, dest_lat, dest_lng)
@@ -98,36 +100,43 @@ async def _score_via_ors_isochrone(
     bands.sort(key=lambda b: b[0])
 
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
         pt = Point(c["lng"], c["lat"])
         score = 0.0
+        time_min = 0.0
         for value, poly in bands:
             if poly.contains(pt):
                 score = adjusted_scores.get(value, max(0.0, 1.0 - value / 5400))
+                time_min = round(value / 60 * multiplier, 1)
                 break
         if score == 0.0:
             dist = _haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
             score = _distance_score(dist) * 0.08
+            time_min = round(dist / 40 * 60, 1)
         scores[c["cell_id"]] = score
+        metrics[c["cell_id"]] = time_min
 
-    return scores
+    return scores, metrics
 
 
 def _score_by_distance(
     centroids: list[dict], dest_lat: float, dest_lng: float
-) -> dict[str, float]:
+) -> _ScoreResult:
     """Fallback: score by straight-line distance."""
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
         dist = _haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
         scores[c["cell_id"]] = _distance_score(dist)
-    return scores
+        metrics[c["cell_id"]] = round(dist / 40 * 60, 1)
+    return scores, metrics
 
 
 async def _score_via_google_transit(
     centroids: list[dict], dest_lat: float, dest_lng: float,
     is_peak: bool = True,
-) -> dict[str, float]:
+) -> _ScoreResult:
     """Score using Google Directions API for transit mode."""
     if not GOOGLE_API_KEY:
         return _score_by_distance(centroids, dest_lat, dest_lng)
@@ -135,6 +144,7 @@ async def _score_via_google_transit(
     departure_ts = _next_weekday_timestamp(8 if is_peak else 11)
 
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     async with httpx.AsyncClient(timeout=30) as client:
         sample = centroids[::10]
         for c in sample:
@@ -153,38 +163,43 @@ async def _score_via_google_transit(
                 if data["status"] == "OK":
                     duration_s = data["routes"][0]["legs"][0]["duration"]["value"]
                     scores[c["cell_id"]] = max(0.0, 1.0 - (duration_s / 5400) ** 0.7)
+                    metrics[c["cell_id"]] = round(duration_s / 60, 1)
                 else:
                     scores[c["cell_id"]] = 0.5
+                    metrics[c["cell_id"]] = 0
             except Exception:
                 scores[c["cell_id"]] = 0.5
+                metrics[c["cell_id"]] = 0
 
     sampled_ids = set(scores.keys())
     for c in centroids:
         if c["cell_id"] not in sampled_ids:
-            nearest_score = _find_nearest_score(c, sample, scores)
-            scores[c["cell_id"]] = nearest_score
+            nearest = _find_nearest_sampled(c, sample, sampled_ids)
+            scores[c["cell_id"]] = scores.get(nearest, 0.5)
+            metrics[c["cell_id"]] = metrics.get(nearest, 0)
 
-    return scores
+    return scores, metrics
 
 
-def _find_nearest_score(
-    cell: dict, sampled: list[dict], scores: dict[str, float]
-) -> float:
+def _find_nearest_sampled(
+    cell: dict, sampled: list[dict], sampled_ids: set[str]
+) -> str:
+    """Return the cell_id of the nearest sampled cell."""
     best_dist = float("inf")
-    best_score = 0.5
+    best_id = ""
     for s in sampled:
-        if s["cell_id"] not in scores:
+        if s["cell_id"] not in sampled_ids:
             continue
         d = _haversine_km(cell["lat"], cell["lng"], s["lat"], s["lng"])
         if d < best_dist:
             best_dist = d
-            best_score = scores[s["cell_id"]]
-    return best_score
+            best_id = s["cell_id"]
+    return best_id
 
 
 async def score_commute(
     centroids: list[dict], params: dict
-) -> dict[str, float]:
+) -> _ScoreResult:
     dest = params.get("destination", {})
     dest_lat = dest.get("lat", 25.2048)
     dest_lng = dest.get("lng", 55.2708)

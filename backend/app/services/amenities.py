@@ -85,7 +85,7 @@ async def _fetch_pois(category: str) -> list[dict]:
 
 async def score_amenities(
     centroids: list[dict], categories: list[str]
-) -> dict[str, float]:
+) -> tuple[dict[str, float], dict[str, float]]:
     """Score each cell based on density of nearby amenities."""
     all_pois: list[dict] = []
     for cat in categories:
@@ -93,7 +93,8 @@ async def score_amenities(
         all_pois.extend(pois)
 
     if not all_pois:
-        return {c["cell_id"]: 0.5 for c in centroids}
+        empty = {c["cell_id"]: 0.5 for c in centroids}
+        return empty, {c["cell_id"]: 0 for c in centroids}
 
     radius_km = SEARCH_RADIUS_M / 1000
     raw_counts: dict[str, int] = {}
@@ -110,10 +111,12 @@ async def score_amenities(
     cap = max(30, max_count * 0.8)
 
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for cid, count in raw_counts.items():
         if count == 0:
             scores[cid] = 0.0
         else:
             scores[cid] = min(1.0, math.log1p(count) / math.log1p(cap))
+        metrics[cid] = float(count)
 
-    return scores
+    return scores, metrics

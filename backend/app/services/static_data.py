@@ -148,9 +148,12 @@ def _find_zone_value(
     return interpolated * (1 - fade) + default * fade
 
 
-def score_budget(centroids: list[dict], max_monthly_rent: float) -> dict[str, float]:
+def score_budget(
+    centroids: list[dict], max_monthly_rent: float
+) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by how affordable they are relative to user's budget."""
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
         avg_rent = _find_zone_value(c["lat"], c["lng"], RENT_ZONES, "avg_rent", 6000)
         ratio = avg_rent / max_monthly_rent
@@ -158,21 +161,29 @@ def score_budget(centroids: list[dict], max_monthly_rent: float) -> dict[str, fl
             scores[c["cell_id"]] = 1.0 - 0.5 * ratio
         else:
             scores[c["cell_id"]] = max(0.0, 0.5 * (2.0 - ratio))
-    return scores
+        metrics[c["cell_id"]] = round(avg_rent)
+    return scores, metrics
 
 
-def score_neighborhood(centroids: list[dict]) -> dict[str, float]:
+def score_neighborhood(
+    centroids: list[dict],
+) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by neighborhood reputation."""
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
         rep = _find_zone_value(c["lat"], c["lng"], NEIGHBORHOOD_SCORES, "score", 5.0)
         scores[c["cell_id"]] = rep / 10.0
-    return scores
+        metrics[c["cell_id"]] = round(rep, 1)
+    return scores, metrics
 
 
-def score_noise(centroids: list[dict]) -> dict[str, float]:
+def score_noise(
+    centroids: list[dict],
+) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by noise level (higher score = quieter = better)."""
     scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
         max_noise = 0.0
         for src in NOISE_SOURCES:
@@ -181,4 +192,5 @@ def score_noise(centroids: list[dict]) -> dict[str, float]:
                 noise = src["intensity"] * (1 - dist / src["radius_km"])
                 max_noise = max(max_noise, noise)
         scores[c["cell_id"]] = 1.0 - max_noise
-    return scores
+        metrics[c["cell_id"]] = round(max_noise, 2)
+    return scores, metrics

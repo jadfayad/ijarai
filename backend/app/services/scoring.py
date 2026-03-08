@@ -16,32 +16,39 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
     centroids = get_grid_centroids()
 
     criterion_scores: dict[str, dict[str, float]] = {}
+    criterion_metrics: dict[str, dict[str, float]] = {}
 
     for criterion in request.criteria:
         if criterion.weight == 0:
             continue
 
         if criterion.type == "commute":
-            scores = await score_commute(centroids, criterion.params)
+            scores, metrics = await score_commute(centroids, criterion.params)
             mode = criterion.params.get("mode", "car")
             tod = criterion.params.get("time_of_day", "peak")
-            criterion_scores[f"commute_{mode}_{tod}"] = scores
+            key = f"commute_{mode}_{tod}"
+            criterion_scores[key] = scores
+            criterion_metrics[key] = metrics
         elif criterion.type == "amenities":
-            scores = await score_amenities(
+            scores, metrics = await score_amenities(
                 centroids, criterion.params.get("categories", [])
             )
             criterion_scores["amenities"] = scores
+            criterion_metrics["amenities"] = metrics
         elif criterion.type == "budget":
-            scores = score_budget(
+            scores, metrics = score_budget(
                 centroids, criterion.params.get("max_monthly_rent", 8000)
             )
             criterion_scores["budget"] = scores
+            criterion_metrics["budget"] = metrics
         elif criterion.type == "neighborhood":
-            scores = score_neighborhood(centroids)
+            scores, metrics = score_neighborhood(centroids)
             criterion_scores["neighborhood"] = scores
+            criterion_metrics["neighborhood"] = metrics
         elif criterion.type == "noise":
-            scores = score_noise(centroids)
+            scores, metrics = score_noise(centroids)
             criterion_scores["noise"] = scores
+            criterion_metrics["noise"] = metrics
 
     active_criteria = [c for c in request.criteria if c.weight > 0]
     total_weight = sum(c.weight for c in active_criteria)
@@ -50,6 +57,7 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
     for centroid in centroids:
         cid = centroid["cell_id"]
         breakdown: dict[str, float] = {}
+        metric_breakdown: dict[str, float] = {}
         weighted_sum = 0.0
 
         for criterion in active_criteria:
@@ -70,6 +78,7 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
 
             score = criterion_scores.get(key, {}).get(cid, 0.5)
             breakdown[key] = round(score, 4)
+            metric_breakdown[key] = criterion_metrics.get(key, {}).get(cid, 0)
             weighted_sum += score * criterion.weight
 
         final_score = weighted_sum / total_weight if total_weight > 0 else 0.5
@@ -81,6 +90,7 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
                     "cell_id": cid,
                     "score": round(final_score, 4),
                     **{f"s_{k}": v for k, v in breakdown.items()},
+                    **{f"m_{k}": v for k, v in metric_breakdown.items()},
                 },
                 "geometry": {
                     "type": "Point",
