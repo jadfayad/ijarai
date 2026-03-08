@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -7,22 +10,8 @@ class LatLng(BaseModel):
     lng: float
 
 
-class CommuteParams(BaseModel):
-    destination: LatLng
-    mode: str = Field(default="car", pattern="^(car|transit)$")
-    time_of_day: str = Field(default="peak", pattern="^(peak|off_peak)$")
-
-
-class AmenityParams(BaseModel):
-    categories: list[str] = Field(default_factory=lambda: ["gym", "cafe", "beach"])
-
-
-class BudgetParams(BaseModel):
-    max_monthly_rent: float = 8000
-
-
 class CriterionRequest(BaseModel):
-    type: str
+    type: Literal["commute", "amenities", "budget", "neighborhood", "noise"]
     weight: float = Field(ge=0, le=10)
     params: dict = Field(default_factory=dict)
 
@@ -30,14 +19,6 @@ class CriterionRequest(BaseModel):
 class ScoreRequest(BaseModel):
     criteria: list[CriterionRequest]
     cell_size_m: int = Field(default=1000, ge=200, le=2500)
-
-
-class CellScore(BaseModel):
-    cell_id: str
-    lat: float
-    lng: float
-    final_score: float
-    breakdown: dict[str, float] = Field(default_factory=dict)
 
 
 class ScoreResponse(BaseModel):

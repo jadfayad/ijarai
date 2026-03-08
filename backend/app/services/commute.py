@@ -7,10 +7,12 @@ switching grid resolution only re-evaluates cells — no duplicate API calls.
 from __future__ import annotations
 
 import os
-import math
 from datetime import datetime, timedelta, timezone
 
 import httpx
+from cachetools import TTLCache
+
+from app.utils.geo import haversine_km
 
 ORS_API_KEY = os.getenv("ORS_API_KEY", "")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
@@ -22,9 +24,8 @@ PEAK_MULTIPLIER = 1.4
 
 _ScoreResult = tuple[dict[str, float], dict[str, float]]
 
-# Caches API responses, NOT per-cell scores.
-_isochrone_cache: dict[tuple, list[tuple[int, object]]] = {}
-_transit_duration_cache: dict[tuple, dict[tuple[float, float], float]] = {}
+_isochrone_cache: TTLCache[tuple, list[tuple[int, object]]] = TTLCache(maxsize=32, ttl=3600)
+_transit_duration_cache: TTLCache[tuple, dict[tuple[float, float], float]] = TTLCache(maxsize=32, ttl=3600)
 
 DUBAI_TZ = timezone(timedelta(hours=4))
 
@@ -37,19 +38,6 @@ def _next_weekday_timestamp(hour: int) -> int:
     while target.weekday() >= 5:
         target += timedelta(days=1)
     return int(target.timestamp())
-
-
-def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlng = math.radians(lng2 - lng1)
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlng / 2) ** 2
-    )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def _distance_score(dist_km: float, max_km: float = 50) -> float:
@@ -130,7 +118,7 @@ def _score_centroids_from_bands(
                 time_min = round(value / 60 * multiplier, 1)
                 break
         if score == 0.0:
-            dist = _haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
+            dist = haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
             score = _distance_score(dist) * 0.08
             time_min = round(dist / 40 * 60, 1)
         scores[c["cell_id"]] = score
@@ -155,7 +143,7 @@ def _score_by_distance(
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
-        dist = _haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
+        dist = haversine_km(c["lat"], c["lng"], dest_lat, dest_lng)
         scores[c["cell_id"]] = _distance_score(dist)
         metrics[c["cell_id"]] = round(dist / 40 * 60, 1)
     return scores, metrics
@@ -228,7 +216,7 @@ def _score_centroids_from_transit(
             best_dist = float("inf")
             duration_s = 0.0
             for slat, slng in sample_points:
-                d = _haversine_km(lat, lng, slat, slng)
+                d = haversine_km(lat, lng, slat, slng)
                 if d < best_dist:
                     best_dist = d
                     duration_s = durations[(slat, slng)]

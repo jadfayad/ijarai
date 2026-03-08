@@ -1,0 +1,15 @@
+[
+  { "center": [25.2532, 55.3657], "radius_km": 5, "intensity": 1.0, "label": "DXB Airport runway 1" },
+  { "center": [25.2400, 55.3800], "radius_km": 4, "intensity": 0.8, "label": "DXB Airport runway 2" },
+  { "center": [24.8968, 55.1614], "radius_km": 5, "intensity": 0.9, "label": "DWC (Al Maktoum) Airport" },
+  { "center": [25.0900, 55.1600], "radius_km": 1.0, "intensity": 0.6, "label": "Sheikh Zayed Road S" },
+  { "center": [25.1200, 55.1900], "radius_km": 1.0, "intensity": 0.6, "label": "Sheikh Zayed Road S-mid" },
+  { "center": [25.1700, 55.2500], "radius_km": 1.0, "intensity": 0.6, "label": "Sheikh Zayed Road mid" },
+  { "center": [25.2100, 55.2800], "radius_km": 1.0, "intensity": 0.6, "label": "Sheikh Zayed Road N-mid" },
+  { "center": [25.2500, 55.3100], "radius_km": 1.0, "intensity": 0.6, "label": "Sheikh Zayed Road N" },
+  { "center": [25.0800, 55.2200], "radius_km": 0.8, "intensity": 0.5, "label": "E311 (MBZ Road) S" },
+  { "center": [25.1500, 55.2800], "radius_km": 0.8, "intensity": 0.5, "label": "E311 (MBZ Road) mid" },
+  { "center": [25.2200, 55.3500], "radius_km": 0.8, "intensity": 0.5, "label": "E311 (MBZ Road) N" },
+  { "center": [25.1000, 55.2000], "radius_km": 0.7, "intensity": 0.4, "label": "Al Khail Road S" },
+  { "center": [25.1600, 55.2600], "radius_km": 0.7, "intensity": 0.4, "label": "Al Khail Road N" }
+]

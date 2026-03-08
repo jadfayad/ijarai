@@ -9,6 +9,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from pathlib import Path
+
+from app.utils.geo import deg_per_m_lat, deg_per_m_lng
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # ---------------------------------------------------------------------------
 # Geographic bounds
@@ -21,8 +29,8 @@ DUBAI_BOUNDS = {
 }
 
 _MID_LAT = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
-_DEG_PER_M_LAT = 1 / 111_320
-_DEG_PER_M_LNG = 1 / (111_320 * math.cos(math.radians(_MID_LAT)))
+_DEG_PER_M_LAT = deg_per_m_lat()
+_DEG_PER_M_LNG = deg_per_m_lng(_MID_LAT)
 
 LAT_EXTENT_KM = round(
     (DUBAI_BOUNDS["max_lat"] - DUBAI_BOUNDS["min_lat"]) / _DEG_PER_M_LAT / 1000, 1

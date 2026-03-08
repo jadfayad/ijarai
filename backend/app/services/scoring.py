@@ -3,16 +3,25 @@ Scoring engine: combines per-criterion scores with user weights.
 """
 from __future__ import annotations
 
-from app.models.schemas import ScoreRequest, ScoreResponse
+from app.models.schemas import CriterionRequest, ScoreRequest, ScoreResponse
 from app.services.grid import get_grid_centroids
+from app.services.commute import score_commute
+from app.services.amenities import score_amenities
+from app.services.static_data import score_budget, score_neighborhood, score_noise
+
+
+def _criterion_key(criterion: CriterionRequest) -> str | None:
+    if criterion.type == "commute":
+        mode = criterion.params.get("mode", "car")
+        tod = criterion.params.get("time_of_day", "peak")
+        return f"commute_{mode}_{tod}"
+    if criterion.type in ("amenities", "budget", "neighborhood", "noise"):
+        return criterion.type
+    return None
 
 
 async def compute_scores(request: ScoreRequest) -> ScoreResponse:
     """Compute weighted scores for every grid cell."""
-    from app.services.commute import score_commute
-    from app.services.amenities import score_amenities
-    from app.services.static_data import score_budget, score_neighborhood, score_noise
-
     centroids = get_grid_centroids(request.cell_size_m)
 
     criterion_scores: dict[str, dict[str, float]] = {}
@@ -22,35 +31,31 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
         if criterion.weight == 0:
             continue
 
+        key = _criterion_key(criterion)
+        if key is None:
+            continue
+
         if criterion.type == "commute":
             scores, metrics = await score_commute(centroids, criterion.params)
-            mode = criterion.params.get("mode", "car")
-            tod = criterion.params.get("time_of_day", "peak")
-            key = f"commute_{mode}_{tod}"
-            criterion_scores[key] = scores
-            criterion_metrics[key] = metrics
         elif criterion.type == "amenities":
             scores, metrics = await score_amenities(
                 centroids,
                 criterion.params.get("categories", []),
                 request.cell_size_m,
             )
-            criterion_scores["amenities"] = scores
-            criterion_metrics["amenities"] = metrics
         elif criterion.type == "budget":
             scores, metrics = score_budget(
                 centroids, criterion.params.get("max_monthly_rent", 8000)
             )
-            criterion_scores["budget"] = scores
-            criterion_metrics["budget"] = metrics
         elif criterion.type == "neighborhood":
             scores, metrics = score_neighborhood(centroids)
-            criterion_scores["neighborhood"] = scores
-            criterion_metrics["neighborhood"] = metrics
         elif criterion.type == "noise":
             scores, metrics = score_noise(centroids)
-            criterion_scores["noise"] = scores
-            criterion_metrics["noise"] = metrics
+        else:
+            continue
+
+        criterion_scores[key] = scores
+        criterion_metrics[key] = metrics
 
     active_criteria = [c for c in request.criteria if c.weight > 0]
     total_weight = sum(c.weight for c in active_criteria)
@@ -63,19 +68,8 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
         weighted_sum = 0.0
 
         for criterion in active_criteria:
-            if criterion.type == "commute":
-                mode = criterion.params.get("mode", "car")
-                tod = criterion.params.get("time_of_day", "peak")
-                key = f"commute_{mode}_{tod}"
-            elif criterion.type == "amenities":
-                key = "amenities"
-            elif criterion.type == "budget":
-                key = "budget"
-            elif criterion.type == "neighborhood":
-                key = "neighborhood"
-            elif criterion.type == "noise":
-                key = "noise"
-            else:
+            key = _criterion_key(criterion)
+            if key is None:
                 continue
 
             score = criterion_scores.get(key, {}).get(cid, 0.5)

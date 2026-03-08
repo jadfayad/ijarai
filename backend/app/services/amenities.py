@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import math
 import httpx
+from cachetools import TTLCache
 
 from app.grid_config import DUBAI_BOUNDS, DEFAULT_RESOLUTION, amenity_search_radius_m
+from app.utils.geo import to_meters
 
-_poi_cache: dict[str, list[dict]] = {}
+_poi_cache: TTLCache[str, list[dict]] = TTLCache(maxsize=64, ttl=3600)
 
 CATEGORY_TO_OSM: dict[str, str] = {
     "gym": '["leisure"="fitness_centre"]',
@@ -26,14 +28,7 @@ CATEGORY_TO_OSM: dict[str, str] = {
     "mosque": '["amenity"="place_of_worship"]["religion"="muslim"]',
 }
 
-_DEG_TO_M_LAT = 111_320
 _MID_LAT = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
-_DEG_TO_M_LNG = 111_320 * math.cos(math.radians(_MID_LAT))
-
-
-def _to_meters(lat: float, lng: float) -> tuple[float, float]:
-    """Project lat/lng to a local meter plane for fast neighborhood queries."""
-    return lng * _DEG_TO_M_LNG, lat * _DEG_TO_M_LAT
 
 
 def _build_spatial_bins(
@@ -104,12 +99,12 @@ async def score_amenities(
     radius_m = float(amenity_search_radius_m(cell_size_m))
     radius_m2 = radius_m * radius_m
     bin_size_m = max(radius_m, 1.0)
-    poi_xy = [_to_meters(float(p["lat"]), float(p["lng"])) for p in all_pois]
+    poi_xy = [to_meters(float(p["lat"]), float(p["lng"]), _MID_LAT) for p in all_pois]
     poi_bins = _build_spatial_bins(poi_xy, bin_size_m)
     raw_counts: dict[str, int] = {}
 
     for c in centroids:
-        cx, cy = _to_meters(float(c["lat"]), float(c["lng"]))
+        cx, cy = to_meters(float(c["lat"]), float(c["lng"]), _MID_LAT)
         bx = int(math.floor(cx / bin_size_m))
         by = int(math.floor(cy / bin_size_m))
 
