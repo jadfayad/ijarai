@@ -59,17 +59,17 @@ function ScoreBar({
         : "from-red-500 to-red-400";
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-28 shrink-0 truncate">
+    <div className="flex items-center gap-2.5">
+      <span className="text-[11px] text-white/40 w-28 shrink-0 truncate">
         {label}
       </span>
       <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full bg-gradient-to-r ${barColor}`}
+          className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-500`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs font-mono w-16 text-right truncate tabular-nums">
+      <span className="text-[11px] font-mono w-16 text-right truncate tabular-nums text-white/60">
         {metric ?? `${pct}%`}
       </span>
     </div>
@@ -85,30 +85,43 @@ interface CellPopupProps {
 
 export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
   const score = properties.score as number;
+  const pct = Math.round(score * 100);
   const breakdownKeys = Object.keys(properties).filter((k) =>
     k.startsWith("s_")
   );
 
+  const scoreColor =
+    pct >= 70
+      ? "text-emerald-400"
+      : pct >= 45
+        ? "text-amber-400"
+        : "text-red-400";
+
   return (
     <div
-      className="absolute z-50 w-72 bg-black/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden"
-      style={{ left: x + 10, top: y - 10 }}
+      className="absolute z-50 w-[290px] bg-[rgba(14,14,24,0.92)] backdrop-blur-2xl border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      style={{ left: x + 12, top: y - 12 }}
     >
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div>
-          <span className="text-xs text-muted-foreground">Overall Score</span>
-          <p className="text-lg font-semibold tabular-nums">
-            {Math.round(score * 100)}%
+          <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
+            Overall Score
+          </span>
+          <p className={`text-2xl font-bold tabular-nums ${scoreColor}`}>
+            {pct}%
           </p>
         </div>
         <button
           onClick={onClose}
-          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
+          className="text-white/25 hover:text-white/60 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
       </div>
-      <div className="px-4 pb-4 pt-1 space-y-2">
+
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+
+      <div className="px-4 pb-4 pt-3 space-y-2">
         {breakdownKeys.map((key) => {
           const metricKey = key.replace(/^s_/, "m_");
           const metricValue = properties[metricKey] as number | undefined;

@@ -29,16 +29,16 @@ export function CommuteConfig({ criterion }: Props) {
   );
 
   return (
-    <div className="space-y-2.5 pt-1">
+    <div className="space-y-3 pt-1">
       <AddressAutocomplete
         value={params.label ?? ""}
         onSelect={handleSelect}
         placeholder="Search for a destination..."
-        className="text-xs h-8 rounded-lg bg-white/[0.04] border-white/[0.08] placeholder:text-muted-foreground/50"
+        className="text-xs h-8 rounded-lg bg-white/[0.05] border-white/[0.1] placeholder:text-white/25 focus:border-primary/40 transition-colors"
       />
 
-      <div className="flex items-center gap-2">
-        <Label className="text-xs text-muted-foreground shrink-0">Mode</Label>
+      <div className="flex items-center gap-2.5">
+        <Label className="text-[11px] text-white/35 shrink-0 uppercase tracking-wider font-medium w-10">Mode</Label>
         <div className="flex gap-1.5">
           {(["car", "transit"] as const).map((mode) => (
             <button
@@ -48,10 +48,10 @@ export function CommuteConfig({ criterion }: Props) {
                   params: { ...params, mode },
                 })
               }
-              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-all duration-200 ${
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                 params.mode === mode
-                  ? "bg-primary/15 text-primary border-primary/30"
-                  : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.1]"
+                  ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
+                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
               }`}
             >
               {mode === "car" ? <Car size={12} /> : <TrainFront size={12} />}
@@ -61,8 +61,8 @@ export function CommuteConfig({ criterion }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Label className="text-xs text-muted-foreground shrink-0">Time</Label>
+      <div className="flex items-center gap-2.5">
+        <Label className="text-[11px] text-white/35 shrink-0 uppercase tracking-wider font-medium w-10">Time</Label>
         <div className="flex gap-1.5">
           {(["peak", "off_peak"] as const).map((tod: TimeOfDay) => (
             <button
@@ -72,10 +72,10 @@ export function CommuteConfig({ criterion }: Props) {
                   params: { ...params, time_of_day: tod },
                 })
               }
-              className={`text-xs px-2.5 py-1 rounded-lg border transition-all duration-200 ${
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                 params.time_of_day === tod
-                  ? "bg-primary/15 text-primary border-primary/30"
-                  : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.1]"
+                  ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
+                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
               }`}
             >
               {tod === "peak" ? "Peak" : "Off-Peak"}

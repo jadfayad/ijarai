@@ -15,7 +15,9 @@ export function BudgetConfig({ criterion }: Props) {
   return (
     <div className="space-y-2 pt-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Max Monthly Rent</span>
+        <span className="text-[11px] text-white/35 uppercase tracking-wider font-medium">
+          Max Monthly Rent
+        </span>
         <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
           {params.max_monthly_rent.toLocaleString()} AED
         </span>
@@ -32,7 +34,7 @@ export function BudgetConfig({ criterion }: Props) {
           });
         }}
       />
-      <div className="flex justify-between text-[10px] text-muted-foreground/60">
+      <div className="flex justify-between text-[10px] text-white/20">
         <span>2,000</span>
         <span>20,000</span>
       </div>
