@@ -3,6 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SCORE_LABELS: Record<string, string> = {
+  s_commute_car_peak: "Commute Car (Peak)",
+  s_commute_car_off_peak: "Commute Car (Off-Peak)",
+  s_commute_transit_peak: "Commute Transit (Peak)",
+  s_commute_transit_off_peak: "Commute Transit (Off-Peak)",
   s_commute_car: "Commute (Car)",
   s_commute_transit: "Commute (Transit)",
   s_amenities: "Amenities",
@@ -11,7 +15,41 @@ const SCORE_LABELS: Record<string, string> = {
   s_noise: "Low Noise",
 };
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
+function formatScoreKey(key: string): string {
+  return key
+    .replace(/^s_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatMetric(scoreKey: string, value: number): string | null {
+  const base = scoreKey.replace(/^s_/, "");
+
+  if (base.startsWith("commute_")) {
+    if (value <= 0) return null;
+    return `~${Math.round(value)} min`;
+  }
+  if (base === "amenities") {
+    return `${Math.round(value)} nearby`;
+  }
+  if (base === "budget") {
+    return `~${Math.round(value).toLocaleString()} AED/mo`;
+  }
+  if (base === "neighborhood") {
+    return `${value}/10`;
+  }
+  return null;
+}
+
+function ScoreBar({
+  label,
+  value,
+  metric,
+}: {
+  label: string;
+  value: number;
+  metric?: string | null;
+}) {
   const pct = Math.round(value * 100);
   const color =
     pct >= 70
@@ -31,7 +69,9 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs font-mono w-10 text-right">{pct}%</span>
+      <span className="text-xs font-mono w-16 text-right truncate">
+        {metric ?? `${pct}%`}
+      </span>
     </div>
   );
 }
@@ -51,7 +91,7 @@ export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
 
   return (
     <Card
-      className="absolute z-50 w-64 shadow-xl"
+      className="absolute z-50 w-72 shadow-xl"
       style={{ left: x + 10, top: y - 10 }}
     >
       <CardHeader className="pb-2 pt-3 px-4">
@@ -68,13 +108,23 @@ export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-1.5">
-        {breakdownKeys.map((key) => (
-          <ScoreBar
-            key={key}
-            label={SCORE_LABELS[key] ?? key.replace("s_", "")}
-            value={properties[key] as number}
-          />
-        ))}
+        {breakdownKeys.map((key) => {
+          const metricKey = key.replace(/^s_/, "m_");
+          const metricValue = properties[metricKey] as number | undefined;
+          const metric =
+            metricValue !== undefined
+              ? formatMetric(key, metricValue)
+              : null;
+
+          return (
+            <ScoreBar
+              key={key}
+              label={SCORE_LABELS[key] ?? formatScoreKey(key)}
+              value={properties[key] as number}
+              metric={metric}
+            />
+          );
+        })}
       </CardContent>
     </Card>
   );

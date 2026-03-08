@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { Label } from "@/components/ui/label";
-import type { CriterionConfig, CommuteParams } from "@/lib/types";
+import type { CriterionConfig, CommuteParams, TimeOfDay } from "@/lib/types";
 
 interface Props {
   criterion: CriterionConfig;
@@ -54,6 +54,29 @@ export function CommuteConfig({ criterion }: Props) {
               }`}
             >
               {mode === "car" ? "Car" : "Public Transit"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Label className="text-xs text-muted-foreground">Time:</Label>
+        <div className="flex gap-1">
+          {(["peak", "off_peak"] as const).map((tod: TimeOfDay) => (
+            <button
+              key={tod}
+              onClick={() =>
+                updateCriterion(criterion.id, {
+                  params: { ...params, time_of_day: tod },
+                })
+              }
+              className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${
+                params.time_of_day === tod
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted border-transparent hover:border-border"
+              }`}
+            >
+              {tod === "peak" ? "Peak" : "Off-Peak"}
             </button>
           ))}
         </div>

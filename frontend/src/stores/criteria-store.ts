@@ -12,6 +12,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     params: {
       destination: { lat: 25.2048, lng: 55.2708 },
       mode: "car" as const,
+      time_of_day: "peak" as const,
       label: "",
     },
     icon: "briefcase",
@@ -26,6 +27,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     params: {
       destination: { lat: 25.2532, lng: 55.3657 },
       mode: "car" as const,
+      time_of_day: "peak" as const,
       label: "DXB Airport",
     },
     icon: "plane",
@@ -40,6 +42,7 @@ const DEFAULT_CRITERIA: CriterionConfig[] = [
     params: {
       destination: { lat: 25.2048, lng: 55.2708 },
       mode: "car" as const,
+      time_of_day: "peak" as const,
       label: "",
     },
     icon: "map-pin",

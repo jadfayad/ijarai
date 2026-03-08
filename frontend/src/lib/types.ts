@@ -5,6 +5,8 @@ export interface LatLng {
 
 export type TransportMode = "car" | "transit";
 
+export type TimeOfDay = "peak" | "off_peak";
+
 export type CriterionType =
   | "commute"
   | "amenities"
@@ -15,6 +17,7 @@ export type CriterionType =
 export interface CommuteParams {
   destination: LatLng;
   mode: TransportMode;
+  time_of_day: TimeOfDay;
   label?: string;
 }
 

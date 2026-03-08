@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { luma } from "@luma.gl/core";
+import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { ScatterplotLayer } from "@deck.gl/layers";
+
+luma.registerAdapters([webgl2Adapter]);
 import { MapPin, Briefcase, Plane } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
@@ -35,8 +39,13 @@ const COLOR_RAMP: [number, number, number][] = [
   [26, 150, 65],
 ];
 
-function scoreToColor(score: number): [number, number, number, number] {
-  const t = Math.max(0, Math.min(1, score)) * (COLOR_RAMP.length - 1);
+function scoreToColor(
+  score: number,
+  min: number,
+  max: number
+): [number, number, number, number] {
+  const normalized = max > min ? (score - min) / (max - min) : 0.5;
+  const t = Math.max(0, Math.min(1, normalized)) * (COLOR_RAMP.length - 1);
   const i = Math.min(Math.floor(t), COLOR_RAMP.length - 2);
   const f = t - i;
   const c0 = COLOR_RAMP[i];
@@ -76,6 +85,18 @@ export function MapView() {
     properties: Record<string, unknown>;
   } | null>(null);
 
+  const scoreRange = useMemo(() => {
+    if (!scoreData?.features?.length) return { min: 0, max: 1 };
+    let min = Infinity;
+    let max = -Infinity;
+    for (const f of scoreData.features) {
+      const s = f.properties.score as number;
+      if (s < min) min = s;
+      if (s > max) max = s;
+    }
+    return { min, max };
+  }, [scoreData]);
+
   const layers = useMemo(() => {
     if (!scoreData?.features?.length) return [];
 
@@ -87,12 +108,15 @@ export function MapView() {
         ...f.properties,
       }));
 
+    if (!data.length) return [];
+
     return [
       new ScatterplotLayer({
         id: "score-cells",
         data,
         getPosition: (d: (typeof data)[0]) => d.position,
-        getFillColor: (d: (typeof data)[0]) => scoreToColor(d.weight),
+        getFillColor: (d: (typeof data)[0]) =>
+          scoreToColor(d.weight, scoreRange.min, scoreRange.max),
         getRadius: 300,
         pickable: true,
         radiusMinPixels: 4,
@@ -101,7 +125,7 @@ export function MapView() {
         opacity: 0.85,
       }),
     ];
-  }, [scoreData, scoreThreshold]);
+  }, [scoreData, scoreThreshold, scoreRange]);
 
   const visibleCount = useMemo(() => {
     if (!scoreData?.features?.length) return 0;
@@ -196,8 +220,8 @@ export function MapView() {
               const v = Array.isArray(val) ? val[0] : val;
               setScoreThreshold(v);
             }}
-            min={0}
-            max={1}
+            min={scoreRange.min}
+            max={scoreRange.max}
             step={0.01}
           />
         </div>
