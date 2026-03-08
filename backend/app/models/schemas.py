@@ -29,6 +29,7 @@ class CriterionRequest(BaseModel):
 
 class ScoreRequest(BaseModel):
     criteria: list[CriterionRequest]
+    cell_size_m: int = Field(default=500, ge=200, le=1500)
 
 
 class CellScore(BaseModel):

@@ -6,9 +6,10 @@ import { computeScores, healthCheck } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CriterionCard } from "./CriterionCard";
+import { GRID_RESOLUTION_CONFIG, type GridResolution } from "@/lib/types";
 
 export function CriteriaPanel() {
-  const { criteria, loading, error, scoreData, setScoreData, setLoading, setError } =
+  const { criteria, loading, error, scoreData, setScoreData, setLoading, setError, gridResolution, setGridResolution } =
     useCriteriaStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
@@ -38,7 +39,8 @@ export function CriteriaPanel() {
         return;
       }
 
-      const data = await computeScores({ criteria: activeCriteria });
+      const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
+      const data = await computeScores({ criteria: activeCriteria, cell_size_m });
       setScoreData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to compute scores");
@@ -103,6 +105,32 @@ export function CriteriaPanel() {
             Backend is not reachable. Make sure the Python server is running on port 8000.
           </p>
         )}
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">
+            Grid Resolution
+          </label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(Object.entries(GRID_RESOLUTION_CONFIG) as [GridResolution, typeof GRID_RESOLUTION_CONFIG[GridResolution]][]).map(
+              ([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => setGridResolution(key)}
+                  className={`rounded-md border px-2 py-1.5 text-center transition-colors ${
+                    gridResolution === key
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <span className="block text-xs font-semibold">{cfg.label}</span>
+                  <span className="block text-[10px] leading-tight mt-0.5 opacity-70">
+                    {cfg.description}
+                  </span>
+                </button>
+              )
+            )}
+          </div>
+        </div>
 
         {criteria.map((criterion) => (
           <CriterionCard key={criterion.id} criterion={criterion} />

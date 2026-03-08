@@ -7,6 +7,18 @@ export type TransportMode = "car" | "transit";
 
 export type TimeOfDay = "peak" | "off_peak";
 
+export type GridResolution = "coarse" | "normal" | "fine";
+
+// Keep in sync with backend/app/grid_config.py RESOLUTIONS
+export const GRID_RESOLUTION_CONFIG: Record<
+  GridResolution,
+  { cell_size_m: number; label: string; description: string; circleRadius: number }
+> = {
+  coarse: { cell_size_m: 1000, label: "Coarse", description: "~1,300 cells — fast", circleRadius: 550 },
+  normal: { cell_size_m: 500, label: "Normal", description: "~5,400 cells — balanced", circleRadius: 300 },
+  fine: { cell_size_m: 250, label: "Fine", description: "~21,000 cells — detailed", circleRadius: 150 },
+};
+
 export type CriterionType =
   | "commute"
   | "amenities"
@@ -46,6 +58,7 @@ export interface ScoreRequest {
     weight: number;
     params: Record<string, unknown>;
   }[];
+  cell_size_m: number;
 }
 
 export interface GeoJSONFeature {

@@ -13,7 +13,7 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
     from app.services.amenities import score_amenities
     from app.services.static_data import score_budget, score_neighborhood, score_noise
 
-    centroids = get_grid_centroids()
+    centroids = get_grid_centroids(request.cell_size_m)
 
     criterion_scores: dict[str, dict[str, float]] = {}
     criterion_metrics: dict[str, dict[str, float]] = {}

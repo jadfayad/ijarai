@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CriterionConfig, ScoreResponse } from "@/lib/types";
+import type { CriterionConfig, GridResolution, ScoreResponse } from "@/lib/types";
 
 const DEFAULT_CRITERIA: CriterionConfig[] = [
   {
@@ -96,6 +96,7 @@ interface CriteriaStore {
   error: string | null;
   selectedCellId: string | null;
   scoreThreshold: number;
+  gridResolution: GridResolution;
 
   setCriteria: (criteria: CriterionConfig[]) => void;
   updateCriterion: (id: string, updates: Partial<CriterionConfig>) => void;
@@ -104,6 +105,7 @@ interface CriteriaStore {
   setError: (error: string | null) => void;
   setSelectedCellId: (cellId: string | null) => void;
   setScoreThreshold: (threshold: number) => void;
+  setGridResolution: (resolution: GridResolution) => void;
 }
 
 export const useCriteriaStore = create<CriteriaStore>((set) => ({
@@ -113,6 +115,7 @@ export const useCriteriaStore = create<CriteriaStore>((set) => ({
   error: null,
   selectedCellId: null,
   scoreThreshold: 0,
+  gridResolution: "normal",
 
   setCriteria: (criteria) => set({ criteria }),
   updateCriterion: (id, updates) =>
@@ -126,4 +129,5 @@ export const useCriteriaStore = create<CriteriaStore>((set) => ({
   setError: (error) => set({ error }),
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
   setScoreThreshold: (threshold) => set({ scoreThreshold: threshold }),
+  setGridResolution: (resolution) => set({ gridResolution: resolution }),
 }));

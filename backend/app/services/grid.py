@@ -13,20 +13,18 @@ from pathlib import Path
 import numpy as np
 from global_land_mask import globe
 
+from app.grid_config import DUBAI_BOUNDS, DEFAULT_RESOLUTION
+
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-GRID_PATH = DATA_DIR / "dubai_grid.geojson"
 
-DUBAI_BOUNDS = {
-    "min_lat": 25.00,
-    "max_lat": 25.30,
-    "min_lng": 55.05,
-    "max_lng": 55.45,
-}
-
-CELL_SIZE_M = 500  # metres
+DEFAULT_CELL_SIZE_M = DEFAULT_RESOLUTION.cell_size_m
 
 # Bump this to force grid regeneration after coastline/bounds changes.
 _GRID_VERSION = 3
+
+
+def _grid_path(cell_size_m: int) -> Path:
+    return DATA_DIR / f"dubai_grid_{cell_size_m}m.geojson"
 
 
 def _meters_to_deg_lat(meters: float) -> float:
@@ -37,11 +35,11 @@ def _meters_to_deg_lng(meters: float, lat: float) -> float:
     return meters / (111_320 * math.cos(math.radians(lat)))
 
 
-def generate_grid() -> dict:
+def generate_grid(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> dict:
     """Generate a GeoJSON FeatureCollection grid over Dubai (land only)."""
-    dlat = _meters_to_deg_lat(CELL_SIZE_M)
+    dlat = _meters_to_deg_lat(cell_size_m)
     mid_lat = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
-    dlng = _meters_to_deg_lng(CELL_SIZE_M, mid_lat)
+    dlng = _meters_to_deg_lng(cell_size_m, mid_lat)
 
     lats = np.arange(DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["max_lat"], dlat)
     lngs = np.arange(DUBAI_BOUNDS["min_lng"], DUBAI_BOUNDS["max_lng"], dlng)
@@ -67,23 +65,24 @@ def generate_grid() -> dict:
     return {"type": "FeatureCollection", "features": features}
 
 
-def load_grid() -> dict:
+def load_grid(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> dict:
     """Load the grid from disk, regenerating when the version changes."""
-    if GRID_PATH.exists():
-        grid = json.loads(GRID_PATH.read_text())
+    path = _grid_path(cell_size_m)
+    if path.exists():
+        grid = json.loads(path.read_text())
         if grid.get("_version") == _GRID_VERSION:
             return grid
 
-    grid = generate_grid()
+    grid = generate_grid(cell_size_m)
     grid["_version"] = _GRID_VERSION
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    GRID_PATH.write_text(json.dumps(grid))
+    path.write_text(json.dumps(grid))
     return grid
 
 
-def get_grid_centroids() -> list[dict]:
+def get_grid_centroids(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> list[dict]:
     """Return list of {cell_id, lat, lng} dicts."""
-    grid = load_grid()
+    grid = load_grid(cell_size_m)
     centroids = []
     for f in grid["features"]:
         coords = f["geometry"]["coordinates"]

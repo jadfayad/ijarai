@@ -6,7 +6,7 @@ from __future__ import annotations
 import math
 import httpx
 
-from app.services.grid import DUBAI_BOUNDS
+from app.grid_config import DUBAI_BOUNDS, AMENITY_SEARCH_RADIUS_M
 
 _poi_cache: dict[str, list[dict]] = {}
 
@@ -26,7 +26,7 @@ CATEGORY_TO_OSM: dict[str, str] = {
     "mosque": '["amenity"="place_of_worship"]["religion"="muslim"]',
 }
 
-SEARCH_RADIUS_M = 1500
+SEARCH_RADIUS_M = AMENITY_SEARCH_RADIUS_M
 
 
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:

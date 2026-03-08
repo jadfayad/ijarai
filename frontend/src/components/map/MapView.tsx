@@ -12,7 +12,7 @@ import { MapPin, Briefcase, Plane } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
 import { CellPopup } from "./CellPopup";
-import type { CommuteParams } from "@/lib/types";
+import { GRID_RESOLUTION_CONFIG, type CommuteParams } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const ICON_MAP: Record<string, typeof MapPin> = {
@@ -59,7 +59,7 @@ function scoreToColor(
 }
 
 export function MapView() {
-  const { criteria, scoreData, setSelectedCellId, selectedCellId, scoreThreshold, setScoreThreshold } =
+  const { criteria, scoreData, setSelectedCellId, selectedCellId, scoreThreshold, setScoreThreshold, gridResolution } =
     useCriteriaStore();
 
   const destinations = useMemo(
@@ -110,6 +110,8 @@ export function MapView() {
 
     if (!data.length) return [];
 
+    const circleRadius = GRID_RESOLUTION_CONFIG[gridResolution].circleRadius;
+
     return [
       new ScatterplotLayer({
         id: "score-cells",
@@ -117,15 +119,15 @@ export function MapView() {
         getPosition: (d: (typeof data)[0]) => d.position,
         getFillColor: (d: (typeof data)[0]) =>
           scoreToColor(d.weight, scoreRange.min, scoreRange.max),
-        getRadius: 300,
+        getRadius: circleRadius,
         pickable: true,
-        radiusMinPixels: 4,
-        radiusMaxPixels: 25,
+        radiusMinPixels: 2,
+        radiusMaxPixels: 8,
         radiusUnits: "meters" as const,
         opacity: 0.85,
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange]);
+  }, [scoreData, scoreThreshold, scoreRange, gridResolution]);
 
   const visibleCount = useMemo(() => {
     if (!scoreData?.features?.length) return 0;
