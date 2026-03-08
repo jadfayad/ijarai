@@ -1,62 +1,66 @@
 """
 Dubai grid generation and management.
 
-Generates a square grid at ~500m resolution covering the main urban areas,
+Generates an H3 hexagonal grid covering the main urban areas,
 filtered to land-only cells using the global-land-mask dataset.
 """
 from __future__ import annotations
 
 import json
 
-import numpy as np
+import h3
 from global_land_mask import globe
 
-from app.grid_config import DUBAI_BOUNDS, DEFAULT_RESOLUTION, DATA_DIR
-from app.utils.geo import meters_to_deg_lat, meters_to_deg_lng
+from app.grid_config import (
+    DUBAI_BOUNDS,
+    DEFAULT_RESOLUTION,
+    DATA_DIR,
+    RESOLUTIONS,
+    cell_size_to_h3_res,
+)
 
-DEFAULT_CELL_SIZE_M = DEFAULT_RESOLUTION.cell_size_m
-
-# Bump this to force grid regeneration after coastline/bounds changes.
-_GRID_VERSION = 3
-
-
-def _grid_path(cell_size_m: int):
-    return DATA_DIR / f"dubai_grid_{cell_size_m}m.geojson"
+_GRID_VERSION = 4
 
 
-def generate_grid(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> dict:
-    """Generate a GeoJSON FeatureCollection grid over Dubai (land only)."""
-    dlat = meters_to_deg_lat(cell_size_m)
-    mid_lat = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
-    dlng = meters_to_deg_lng(cell_size_m, mid_lat)
+def _grid_path(h3_res: int):
+    return DATA_DIR / f"dubai_grid_h3r{h3_res}.geojson"
 
-    lats = np.arange(DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["max_lat"], dlat)
-    lngs = np.arange(DUBAI_BOUNDS["min_lng"], DUBAI_BOUNDS["max_lng"], dlng)
+
+def generate_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
+    """Generate a GeoJSON FeatureCollection of H3 hex cells over Dubai (land only)."""
+    h3_res = cell_size_to_h3_res(cell_size_m)
+
+    boundary = h3.LatLngPoly([
+        (DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["min_lng"]),
+        (DUBAI_BOUNDS["max_lat"], DUBAI_BOUNDS["min_lng"]),
+        (DUBAI_BOUNDS["max_lat"], DUBAI_BOUNDS["max_lng"]),
+        (DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["max_lng"]),
+    ])
+    all_cells = h3.h3shape_to_cells(boundary, h3_res)
 
     features = []
-    cell_id = 0
-    for lat in lats:
-        for lng in lngs:
-            if not globe.is_land(float(lat), float(lng)):
-                continue
-            features.append(
-                {
-                    "type": "Feature",
-                    "properties": {"cell_id": f"c_{cell_id}"},
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [round(float(lng), 6), round(float(lat), 6)],
-                    },
-                }
-            )
-            cell_id += 1
+    for cell_id in sorted(all_cells):
+        lat, lng = h3.cell_to_latlng(cell_id)
+        if not globe.is_land(lat, lng):
+            continue
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {"cell_id": cell_id},
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [round(lng, 6), round(lat, 6)],
+                },
+            }
+        )
 
     return {"type": "FeatureCollection", "features": features}
 
 
-def load_grid(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> dict:
+def load_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
     """Load the grid from disk, regenerating when the version changes."""
-    path = _grid_path(cell_size_m)
+    h3_res = cell_size_to_h3_res(cell_size_m)
+    path = _grid_path(h3_res)
     if path.exists():
         grid = json.loads(path.read_text())
         if grid.get("_version") == _GRID_VERSION:
@@ -69,7 +73,7 @@ def load_grid(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> dict:
     return grid
 
 
-def get_grid_centroids(cell_size_m: int = DEFAULT_CELL_SIZE_M) -> list[dict]:
+def get_grid_centroids(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> list[dict]:
     """Return list of {cell_id, lat, lng} dicts."""
     grid = load_grid(cell_size_m)
     centroids = []

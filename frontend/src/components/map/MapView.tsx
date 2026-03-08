@@ -5,7 +5,7 @@ import { luma } from "@luma.gl/core";
 import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
-import { PolygonLayer } from "@deck.gl/layers";
+import { H3HexagonLayer } from "@deck.gl/geo-layers";
 
 luma.registerAdapters([webgl2Adapter]);
 import {
@@ -84,29 +84,6 @@ function scoreToColor(
   ];
 }
 
-function createSquarePolygon(
-  center: [number, number],
-  cellSizeMeters: number
-): [number, number][] {
-  const [lng, lat] = center;
-  const latRad = (lat * Math.PI) / 180;
-  const earthRadius = 6_378_137;
-  const half = cellSizeMeters / 2;
-  const offsets: [number, number][] = [
-    [-half, -half],
-    [half, -half],
-    [half, half],
-    [-half, half],
-    [-half, -half],
-  ];
-
-  return offsets.map(([dx, dy]) => {
-    const dLat = (dy / earthRadius) * (180 / Math.PI);
-    const dLng = (dx / (earthRadius * Math.cos(latRad))) * (180 / Math.PI);
-    return [lng + dLng, lat + dLat];
-  });
-}
-
 export function MapView() {
   const {
     criteria,
@@ -167,32 +144,29 @@ export function MapView() {
     const data = scoreData.features
       .filter((f) => f.properties.score >= scoreThreshold)
       .map((f) => ({
-        position: f.geometry.coordinates as [number, number],
+        hexIndex: f.properties.cell_id as string,
         weight: f.properties.score as number,
         ...f.properties,
       }));
 
     if (!data.length) return [];
 
-    const cellSize = GRID_RESOLUTION_CONFIG[gridResolution].cell_size_m;
-    const dataWithPolygons = data.map((d) => ({
-      ...d,
-      polygon: createSquarePolygon(d.position, cellSize),
-    }));
-
     return [
-      new PolygonLayer({
+      new H3HexagonLayer({
         id: "score-cells",
-        data: dataWithPolygons,
-        getPolygon: (d: (typeof dataWithPolygons)[0]) => d.polygon,
-        getFillColor: (d: (typeof dataWithPolygons)[0]) =>
+        data,
+        getHexagon: (d: (typeof data)[0]) => d.hexIndex,
+        getFillColor: (d: (typeof data)[0]) =>
           scoreToColor(d.weight, scoreRange.min, scoreRange.max),
         pickable: true,
         opacity: 0.85,
         stroked: false,
+        filled: true,
+        extruded: false,
+        highPrecision: true,
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange, gridResolution]);
+  }, [scoreData, scoreThreshold, scoreRange]);
 
   const visibleCount = useMemo(() => {
     if (!scoreData?.features?.length) return 0;
