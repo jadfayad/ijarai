@@ -23,7 +23,9 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
 
         if criterion.type == "commute":
             scores = await score_commute(centroids, criterion.params)
-            criterion_scores[f"commute_{criterion.params.get('mode', 'car')}"] = scores
+            mode = criterion.params.get("mode", "car")
+            tod = criterion.params.get("time_of_day", "peak")
+            criterion_scores[f"commute_{mode}_{tod}"] = scores
         elif criterion.type == "amenities":
             scores = await score_amenities(
                 centroids, criterion.params.get("categories", [])
@@ -52,7 +54,9 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
 
         for criterion in active_criteria:
             if criterion.type == "commute":
-                key = f"commute_{criterion.params.get('mode', 'car')}"
+                mode = criterion.params.get("mode", "car")
+                tod = criterion.params.get("time_of_day", "peak")
+                key = f"commute_{mode}_{tod}"
             elif criterion.type == "amenities":
                 key = "amenities"
             elif criterion.type == "budget":

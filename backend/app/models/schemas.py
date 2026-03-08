@@ -10,6 +10,7 @@ class LatLng(BaseModel):
 class CommuteParams(BaseModel):
     destination: LatLng
     mode: str = Field(default="car", pattern="^(car|transit)$")
+    time_of_day: str = Field(default="peak", pattern="^(peak|off_peak)$")
 
 
 class AmenityParams(BaseModel):
