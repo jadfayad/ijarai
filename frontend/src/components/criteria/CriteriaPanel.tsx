@@ -47,7 +47,7 @@ export function CriteriaPanel() {
     } finally {
       setLoading(false);
     }
-  }, [criteria, setScoreData, setLoading, setError]);
+  }, [criteria, gridResolution, setScoreData, setLoading, setError]);
 
   if (!sidebarOpen) {
     return (
@@ -110,7 +110,7 @@ export function CriteriaPanel() {
           <label className="text-xs font-medium text-muted-foreground">
             Grid Resolution
           </label>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             {(Object.entries(GRID_RESOLUTION_CONFIG) as [GridResolution, typeof GRID_RESOLUTION_CONFIG[GridResolution]][]).map(
               ([key, cfg]) => (
                 <button

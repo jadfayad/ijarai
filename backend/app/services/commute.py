@@ -1,39 +1,40 @@
 """
 Commute scoring via OpenRouteService (car) and Google Directions (transit).
+
+Caches expensive API responses (isochrone polygons, transit durations) so that
+switching grid resolution only re-evaluates cells — no duplicate API calls.
 """
 from __future__ import annotations
 
 import os
 import math
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 
 import httpx
 
 ORS_API_KEY = os.getenv("ORS_API_KEY", "")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
-# Isochrone bands in seconds and their corresponding scores (closer = higher)
 ISOCHRONE_BANDS_SEC = [600, 1200, 1800, 2700, 3600, 5400]
 BAND_SCORES = {600: 1.0, 1200: 0.85, 1800: 0.65, 2700: 0.45, 3600: 0.25, 5400: 0.10}
 
-# Peak traffic stretches effective travel times by this factor (Dubai urban estimate)
 PEAK_MULTIPLIER = 1.4
 
 _ScoreResult = tuple[dict[str, float], dict[str, float]]
 
-_commute_cache: dict[tuple, _ScoreResult] = {}
+# Caches API responses, NOT per-cell scores.
+_isochrone_cache: dict[tuple, list[tuple[int, object]]] = {}
+_transit_duration_cache: dict[tuple, dict[tuple[float, float], float]] = {}
 
 DUBAI_TZ = timezone(timedelta(hours=4))
 
 
 def _next_weekday_timestamp(hour: int) -> int:
-    """Return a Unix timestamp for the next weekday at the given hour in Dubai time."""
     now = datetime.now(DUBAI_TZ)
     target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
     if target <= now:
         target += timedelta(days=1)
-    while target.weekday() >= 5:  # skip Sat/Sun
+    while target.weekday() >= 5:
         target += timedelta(days=1)
     return int(target.timestamp())
 
@@ -52,17 +53,23 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def _distance_score(dist_km: float, max_km: float = 50) -> float:
-    """Convert distance to a 0-1 score (closer = higher)."""
     return max(0.0, 1.0 - (dist_km / max_km) ** 0.8)
 
 
-async def _score_via_ors_isochrone(
-    centroids: list[dict], dest_lat: float, dest_lng: float,
-    is_peak: bool = True,
-) -> _ScoreResult:
-    """Fetch isochrone bands from ORS and score cells by containment."""
+# ---------------------------------------------------------------------------
+# ORS isochrone helpers
+# ---------------------------------------------------------------------------
+
+async def _fetch_isochrone_bands(
+    dest_lat: float, dest_lng: float
+) -> list[tuple[int, object]] | None:
+    """Fetch and cache isochrone polygons from ORS. Returns sorted bands."""
+    cache_key = (round(dest_lat, 4), round(dest_lng, 4))
+    if cache_key in _isochrone_cache:
+        return _isochrone_cache[cache_key]
+
     if not ORS_API_KEY:
-        return _score_by_distance(centroids, dest_lat, dest_lng)
+        return None
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -81,23 +88,35 @@ async def _score_via_ors_isochrone(
             resp.raise_for_status()
             data = resp.json()
     except Exception:
-        return _score_by_distance(centroids, dest_lat, dest_lng)
+        return None
 
-    from shapely.geometry import shape, Point
+    from shapely.geometry import shape
 
-    # During peak hours, shrink band thresholds so the same isochrone polygons
-    # are scored more harshly (a 20-min free-flow zone maps to ~28-min peak).
-    multiplier = PEAK_MULTIPLIER if is_peak else 1.0
-    adjusted_scores = {
-        band: max(0.0, score / multiplier) for band, score in BAND_SCORES.items()
-    }
-
-    bands = []
+    bands: list[tuple[int, object]] = []
     for feature in data.get("features", []):
         poly = shape(feature["geometry"])
         value = feature["properties"]["value"]
         bands.append((value, poly))
     bands.sort(key=lambda b: b[0])
+
+    _isochrone_cache[cache_key] = bands
+    return bands
+
+
+def _score_centroids_from_bands(
+    centroids: list[dict],
+    bands: list[tuple[int, object]],
+    dest_lat: float,
+    dest_lng: float,
+    is_peak: bool,
+) -> _ScoreResult:
+    """Evaluate each centroid against cached isochrone polygons."""
+    from shapely.geometry import Point
+
+    multiplier = PEAK_MULTIPLIER if is_peak else 1.0
+    adjusted_scores = {
+        band: max(0.0, score / multiplier) for band, score in BAND_SCORES.items()
+    }
 
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
@@ -120,10 +139,19 @@ async def _score_via_ors_isochrone(
     return scores, metrics
 
 
+async def _score_via_ors_isochrone(
+    centroids: list[dict], dest_lat: float, dest_lng: float,
+    is_peak: bool = True,
+) -> _ScoreResult:
+    bands = await _fetch_isochrone_bands(dest_lat, dest_lng)
+    if bands is None:
+        return _score_by_distance(centroids, dest_lat, dest_lng)
+    return _score_centroids_from_bands(centroids, bands, dest_lat, dest_lng, is_peak)
+
+
 def _score_by_distance(
     centroids: list[dict], dest_lat: float, dest_lng: float
 ) -> _ScoreResult:
-    """Fallback: score by straight-line distance."""
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
@@ -133,18 +161,24 @@ def _score_by_distance(
     return scores, metrics
 
 
-async def _score_via_google_transit(
-    centroids: list[dict], dest_lat: float, dest_lng: float,
-    is_peak: bool = True,
-) -> _ScoreResult:
-    """Score using Google Directions API for transit mode."""
+# ---------------------------------------------------------------------------
+# Google transit helpers
+# ---------------------------------------------------------------------------
+
+async def _fetch_transit_durations(
+    centroids: list[dict], dest_lat: float, dest_lng: float, is_peak: bool
+) -> dict[tuple[float, float], float]:
+    """Fetch transit durations for sampled centroids. Cached by destination."""
+    cache_key = (round(dest_lat, 4), round(dest_lng, 4), is_peak)
+    if cache_key in _transit_duration_cache:
+        return _transit_duration_cache[cache_key]
+
     if not GOOGLE_API_KEY:
-        return _score_by_distance(centroids, dest_lat, dest_lng)
+        return {}
 
     departure_ts = _next_weekday_timestamp(8 if is_peak else 11)
+    durations: dict[tuple[float, float], float] = {}
 
-    scores: dict[str, float] = {}
-    metrics: dict[str, float] = {}
     async with httpx.AsyncClient(timeout=30) as client:
         sample = centroids[::10]
         for c in sample:
@@ -162,40 +196,60 @@ async def _score_via_google_transit(
                 data = resp.json()
                 if data["status"] == "OK":
                     duration_s = data["routes"][0]["legs"][0]["duration"]["value"]
-                    scores[c["cell_id"]] = max(0.0, 1.0 - (duration_s / 5400) ** 0.7)
-                    metrics[c["cell_id"]] = round(duration_s / 60, 1)
-                else:
-                    scores[c["cell_id"]] = 0.5
-                    metrics[c["cell_id"]] = 0
+                    durations[(round(c["lat"], 5), round(c["lng"], 5))] = float(duration_s)
             except Exception:
-                scores[c["cell_id"]] = 0.5
-                metrics[c["cell_id"]] = 0
+                pass
 
-    sampled_ids = set(scores.keys())
+    _transit_duration_cache[cache_key] = durations
+    return durations
+
+
+def _score_centroids_from_transit(
+    centroids: list[dict],
+    durations: dict[tuple[float, float], float],
+    dest_lat: float,
+    dest_lng: float,
+) -> _ScoreResult:
+    """Interpolate transit scores for any resolution from cached sample durations."""
+    if not durations:
+        return _score_by_distance(centroids, dest_lat, dest_lng)
+
+    sample_points = list(durations.keys())
+
+    scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
     for c in centroids:
-        if c["cell_id"] not in sampled_ids:
-            nearest = _find_nearest_sampled(c, sample, sampled_ids)
-            scores[c["cell_id"]] = scores.get(nearest, 0.5)
-            metrics[c["cell_id"]] = metrics.get(nearest, 0)
+        lat, lng = c["lat"], c["lng"]
+        key = (round(lat, 5), round(lng, 5))
+
+        if key in durations:
+            duration_s = durations[key]
+        else:
+            best_dist = float("inf")
+            duration_s = 0.0
+            for slat, slng in sample_points:
+                d = _haversine_km(lat, lng, slat, slng)
+                if d < best_dist:
+                    best_dist = d
+                    duration_s = durations[(slat, slng)]
+
+        scores[c["cell_id"]] = max(0.0, 1.0 - (duration_s / 5400) ** 0.7)
+        metrics[c["cell_id"]] = round(duration_s / 60, 1)
 
     return scores, metrics
 
 
-def _find_nearest_sampled(
-    cell: dict, sampled: list[dict], sampled_ids: set[str]
-) -> str:
-    """Return the cell_id of the nearest sampled cell."""
-    best_dist = float("inf")
-    best_id = ""
-    for s in sampled:
-        if s["cell_id"] not in sampled_ids:
-            continue
-        d = _haversine_km(cell["lat"], cell["lng"], s["lat"], s["lng"])
-        if d < best_dist:
-            best_dist = d
-            best_id = s["cell_id"]
-    return best_id
+async def _score_via_google_transit(
+    centroids: list[dict], dest_lat: float, dest_lng: float,
+    is_peak: bool = True,
+) -> _ScoreResult:
+    durations = await _fetch_transit_durations(centroids, dest_lat, dest_lng, is_peak)
+    return _score_centroids_from_transit(centroids, durations, dest_lat, dest_lng)
 
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 async def score_commute(
     centroids: list[dict], params: dict
@@ -207,14 +261,7 @@ async def score_commute(
     time_of_day = params.get("time_of_day", "peak")
     is_peak = time_of_day == "peak"
 
-    cache_key = (round(dest_lat, 3), round(dest_lng, 3), mode, time_of_day)
-    if cache_key in _commute_cache:
-        return _commute_cache[cache_key]
-
     if mode == "transit":
-        result = await _score_via_google_transit(centroids, dest_lat, dest_lng, is_peak)
+        return await _score_via_google_transit(centroids, dest_lat, dest_lng, is_peak)
     else:
-        result = await _score_via_ors_isochrone(centroids, dest_lat, dest_lng, is_peak)
-
-    _commute_cache[cache_key] = result
-    return result
+        return await _score_via_ors_isochrone(centroids, dest_lat, dest_lng, is_peak)

@@ -2,7 +2,7 @@
   "name": "optim-house",
   "private": true,
   "scripts": {
-    "dev": "dotenv -- concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "dotenv -- concurrently --handle-input false --restart-tries -1 --restart-after 1000 -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
     "dev:frontend": "cd frontend && npm run dev",
     "install:all": "cd frontend && npm install"

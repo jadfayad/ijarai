@@ -6,7 +6,7 @@ from __future__ import annotations
 import math
 import httpx
 
-from app.grid_config import DUBAI_BOUNDS, AMENITY_SEARCH_RADIUS_M
+from app.grid_config import DUBAI_BOUNDS, DEFAULT_RESOLUTION, amenity_search_radius_m
 
 _poi_cache: dict[str, list[dict]] = {}
 
@@ -26,20 +26,25 @@ CATEGORY_TO_OSM: dict[str, str] = {
     "mosque": '["amenity"="place_of_worship"]["religion"="muslim"]',
 }
 
-SEARCH_RADIUS_M = AMENITY_SEARCH_RADIUS_M
+_DEG_TO_M_LAT = 111_320
+_MID_LAT = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
+_DEG_TO_M_LNG = 111_320 * math.cos(math.radians(_MID_LAT))
 
 
-def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlng = math.radians(lng2 - lng1)
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlng / 2) ** 2
-    )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+def _to_meters(lat: float, lng: float) -> tuple[float, float]:
+    """Project lat/lng to a local meter plane for fast neighborhood queries."""
+    return lng * _DEG_TO_M_LNG, lat * _DEG_TO_M_LAT
+
+
+def _build_spatial_bins(
+    points: list[tuple[float, float]], bin_size_m: float
+) -> dict[tuple[int, int], list[int]]:
+    bins: dict[tuple[int, int], list[int]] = {}
+    inv = 1.0 / bin_size_m
+    for idx, (x, y) in enumerate(points):
+        key = (int(math.floor(x * inv)), int(math.floor(y * inv)))
+        bins.setdefault(key, []).append(idx)
+    return bins
 
 
 async def _fetch_pois(category: str) -> list[dict]:
@@ -84,7 +89,7 @@ async def _fetch_pois(category: str) -> list[dict]:
 
 
 async def score_amenities(
-    centroids: list[dict], categories: list[str]
+    centroids: list[dict], categories: list[str], cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score each cell based on density of nearby amenities."""
     all_pois: list[dict] = []
@@ -96,15 +101,25 @@ async def score_amenities(
         empty = {c["cell_id"]: 0.5 for c in centroids}
         return empty, {c["cell_id"]: 0 for c in centroids}
 
-    radius_km = SEARCH_RADIUS_M / 1000
+    radius_m = float(amenity_search_radius_m(cell_size_m))
+    radius_m2 = radius_m * radius_m
+    bin_size_m = max(radius_m, 1.0)
+    poi_xy = [_to_meters(float(p["lat"]), float(p["lng"])) for p in all_pois]
+    poi_bins = _build_spatial_bins(poi_xy, bin_size_m)
     raw_counts: dict[str, int] = {}
 
     for c in centroids:
-        count = sum(
-            1
-            for p in all_pois
-            if _haversine_km(c["lat"], c["lng"], p["lat"], p["lng"]) <= radius_km
-        )
+        cx, cy = _to_meters(float(c["lat"]), float(c["lng"]))
+        bx = int(math.floor(cx / bin_size_m))
+        by = int(math.floor(cy / bin_size_m))
+
+        count = 0
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for poi_idx in poi_bins.get((bx + dx, by + dy), []):
+                    px, py = poi_xy[poi_idx]
+                    if (cx - px) ** 2 + (cy - py) ** 2 <= radius_m2:
+                        count += 1
         raw_counts[c["cell_id"]] = count
 
     max_count = max(raw_counts.values()) if raw_counts else 1

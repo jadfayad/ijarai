@@ -5,7 +5,7 @@ import { luma } from "@luma.gl/core";
 import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import { PolygonLayer } from "@deck.gl/layers";
 
 luma.registerAdapters([webgl2Adapter]);
 import { MapPin, Briefcase, Plane } from "lucide-react";
@@ -56,6 +56,29 @@ function scoreToColor(
     c0[2] + (c1[2] - c0[2]) * f,
     200,
   ];
+}
+
+function createSquarePolygon(
+  center: [number, number],
+  cellSizeMeters: number
+): [number, number][] {
+  const [lng, lat] = center;
+  const latRad = (lat * Math.PI) / 180;
+  const earthRadius = 6_378_137;
+  const half = cellSizeMeters / 2;
+  const offsets: [number, number][] = [
+    [-half, -half],
+    [half, -half],
+    [half, half],
+    [-half, half],
+    [-half, -half],
+  ];
+
+  return offsets.map(([dx, dy]) => {
+    const dLat = (dy / earthRadius) * (180 / Math.PI);
+    const dLng = (dx / (earthRadius * Math.cos(latRad))) * (180 / Math.PI);
+    return [lng + dLng, lat + dLat];
+  });
 }
 
 export function MapView() {
@@ -110,21 +133,22 @@ export function MapView() {
 
     if (!data.length) return [];
 
-    const circleRadius = GRID_RESOLUTION_CONFIG[gridResolution].circleRadius;
+    const cellSize = GRID_RESOLUTION_CONFIG[gridResolution].cell_size_m;
+    const dataWithPolygons = data.map((d) => ({
+      ...d,
+      polygon: createSquarePolygon(d.position, cellSize),
+    }));
 
     return [
-      new ScatterplotLayer({
+      new PolygonLayer({
         id: "score-cells",
-        data,
-        getPosition: (d: (typeof data)[0]) => d.position,
-        getFillColor: (d: (typeof data)[0]) =>
+        data: dataWithPolygons,
+        getPolygon: (d: (typeof dataWithPolygons)[0]) => d.polygon,
+        getFillColor: (d: (typeof dataWithPolygons)[0]) =>
           scoreToColor(d.weight, scoreRange.min, scoreRange.max),
-        getRadius: circleRadius,
         pickable: true,
-        radiusMinPixels: 2,
-        radiusMaxPixels: 8,
-        radiusUnits: "meters" as const,
         opacity: 0.85,
+        stroked: false,
       }),
     ];
   }, [scoreData, scoreThreshold, scoreRange, gridResolution]);

@@ -31,7 +31,9 @@ async def compute_scores(request: ScoreRequest) -> ScoreResponse:
             criterion_metrics[key] = metrics
         elif criterion.type == "amenities":
             scores, metrics = await score_amenities(
-                centroids, criterion.params.get("categories", [])
+                centroids,
+                criterion.params.get("categories", []),
+                request.cell_size_m,
             )
             criterion_scores["amenities"] = scores
             criterion_metrics["amenities"] = metrics

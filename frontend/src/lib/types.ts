@@ -7,16 +7,17 @@ export type TransportMode = "car" | "transit";
 
 export type TimeOfDay = "peak" | "off_peak";
 
-export type GridResolution = "coarse" | "normal" | "fine";
+export type GridResolution = "coarse" | "normal" | "fine" | "max";
 
 // Keep in sync with backend/app/grid_config.py RESOLUTIONS
 export const GRID_RESOLUTION_CONFIG: Record<
   GridResolution,
   { cell_size_m: number; label: string; description: string; circleRadius: number }
 > = {
-  coarse: { cell_size_m: 1000, label: "Coarse", description: "~1,300 cells — fast", circleRadius: 550 },
-  normal: { cell_size_m: 500, label: "Normal", description: "~5,400 cells — balanced", circleRadius: 300 },
-  fine: { cell_size_m: 250, label: "Fine", description: "~21,000 cells — detailed", circleRadius: 150 },
+  coarse: { cell_size_m: 2000, label: "Coarse", description: "~330 cells — fastest", circleRadius: 1100 },
+  normal: { cell_size_m: 1000, label: "Normal", description: "~1,300 cells — fast", circleRadius: 550 },
+  fine: { cell_size_m: 500, label: "Fine", description: "~5,400 cells — balanced", circleRadius: 300 },
+  max: { cell_size_m: 250, label: "Max", description: "~21,000 cells — detailed", circleRadius: 150 },
 };
 
 export type CriterionType =

@@ -25,30 +25,30 @@ Conversion factors at mid-latitude (25.15°N):
 
 ## Resolution Presets
 
-Three presets are available. Each one defines how the grid is spaced and how
+Four presets are available. Each one defines how the grid is spaced and how
 cells are drawn on the map.
 
 ### Dimensions & Counts
 
-| Property                  | Coarse       | Normal       | Fine          |
-|---------------------------|--------------|--------------|---------------|
-| **Cell spacing**          | 1,000 m      | 500 m        | 250 m         |
-| **Circle radius (visual)**| 550 m       | 300 m        | 150 m         |
-| **Circle diameter**       | 1,100 m      | 600 m        | 300 m         |
-| **Grid rows (lat)**       | ~34          | ~67          | ~134          |
-| **Grid columns (lng)**    | ~41          | ~81          | ~162          |
-| **Raw cells (rows × cols)**| ~1,394      | ~5,427       | ~21,708       |
-| **Land-only cells (approx)**| ~1,300     | ~5,400       | ~21,000       |
+| Property                    | Coarse       | Normal       | Fine         | Max           |
+|-----------------------------|--------------|--------------|--------------|---------------|
+| **Cell spacing**            | 2,000 m      | 1,000 m      | 500 m        | 250 m         |
+| **Circle radius (visual)**  | 1,100 m      | 550 m        | 300 m        | 150 m         |
+| **Circle diameter**         | 2,200 m      | 1,100 m      | 600 m        | 300 m         |
+| **Grid rows (lat)**         | ~17          | ~34          | ~67          | ~134          |
+| **Grid columns (lng)**      | ~21          | ~41          | ~81          | ~162          |
+| **Raw cells (rows × cols)** | ~357         | ~1,394       | ~5,427       | ~21,708       |
+| **Land-only cells (approx)**| ~330         | ~1,300       | ~5,400       | ~21,000       |
 
 > Roughly 7% of raw cells fall in the sea and are filtered out by the
 > `global-land-mask` library.
 
 ### Areas
 
-| Property                  | Coarse       | Normal       | Fine          |
-|---------------------------|--------------|--------------|---------------|
-| **Cell area (square)**    | 1.0 km²      | 0.25 km²     | 0.0625 km²    |
-| **Circle area**           | 0.9503 km²   | 0.2827 km²   | 0.0707 km²    |
+| Property                  | Coarse       | Normal       | Fine         | Max           |
+|---------------------------|--------------|--------------|--------------|---------------|
+| **Cell area (square)**    | 4.0 km²      | 1.0 km²      | 0.25 km²     | 0.0625 km²    |
+| **Circle area**           | 3.8013 km²   | 0.9503 km²   | 0.2827 km²   | 0.0707 km²    |
 
 ### Visual Overlap
 
@@ -57,11 +57,11 @@ adjacent circles overlap slightly, producing seamless visual coverage on the
 map (no gaps). The circles are rendered in meters (`radiusUnits: "meters"` in
 the deck.gl `ScatterplotLayer`).
 
-| Property                        | Coarse | Normal | Fine  |
-|---------------------------------|--------|--------|-------|
-| **Overlap between neighbours**  | 100 m  | 100 m  | 50 m  |
-| **Overlap as % of diameter**    | 9.1%   | 16.7%  | 16.7% |
-| **Radius-to-spacing ratio**     | 1.10×  | 1.20×  | 1.20× |
+| Property                        | Coarse  | Normal | Fine  | Max   |
+|---------------------------------|---------|--------|-------|-------|
+| **Overlap between neighbours**  | 200 m   | 100 m  | 100 m | 50 m  |
+| **Overlap as % of diameter**    | 9.1%    | 9.1%   | 16.7% | 16.7% |
+| **Radius-to-spacing ratio**     | 1.10×   | 1.10×  | 1.20× | 1.20× |
 
 ---
 
@@ -71,8 +71,9 @@ Each step down in resolution **halves the spacing** in both dimensions,
 resulting in roughly **4× the number of cells**:
 
 ```
-coarse  →  normal :  ×4.15   (1,300 → 5,400)
-normal  →  fine   :  ×3.89   (5,400 → 21,000)
+coarse  →  normal :  ×3.94   (330 → 1,300)
+normal  →  fine   :  ×4.15   (1,300 → 5,400)
+fine    →  max    :  ×3.89   (5,400 → 21,000)
 ```
 
 ---
@@ -86,9 +87,10 @@ across neighbouring cells at every resolution.
 
 | Resolution | Search radius / cell spacing |
 |------------|------------------------------|
-| Coarse     | 1.5×                         |
-| Normal     | 3.0×                         |
-| Fine       | 6.0×                         |
+| Coarse     | 0.75×                        |
+| Normal     | 1.5×                         |
+| Fine       | 3.0×                         |
+| Max        | 6.0×                         |
 
 ---
 

@@ -88,24 +88,33 @@ class GridResolution:
 COARSE = GridResolution(
     key="coarse",
     label="Coarse",
+    cell_size_m=2000,
+    circle_radius_m=1100,
+    approx_cells=330,
+    description="~330 cells — fastest",
+)
+
+NORMAL = GridResolution(
+    key="normal",
+    label="Normal",
     cell_size_m=1000,
     circle_radius_m=550,
     approx_cells=1300,
     description="~1,300 cells — fast",
 )
 
-NORMAL = GridResolution(
-    key="normal",
-    label="Normal",
+FINE = GridResolution(
+    key="fine",
+    label="Fine",
     cell_size_m=500,
     circle_radius_m=300,
     approx_cells=5400,
     description="~5,400 cells — balanced",
 )
 
-FINE = GridResolution(
-    key="fine",
-    label="Fine",
+MAX = GridResolution(
+    key="max",
+    label="Max",
     cell_size_m=250,
     circle_radius_m=150,
     approx_cells=21000,
@@ -116,6 +125,7 @@ RESOLUTIONS: dict[str, GridResolution] = {
     "coarse": COARSE,
     "normal": NORMAL,
     "fine": FINE,
+    "max": MAX,
 }
 
 DEFAULT_RESOLUTION = NORMAL
@@ -124,3 +134,17 @@ DEFAULT_RESOLUTION = NORMAL
 # Amenity search
 # ---------------------------------------------------------------------------
 AMENITY_SEARCH_RADIUS_M = 1500
+AMENITY_SEARCH_RADIUS_MIN_M = 250
+AMENITY_SEARCH_RADIUS_RATIO = 0.75
+
+
+def amenity_search_radius_m(cell_size_m: int) -> int:
+    """Resolution-aware amenity radius.
+
+    Keeps local detail at fine resolutions while retaining broad context for
+    coarse grids.
+    """
+    return max(
+        AMENITY_SEARCH_RADIUS_MIN_M,
+        min(AMENITY_SEARCH_RADIUS_M, int(round(cell_size_m * AMENITY_SEARCH_RADIUS_RATIO))),
+    )
