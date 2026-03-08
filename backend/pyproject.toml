@@ -13,4 +13,9 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "python-dotenv>=1.0.0",
     "geojson>=3.1.0",
+    "global-land-mask>=1.0.0",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
