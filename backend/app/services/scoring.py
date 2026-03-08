@@ -1,0 +1,88 @@
+"""
+Scoring engine: combines per-criterion scores with user weights.
+"""
+from __future__ import annotations
+
+from app.models.schemas import ScoreRequest, ScoreResponse
+from app.services.grid import get_grid_centroids
+
+
+async def compute_scores(request: ScoreRequest) -> ScoreResponse:
+    """Compute weighted scores for every grid cell."""
+    from app.services.commute import score_commute
+    from app.services.amenities import score_amenities
+    from app.services.static_data import score_budget, score_neighborhood, score_noise
+
+    centroids = get_grid_centroids()
+
+    criterion_scores: dict[str, dict[str, float]] = {}
+
+    for criterion in request.criteria:
+        if criterion.weight == 0:
+            continue
+
+        if criterion.type == "commute":
+            scores = await score_commute(centroids, criterion.params)
+            criterion_scores[f"commute_{criterion.params.get('mode', 'car')}"] = scores
+        elif criterion.type == "amenities":
+            scores = await score_amenities(
+                centroids, criterion.params.get("categories", [])
+            )
+            criterion_scores["amenities"] = scores
+        elif criterion.type == "budget":
+            scores = score_budget(
+                centroids, criterion.params.get("max_monthly_rent", 8000)
+            )
+            criterion_scores["budget"] = scores
+        elif criterion.type == "neighborhood":
+            scores = score_neighborhood(centroids)
+            criterion_scores["neighborhood"] = scores
+        elif criterion.type == "noise":
+            scores = score_noise(centroids)
+            criterion_scores["noise"] = scores
+
+    active_criteria = [c for c in request.criteria if c.weight > 0]
+    total_weight = sum(c.weight for c in active_criteria)
+
+    features = []
+    for centroid in centroids:
+        cid = centroid["cell_id"]
+        breakdown: dict[str, float] = {}
+        weighted_sum = 0.0
+
+        for criterion in active_criteria:
+            if criterion.type == "commute":
+                key = f"commute_{criterion.params.get('mode', 'car')}"
+            elif criterion.type == "amenities":
+                key = "amenities"
+            elif criterion.type == "budget":
+                key = "budget"
+            elif criterion.type == "neighborhood":
+                key = "neighborhood"
+            elif criterion.type == "noise":
+                key = "noise"
+            else:
+                continue
+
+            score = criterion_scores.get(key, {}).get(cid, 0.5)
+            breakdown[key] = round(score, 4)
+            weighted_sum += score * criterion.weight
+
+        final_score = weighted_sum / total_weight if total_weight > 0 else 0.5
+
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "cell_id": cid,
+                    "score": round(final_score, 4),
+                    **{f"s_{k}": v for k, v in breakdown.items()},
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [centroid["lng"], centroid["lat"]],
+                },
+            }
+        )
+
+    return ScoreResponse(features=features)

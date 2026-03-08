@@ -1,0 +1,12 @@
+node_modules/
+package-lock.json
+.next/
+.env
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+backend/app/data/dubai_grid.geojson
