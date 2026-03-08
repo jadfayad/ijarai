@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 
-interface Suggestion {
-  place_name: string;
-  center: [number, number]; // [lng, lat]
+interface Prediction {
+  place_id: string;
+  description: string;
 }
 
 interface Props {
@@ -15,10 +15,53 @@ interface Props {
   className?: string;
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY ?? "";
 
-// Dubai bounding box: [minLng, minLat, maxLng, maxLat]
-const DUBAI_BBOX = "54.89,24.78,55.87,25.51";
+const DUBAI_CENTER = { latitude: 25.2048, longitude: 55.2708 };
+
+async function fetchAutocomplete(input: string): Promise<Prediction[]> {
+  const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_API_KEY,
+    },
+    body: JSON.stringify({
+      input,
+      locationBias: {
+        circle: { center: DUBAI_CENTER, radius: 50000.0 },
+      },
+      includedRegionCodes: ["ae"],
+    }),
+  });
+
+  if (!res.ok) return [];
+  const data = await res.json();
+
+  return (
+    data.suggestions
+      ?.map((s: { placePrediction?: { placeId?: string; text?: { text?: string } } }) => ({
+        place_id: s.placePrediction?.placeId,
+        description: s.placePrediction?.text?.text,
+      }))
+      .filter((p: Prediction) => p.place_id && p.description) ?? []
+  );
+}
+
+async function fetchPlaceLocation(placeId: string): Promise<{ lat: number; lng: number } | null> {
+  const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+    headers: {
+      "X-Goog-Api-Key": GOOGLE_API_KEY,
+      "X-Goog-FieldMask": "location",
+    },
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.location) return null;
+
+  return { lat: data.location.latitude, lng: data.location.longitude };
+}
 
 export function AddressAutocomplete({
   value,
@@ -27,7 +70,7 @@ export function AddressAutocomplete({
   className,
 }: Props) {
   const [query, setQuery] = useState(value);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -37,34 +80,13 @@ export function AddressAutocomplete({
     setQuery(value);
   }, [value]);
 
-  const fetchSuggestions = useCallback(async (text: string) => {
-    if (!text.trim() || !MAPBOX_TOKEN) {
-      setSuggestions([]);
+  const handleFetch = useCallback(async (text: string) => {
+    if (!text.trim()) {
+      setPredictions([]);
       return;
     }
-
-    try {
-      const encoded = encodeURIComponent(text.trim());
-      const url =
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json` +
-        `?access_token=${MAPBOX_TOKEN}` +
-        `&autocomplete=true` +
-        `&bbox=${DUBAI_BBOX}` +
-        `&limit=5` +
-        `&types=address,poi,place,locality,neighborhood`;
-
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const data = await res.json();
-      setSuggestions(
-        (data.features ?? []).map((f: { place_name: string; center: [number, number] }) => ({
-          place_name: f.place_name,
-          center: f.center,
-        }))
-      );
-    } catch {
-      setSuggestions([]);
-    }
+    const results = await fetchAutocomplete(text.trim());
+    setPredictions(results);
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,29 +96,34 @@ export function AddressAutocomplete({
     setOpen(true);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(text), 300);
+    debounceRef.current = setTimeout(() => handleFetch(text), 200);
   };
 
-  const handleSelect = (suggestion: Suggestion) => {
-    const [lng, lat] = suggestion.center;
-    setQuery(suggestion.place_name);
-    setSuggestions([]);
+  const handleSelect = async (prediction: Prediction) => {
+    setQuery(prediction.description);
+    setPredictions([]);
     setOpen(false);
-    onSelect({ lat, lng, display_name: suggestion.place_name });
+
+    const location = await fetchPlaceLocation(prediction.place_id);
+    onSelect({
+      lat: location?.lat ?? 0,
+      lng: location?.lng ?? 0,
+      display_name: prediction.description,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!open || suggestions.length === 0) return;
+    if (!open || predictions.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => (i < suggestions.length - 1 ? i + 1 : 0));
+      setActiveIndex((i) => (i < predictions.length - 1 ? i + 1 : 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => (i > 0 ? i - 1 : suggestions.length - 1));
+      setActiveIndex((i) => (i > 0 ? i - 1 : predictions.length - 1));
     } else if (e.key === "Enter" && activeIndex >= 0) {
       e.preventDefault();
-      handleSelect(suggestions[activeIndex]);
+      handleSelect(predictions[activeIndex]);
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -119,22 +146,22 @@ export function AddressAutocomplete({
         value={query}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onFocus={() => predictions.length > 0 && setOpen(true)}
         className={className}
       />
-      {open && suggestions.length > 0 && (
+      {open && predictions.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
-          {suggestions.map((s, i) => (
+          {predictions.map((p, i) => (
             <li
-              key={s.place_name + i}
-              onMouseDown={() => handleSelect(s)}
+              key={p.place_id}
+              onMouseDown={() => handleSelect(p)}
               className={`cursor-pointer px-2.5 py-1.5 text-xs transition-colors ${
                 i === activeIndex
                   ? "bg-accent text-accent-foreground"
                   : "hover:bg-accent/50"
               }`}
             >
-              {s.place_name}
+              {p.description}
             </li>
           ))}
         </ul>

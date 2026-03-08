@@ -1,13 +1,21 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Map, { NavigationControl } from "react-map-gl/mapbox";
+import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { ScatterplotLayer } from "@deck.gl/layers";
+import { MapPin, Briefcase, Plane } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
 import { CellPopup } from "./CellPopup";
+import type { CommuteParams } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
+
+const ICON_MAP: Record<string, typeof MapPin> = {
+  briefcase: Briefcase,
+  plane: Plane,
+  "map-pin": MapPin,
+};
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -42,8 +50,26 @@ function scoreToColor(score: number): [number, number, number, number] {
 }
 
 export function MapView() {
-  const { scoreData, setSelectedCellId, selectedCellId, scoreThreshold, setScoreThreshold } =
+  const { criteria, scoreData, setSelectedCellId, selectedCellId, scoreThreshold, setScoreThreshold } =
     useCriteriaStore();
+
+  const destinations = useMemo(
+    () =>
+      criteria
+        .filter((c) => c.enabled && c.type === "commute")
+        .map((c) => {
+          const params = c.params as CommuteParams;
+          return {
+            id: c.id,
+            lat: params.destination.lat,
+            lng: params.destination.lng,
+            label: params.label || c.label,
+            icon: c.icon,
+          };
+        })
+        .filter((d) => d.lat !== 0 || d.lng !== 0),
+    [criteria]
+  );
   const [popupInfo, setPopupInfo] = useState<{
     x: number;
     y: number;
@@ -118,7 +144,25 @@ export function MapView() {
           mapboxAccessToken={MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/dark-v11"
           reuseMaps
-        />
+        >
+          {destinations.map((d) => {
+            const Icon = ICON_MAP[d.icon] ?? MapPin;
+            return (
+              <Marker key={d.id} longitude={d.lng} latitude={d.lat} anchor="bottom">
+                <div className="flex flex-col items-center group">
+                  <div className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg ring-2 ring-white/30 transition-transform group-hover:scale-110">
+                    <Icon size={16} />
+                  </div>
+                  {d.label && (
+                    <span className="mt-1 px-1.5 py-0.5 rounded bg-background/90 text-[10px] font-medium text-foreground shadow-sm border border-border whitespace-nowrap max-w-[150px] truncate">
+                      {d.label}
+                    </span>
+                  )}
+                </div>
+              </Marker>
+            );
+          })}
+        </Map>
       </DeckGL>
 
       {popupInfo && (
