@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { luma } from "@luma.gl/core";
 import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
@@ -119,6 +119,10 @@ export function MapView() {
     }
     return { min, max };
   }, [scoreData]);
+
+  useEffect(() => {
+    setScoreThreshold(scoreRange.min);
+  }, [scoreRange.min, setScoreThreshold]);
 
   const layers = useMemo(() => {
     if (!scoreData?.features?.length) return [];
