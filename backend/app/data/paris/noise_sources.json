@@ -1,0 +1,86 @@
+[
+  {
+    "center": [48.8600, 2.4100],
+    "radius_km": 1.5,
+    "intensity": 0.6,
+    "label": "Périphérique East (Porte de Vincennes)"
+  },
+  {
+    "center": [48.8900, 2.3800],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique Northeast (Porte de Pantin)"
+  },
+  {
+    "center": [48.9000, 2.3400],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique North (Porte de Clignancourt)"
+  },
+  {
+    "center": [48.8950, 2.2800],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique Northwest (Porte Maillot)"
+  },
+  {
+    "center": [48.8450, 2.2250],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique West (Porte de Saint-Cloud)"
+  },
+  {
+    "center": [48.8200, 2.2800],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique South (Porte de Vanves)"
+  },
+  {
+    "center": [48.8200, 2.3500],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique South (Porte d'Italie)"
+  },
+  {
+    "center": [48.8300, 2.4100],
+    "radius_km": 1.2,
+    "intensity": 0.6,
+    "label": "Périphérique Southeast (Porte de Charenton)"
+  },
+  {
+    "center": [48.8809, 2.3553],
+    "radius_km": 0.6,
+    "intensity": 0.5,
+    "label": "Gare du Nord / Gare de l'Est rail hub"
+  },
+  {
+    "center": [48.8443, 2.3735],
+    "radius_km": 0.5,
+    "intensity": 0.4,
+    "label": "Gare de Lyon rail hub"
+  },
+  {
+    "center": [48.8411, 2.3209],
+    "radius_km": 0.5,
+    "intensity": 0.4,
+    "label": "Gare Montparnasse rail hub"
+  },
+  {
+    "center": [48.8762, 2.3254],
+    "radius_km": 0.4,
+    "intensity": 0.3,
+    "label": "Gare Saint-Lazare rail hub"
+  },
+  {
+    "center": [48.8760, 2.3580],
+    "radius_km": 0.5,
+    "intensity": 0.4,
+    "label": "Grands Boulevards high-traffic area"
+  },
+  {
+    "center": [48.8530, 2.3490],
+    "radius_km": 0.5,
+    "intensity": 0.3,
+    "label": "Saint-Michel / Notre-Dame tourist area"
+  }
+]

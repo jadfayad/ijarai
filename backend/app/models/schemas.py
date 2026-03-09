@@ -54,4 +54,10 @@ class CityConfigResponse(BaseModel):
     center_lng: float
     timezone_offset_hours: int
     default_zoom: int
+    currency_code: str
+    currency_symbol: str
+    rent_min: int
+    rent_max: int
+    rent_step: int
+    rent_default: int
     default_destinations: list[DestinationConfig]

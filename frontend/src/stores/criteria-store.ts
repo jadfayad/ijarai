@@ -114,6 +114,12 @@ const FALLBACK_CITY: CityConfig = {
   center_lng: 55.2708,
   timezone_offset_hours: 4,
   default_zoom: 11,
+  currency_code: "AED",
+  currency_symbol: "AED",
+  rent_min: 2000,
+  rent_max: 20000,
+  rent_step: 500,
+  rent_default: 7000,
   default_destinations: [
     { label: "", lat: 25.2048, lng: 55.2708, icon: "briefcase" },
     { label: "DXB Airport", lat: 25.2532, lng: 55.3657, icon: "plane" },

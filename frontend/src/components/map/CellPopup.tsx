@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { useCriteriaStore } from "@/stores/criteria-store";
 
 const SCORE_LABELS: Record<string, string> = {
   s_commute_car_peak: "Car (Peak)",
@@ -24,7 +25,7 @@ function formatScoreKey(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatMetric(scoreKey: string, value: number): string | null {
+function formatMetric(scoreKey: string, value: number, currencySymbol: string): string | null {
   const base = scoreKey.replace(/^s_/, "");
 
   if (base.startsWith("commute_")) {
@@ -35,7 +36,7 @@ function formatMetric(scoreKey: string, value: number): string | null {
     return `${Math.round(value)} nearby`;
   }
   if (base === "budget") {
-    return `~${Math.round(value).toLocaleString()} AED/mo`;
+    return `~${currencySymbol}${Math.round(value).toLocaleString()}/mo`;
   }
   if (base === "neighborhood") {
     return `${value}/10`;
@@ -87,6 +88,7 @@ interface CellPopupProps {
 }
 
 export function CellPopup({ x, y, properties, areaName, onClose }: CellPopupProps) {
+  const currencySymbol = useCriteriaStore((s) => s.cityConfig.currency_symbol);
   const score = properties.score as number;
   const pct = Math.round(score * 100);
   const breakdownKeys = Object.keys(properties).filter((k) =>
@@ -136,7 +138,7 @@ export function CellPopup({ x, y, properties, areaName, onClose }: CellPopupProp
           const metricKey = key.replace(/^s_/, "m_");
           const metricValue = properties[metricKey] as number | undefined;
           const metric =
-            metricValue !== undefined ? formatMetric(key, metricValue) : null;
+            metricValue !== undefined ? formatMetric(key, metricValue, currencySymbol) : null;
 
           return (
             <ScoreBar

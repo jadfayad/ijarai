@@ -9,8 +9,9 @@ interface Props {
 }
 
 export function BudgetConfig({ criterion }: Props) {
-  const { updateCriterion } = useCriteriaStore();
+  const { updateCriterion, cityConfig } = useCriteriaStore();
   const params = criterion.params as BudgetParams;
+  const { currency_symbol, rent_min, rent_max, rent_step } = cityConfig;
 
   return (
     <div className="space-y-2 pt-1">
@@ -19,14 +20,14 @@ export function BudgetConfig({ criterion }: Props) {
           Max Monthly Rent
         </span>
         <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
-          {params.max_monthly_rent.toLocaleString()} AED
+          {currency_symbol}{params.max_monthly_rent.toLocaleString()}
         </span>
       </div>
       <Slider
         value={[params.max_monthly_rent]}
-        min={2000}
-        max={20000}
-        step={500}
+        min={rent_min}
+        max={rent_max}
+        step={rent_step}
         onValueChange={(val) => {
           const v = Array.isArray(val) ? val[0] : val;
           updateCriterion(criterion.id, {
@@ -35,8 +36,8 @@ export function BudgetConfig({ criterion }: Props) {
         }}
       />
       <div className="flex justify-between text-[10px] text-white/20">
-        <span>2,000</span>
-        <span>20,000</span>
+        <span>{rent_min.toLocaleString()}</span>
+        <span>{rent_max.toLocaleString()}</span>
       </div>
     </div>
   );

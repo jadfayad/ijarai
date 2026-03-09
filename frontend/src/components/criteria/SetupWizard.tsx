@@ -105,7 +105,7 @@ export function SetupWizard({ onComplete }: Props) {
 
   // Step 3: Other preferences
   const [budgetEnabled, setBudgetEnabled] = useState(false);
-  const [maxRent, setMaxRent] = useState(7000);
+  const [maxRent, setMaxRent] = useState(cityConfig.rent_default);
   const [neighborhoodEnabled, setNeighborhoodEnabled] = useState(false);
   const [noiseEnabled, setNoiseEnabled] = useState(false);
 
@@ -469,22 +469,22 @@ export function SetupWizard({ onComplete }: Props) {
                             Max Monthly Rent
                           </span>
                           <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
-                            {maxRent.toLocaleString()} AED
+                            {cityConfig.currency_symbol}{maxRent.toLocaleString()}
                           </span>
                         </div>
                         <Slider
                           value={[maxRent]}
-                          min={2000}
-                          max={20000}
-                          step={500}
+                          min={cityConfig.rent_min}
+                          max={cityConfig.rent_max}
+                          step={cityConfig.rent_step}
                           onValueChange={(val) => {
                             const v = Array.isArray(val) ? val[0] : val;
                             setMaxRent(v);
                           }}
                         />
                         <div className="flex justify-between text-[10px] text-white/20 mt-1">
-                          <span>2,000</span>
-                          <span>20,000</span>
+                          <span>{cityConfig.rent_min.toLocaleString()}</span>
+                          <span>{cityConfig.rent_max.toLocaleString()}</span>
                         </div>
                       </div>
                     )}

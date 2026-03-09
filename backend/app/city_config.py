@@ -33,6 +33,12 @@ class CityConfig:
     center_lng: float
     timezone_offset_hours: int
     default_zoom: int
+    currency_code: str = "USD"
+    currency_symbol: str = "$"
+    rent_min: int = 1000
+    rent_max: int = 10000
+    rent_step: int = 250
+    rent_default: int = 3000
     default_destinations: tuple[Destination, ...] = field(default_factory=tuple)
     data_dir_name: str | None = None
 
@@ -56,6 +62,12 @@ CITIES: dict[str, CityConfig] = {
         center_lng=55.2708,
         timezone_offset_hours=4,
         default_zoom=11,
+        currency_code="AED",
+        currency_symbol="AED",
+        rent_min=2000,
+        rent_max=20000,
+        rent_step=500,
+        rent_default=7000,
         default_destinations=(
             Destination(label="", lat=25.2048, lng=55.2708, icon="briefcase"),
             Destination(label="DXB Airport", lat=25.2532, lng=55.3657, icon="plane"),
@@ -76,12 +88,44 @@ CITIES: dict[str, CityConfig] = {
         center_lng=-122.4194,
         timezone_offset_hours=-8,
         default_zoom=12,
+        currency_code="USD",
+        currency_symbol="$",
+        rent_min=1000,
+        rent_max=8000,
+        rent_step=250,
+        rent_default=3000,
         default_destinations=(
             Destination(label="", lat=37.7749, lng=-122.4194, icon="briefcase"),
             Destination(label="SFO Airport", lat=37.6213, lng=-122.3790, icon="plane"),
             Destination(label="", lat=37.7749, lng=-122.4194, icon="map-pin"),
         ),
         data_dir_name="san_francisco",
+    ),
+    "paris": CityConfig(
+        slug="paris",
+        name="Paris",
+        country_code="fr",
+        bounds={
+            "min_lat": 48.815,
+            "max_lat": 48.905,
+            "min_lng": 2.22,
+            "max_lng": 2.46,
+        },
+        center_lat=48.8566,
+        center_lng=2.3522,
+        timezone_offset_hours=1,
+        default_zoom=12,
+        currency_code="EUR",
+        currency_symbol="€",
+        rent_min=500,
+        rent_max=4000,
+        rent_step=100,
+        rent_default=1500,
+        default_destinations=(
+            Destination(label="", lat=48.8566, lng=2.3522, icon="briefcase"),
+            Destination(label="CDG Airport", lat=49.0097, lng=2.5479, icon="plane"),
+            Destination(label="", lat=48.8566, lng=2.3522, icon="map-pin"),
+        ),
     ),
 }
 

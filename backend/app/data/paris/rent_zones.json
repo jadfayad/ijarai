@@ -1,0 +1,117 @@
+{
+  "louvre_les_halles": {
+    "center": [48.8606, 2.3376],
+    "radius_km": 0.7,
+    "avg_rent": 2100
+  },
+  "bourse": {
+    "center": [48.8685, 2.3412],
+    "radius_km": 0.5,
+    "avg_rent": 1900
+  },
+  "temple_haut_marais": {
+    "center": [48.8638, 2.3612],
+    "radius_km": 0.6,
+    "avg_rent": 2000
+  },
+  "marais": {
+    "center": [48.8554, 2.3574],
+    "radius_km": 0.6,
+    "avg_rent": 2300
+  },
+  "latin_quarter": {
+    "center": [48.8462, 2.3496],
+    "radius_km": 0.8,
+    "avg_rent": 2000
+  },
+  "saint_germain_des_pres": {
+    "center": [48.8510, 2.3332],
+    "radius_km": 0.7,
+    "avg_rent": 2500
+  },
+  "tour_eiffel_invalides": {
+    "center": [48.8566, 2.3150],
+    "radius_km": 0.9,
+    "avg_rent": 2600
+  },
+  "champs_elysees": {
+    "center": [48.8738, 2.3010],
+    "radius_km": 0.8,
+    "avg_rent": 2800
+  },
+  "opera": {
+    "center": [48.8767, 2.3376],
+    "radius_km": 0.6,
+    "avg_rent": 1800
+  },
+  "canal_saint_martin": {
+    "center": [48.8763, 2.3614],
+    "radius_km": 0.6,
+    "avg_rent": 1500
+  },
+  "bastille_oberkampf": {
+    "center": [48.8600, 2.3785],
+    "radius_km": 0.8,
+    "avg_rent": 1500
+  },
+  "bercy_nation": {
+    "center": [48.8396, 2.3876],
+    "radius_km": 1.0,
+    "avg_rent": 1400
+  },
+  "gobelins": {
+    "center": [48.8322, 2.3550],
+    "radius_km": 0.9,
+    "avg_rent": 1300
+  },
+  "montparnasse": {
+    "center": [48.8332, 2.3265],
+    "radius_km": 0.8,
+    "avg_rent": 1500
+  },
+  "vaugirard": {
+    "center": [48.8421, 2.2981],
+    "radius_km": 1.0,
+    "avg_rent": 1600
+  },
+  "passy_trocadero": {
+    "center": [48.8574, 2.2686],
+    "radius_km": 1.0,
+    "avg_rent": 2200
+  },
+  "batignolles": {
+    "center": [48.8869, 2.3150],
+    "radius_km": 0.8,
+    "avg_rent": 1700
+  },
+  "montmartre": {
+    "center": [48.8867, 2.3440],
+    "radius_km": 0.7,
+    "avg_rent": 1400
+  },
+  "buttes_chaumont": {
+    "center": [48.8809, 2.3825],
+    "radius_km": 0.8,
+    "avg_rent": 1200
+  },
+  "belleville_menilmontant": {
+    "center": [48.8653, 2.3986],
+    "radius_km": 0.8,
+    "avg_rent": 1200
+  },
+  "la_defense": {
+    "center": [48.8922, 2.2360],
+    "radius_km": 1.0,
+    "avg_rent": 1600
+  },
+  "boulogne_billancourt": {
+    "center": [48.8357, 2.2400],
+    "radius_km": 1.2,
+    "avg_rent": 1500
+  },
+  "neuilly_sur_seine": {
+    "center": [48.8847, 2.2690],
+    "radius_km": 0.8,
+    "avg_rent": 2100
+  }
+}

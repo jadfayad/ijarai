@@ -131,5 +131,11 @@ export interface CityConfig {
   center_lng: number;
   timezone_offset_hours: number;
   default_zoom: number;
+  currency_code: string;
+  currency_symbol: string;
+  rent_min: number;
+  rent_max: number;
+  rent_step: number;
+  rent_default: number;
   default_destinations: DestinationConfig[];
 }
