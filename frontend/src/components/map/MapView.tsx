@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { luma } from "@luma.gl/core";
 import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
@@ -150,9 +150,70 @@ export function MapView() {
     return { min, max };
   }, [scoreData]);
 
+  const animFrameRef = useRef<number | null>(null);
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevScoreDataRef = useRef<typeof scoreData>(null);
+
   useEffect(() => {
-    setScoreThreshold(scoreRange.min);
-  }, [scoreRange.min, setScoreThreshold]);
+    const isNewData = scoreData !== prevScoreDataRef.current;
+    prevScoreDataRef.current = scoreData;
+
+    if (delayTimerRef.current != null) {
+      clearTimeout(delayTimerRef.current);
+      delayTimerRef.current = null;
+    }
+    if (animFrameRef.current != null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+
+    if (!isNewData || !scoreData?.features?.length) {
+      setScoreThreshold(scoreRange.min);
+      return;
+    }
+
+    const from = scoreRange.min;
+    const target = Math.min(0.6, scoreRange.max);
+    if (target <= from) {
+      setScoreThreshold(from);
+      return;
+    }
+
+    setScoreThreshold(from);
+
+    delayTimerRef.current = setTimeout(() => {
+      delayTimerRef.current = null;
+      const durationMs = 1400;
+      const startTime = performance.now();
+
+      function step(now: number) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / durationMs, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = from + (target - from) * eased;
+        setScoreThreshold(value);
+
+        if (progress < 1) {
+          animFrameRef.current = requestAnimationFrame(step);
+        } else {
+          animFrameRef.current = null;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(step);
+    }, 600);
+
+    return () => {
+      if (delayTimerRef.current != null) {
+        clearTimeout(delayTimerRef.current);
+        delayTimerRef.current = null;
+      }
+      if (animFrameRef.current != null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+    };
+  }, [scoreData, scoreRange.min, scoreRange.max, setScoreThreshold]);
 
   const layers = useMemo(() => {
     if (!scoreData?.features?.length) return [];
