@@ -5,6 +5,8 @@ export interface LatLng {
 
 export type TransportMode = "car" | "transit";
 
+export type CommuteSource = "isochrone" | "google";
+
 export type TimeOfDay = "peak" | "off_peak";
 
 export type GridResolution = "coarse" | "normal" | "fine" | "max";
@@ -30,6 +32,7 @@ export type CriterionType =
 export interface CommuteParams {
   destination: LatLng;
   mode: TransportMode;
+  source: CommuteSource;
   time_of_day: TimeOfDay;
   label?: string;
 }

@@ -1,7 +1,7 @@
 """
-Commute scoring via OpenRouteService (car) and Google Directions (transit).
+Commute scoring via OpenRouteService (car) and Google Directions (driving/transit).
 
-Caches expensive API responses (isochrone polygons, transit durations) so that
+Caches expensive API responses (isochrone polygons, Google durations) so that
 switching grid resolution only re-evaluates cells — no duplicate API calls.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ PEAK_MULTIPLIER = 1.4
 _ScoreResult = tuple[dict[str, float], dict[str, float]]
 
 _isochrone_cache: TTLCache[tuple, list[tuple[int, object]]] = TTLCache(maxsize=32, ttl=3600)
-_transit_duration_cache: TTLCache[tuple, dict[tuple[float, float], float]] = TTLCache(maxsize=32, ttl=3600)
+_google_duration_cache: TTLCache[tuple, dict[tuple[float, float], float]] = TTLCache(maxsize=64, ttl=3600)
 
 DUBAI_TZ = timezone(timedelta(hours=4))
 
@@ -154,19 +154,19 @@ def _score_by_distance(
 
 
 # ---------------------------------------------------------------------------
-# Google transit helpers
+# Google Directions shared helpers (driving + transit)
 # ---------------------------------------------------------------------------
 
-_TRANSIT_MAX_SAMPLES = 60
-_TRANSIT_CONCURRENCY = 10
-_TRANSIT_NEAR_RADIUS_KM = 5.0
+_GOOGLE_MAX_SAMPLES = 60
+_GOOGLE_CONCURRENCY = 10
+_GOOGLE_NEAR_RADIUS_KM = 5.0
 _IDW_K = 3
 _IDW_POWER = 2.0
 
 
-def _select_transit_sample(
+def _select_sample(
     centroids: list[dict], dest_lat: float, dest_lng: float,
-    max_samples: int = _TRANSIT_MAX_SAMPLES,
+    max_samples: int = _GOOGLE_MAX_SAMPLES,
 ) -> list[dict]:
     """Pick spatially distributed sample points, denser near the destination."""
     with_dist = [
@@ -175,8 +175,8 @@ def _select_transit_sample(
     ]
     with_dist.sort(key=lambda x: x[1])
 
-    near = [c for c, d in with_dist if d < _TRANSIT_NEAR_RADIUS_KM]
-    far = [c for c, d in with_dist if d >= _TRANSIT_NEAR_RADIUS_KM]
+    near = [c for c, d in with_dist if d < _GOOGLE_NEAR_RADIUS_KM]
+    far = [c for c, d in with_dist if d >= _GOOGLE_NEAR_RADIUS_KM]
 
     near_budget = min(len(near), max(max_samples // 3, 10))
     near_step = max(1, len(near) // near_budget) if near else 1
@@ -192,49 +192,67 @@ def _select_transit_sample(
     return near_sample + far_sample
 
 
-async def _fetch_transit_durations(
-    centroids: list[dict], dest_lat: float, dest_lng: float, is_peak: bool,
+async def _fetch_google_durations(
+    centroids: list[dict],
+    dest_lat: float, dest_lng: float,
+    google_mode: str,
+    is_peak: bool,
 ) -> dict[tuple[float, float], float]:
-    """Fetch transit durations with smart sampling and concurrent API calls."""
-    cache_key = (round(dest_lat, 4), round(dest_lng, 4), is_peak)
-    if cache_key in _transit_duration_cache:
-        return _transit_duration_cache[cache_key]
+    """Fetch durations from Google Directions API with concurrent calls.
+
+    *google_mode* is "driving" or "transit".  For driving the response's
+    ``duration_in_traffic`` field is preferred when present.
+    """
+    cache_key = (google_mode, round(dest_lat, 4), round(dest_lng, 4), is_peak)
+    if cache_key in _google_duration_cache:
+        return _google_duration_cache[cache_key]
 
     if not GOOGLE_API_KEY:
         return {}
 
     departure_ts = _next_weekday_timestamp(8 if is_peak else 11)
     durations: dict[tuple[float, float], float] = {}
-    sem = asyncio.Semaphore(_TRANSIT_CONCURRENCY)
+    sem = asyncio.Semaphore(_GOOGLE_CONCURRENCY)
 
-    sample = _select_transit_sample(centroids, dest_lat, dest_lng)
-    logger.info("Transit: querying %d sample points (of %d centroids)", len(sample), len(centroids))
+    sample = _select_sample(centroids, dest_lat, dest_lng)
+    logger.info(
+        "Google %s: querying %d sample points (of %d centroids)",
+        google_mode, len(sample), len(centroids),
+    )
 
     async def _query(client: httpx.AsyncClient, c: dict) -> None:
         async with sem:
             try:
+                params: dict[str, str] = {
+                    "origin": f"{c['lat']},{c['lng']}",
+                    "destination": f"{dest_lat},{dest_lng}",
+                    "mode": google_mode,
+                    "departure_time": str(departure_ts),
+                    "key": GOOGLE_API_KEY,
+                }
                 resp = await client.get(
                     "https://maps.googleapis.com/maps/api/directions/json",
-                    params={
-                        "origin": f"{c['lat']},{c['lng']}",
-                        "destination": f"{dest_lat},{dest_lng}",
-                        "mode": "transit",
-                        "departure_time": str(departure_ts),
-                        "key": GOOGLE_API_KEY,
-                    },
+                    params=params,
                 )
                 data = resp.json()
                 if data["status"] == "OK":
-                    duration_s = data["routes"][0]["legs"][0]["duration"]["value"]
-                    durations[(round(c["lat"], 5), round(c["lng"], 5))] = float(duration_s)
+                    leg = data["routes"][0]["legs"][0]
+                    if google_mode == "driving" and "duration_in_traffic" in leg:
+                        dur = float(leg["duration_in_traffic"]["value"])
+                    else:
+                        dur = float(leg["duration"]["value"])
+                    durations[(round(c["lat"], 5), round(c["lng"], 5))] = dur
             except Exception:
                 pass
 
     async with httpx.AsyncClient(timeout=15) as client:
         await asyncio.gather(*[_query(client, c) for c in sample])
 
-    logger.info("Transit: %d/%d samples returned durations", len(durations), len(sample))
-    _transit_duration_cache[cache_key] = durations
+    logger.info(
+        "Google %s: %d/%d samples returned durations",
+        google_mode, len(durations), len(sample),
+    )
+    _google_duration_cache[cache_key] = durations
     return durations
 
 
@@ -259,8 +277,8 @@ def _idw_interpolate(
     return sum(w * dur / total_w for w, (_, dur) in zip(weights, nearest))
 
 
-def _transit_duration_to_score(duration_s: float) -> float:
-    """Map transit duration to a 0-1 score using the same bands as car scoring."""
+def _duration_to_score(duration_s: float) -> float:
+    """Map a travel duration (seconds) to a 0-1 score via band interpolation."""
     _BANDS = [(600, 1.0), (1200, 0.85), (1800, 0.65), (2700, 0.45), (3600, 0.25), (5400, 0.10)]
     if duration_s <= _BANDS[0][0]:
         return _BANDS[0][1]
@@ -274,13 +292,13 @@ def _transit_duration_to_score(duration_s: float) -> float:
     return tail_decay
 
 
-def _score_centroids_from_transit(
+def _score_from_google_durations(
     centroids: list[dict],
     durations: dict[tuple[float, float], float],
     dest_lat: float,
     dest_lng: float,
 ) -> _ScoreResult:
-    """Score centroids using IDW interpolation of cached transit durations."""
+    """Score centroids using IDW interpolation of cached Google durations."""
     if not durations:
         return _score_by_distance(centroids, dest_lat, dest_lng)
 
@@ -297,18 +315,20 @@ def _score_centroids_from_transit(
         else:
             duration_s = _idw_interpolate(lat, lng, sample_points, durations)
 
-        scores[c["cell_id"]] = _transit_duration_to_score(duration_s)
+        scores[c["cell_id"]] = _duration_to_score(duration_s)
         metrics[c["cell_id"]] = round(duration_s / 60, 1)
 
     return scores, metrics
 
 
-async def _score_via_google_transit(
+async def _score_via_google(
     centroids: list[dict], dest_lat: float, dest_lng: float,
-    is_peak: bool = True,
+    google_mode: str, is_peak: bool = True,
 ) -> _ScoreResult:
-    durations = await _fetch_transit_durations(centroids, dest_lat, dest_lng, is_peak)
-    return _score_centroids_from_transit(centroids, durations, dest_lat, dest_lng)
+    durations = await _fetch_google_durations(
+        centroids, dest_lat, dest_lng, google_mode, is_peak,
+    )
+    return _score_from_google_durations(centroids, durations, dest_lat, dest_lng)
 
 
 # ---------------------------------------------------------------------------
@@ -322,10 +342,14 @@ async def score_commute(
     dest_lat = dest.get("lat", 25.2048)
     dest_lng = dest.get("lng", 55.2708)
     mode = params.get("mode", "car")
+    source = params.get("source", "isochrone")
     time_of_day = params.get("time_of_day", "peak")
     is_peak = time_of_day == "peak"
 
     if mode == "transit":
-        return await _score_via_google_transit(centroids, dest_lat, dest_lng, is_peak)
-    else:
-        return await _score_via_ors_isochrone(centroids, dest_lat, dest_lng, is_peak)
+        return await _score_via_google(centroids, dest_lat, dest_lng, "transit", is_peak)
+
+    if source == "google":
+        return await _score_via_google(centroids, dest_lat, dest_lng, "driving", is_peak)
+
+    return await _score_via_ors_isochrone(centroids, dest_lat, dest_lng, is_peak)

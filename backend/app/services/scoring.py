@@ -13,8 +13,10 @@ from app.services.static_data import score_budget, score_neighborhood, score_noi
 def _criterion_key(criterion: CriterionRequest) -> str | None:
     if criterion.type == "commute":
         mode = criterion.params.get("mode", "car")
+        source = criterion.params.get("source", "isochrone")
         tod = criterion.params.get("time_of_day", "peak")
-        return f"commute_{mode}_{tod}"
+        src_tag = "_google" if source == "google" else ""
+        return f"commute_{mode}{src_tag}_{tod}"
     if criterion.type in ("amenities", "budget", "neighborhood", "noise"):
         return criterion.type
     return None

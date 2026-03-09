@@ -3,12 +3,14 @@
 import { X } from "lucide-react";
 
 const SCORE_LABELS: Record<string, string> = {
-  s_commute_car_peak: "Commute Car (Peak)",
-  s_commute_car_off_peak: "Commute Car (Off-Peak)",
-  s_commute_transit_peak: "Commute Transit (Peak)",
-  s_commute_transit_off_peak: "Commute Transit (Off-Peak)",
-  s_commute_car: "Commute (Car)",
-  s_commute_transit: "Commute (Transit)",
+  s_commute_car_peak: "Car (Peak)",
+  s_commute_car_off_peak: "Car (Off-Peak)",
+  s_commute_car_google_peak: "Car Traffic (Peak)",
+  s_commute_car_google_off_peak: "Car Traffic (Off-Peak)",
+  s_commute_transit_peak: "Transit (Peak)",
+  s_commute_transit_off_peak: "Transit (Off-Peak)",
+  s_commute_car: "Car",
+  s_commute_transit: "Transit",
   s_amenities: "Amenities",
   s_budget: "Budget Match",
   s_neighborhood: "Neighborhood",
