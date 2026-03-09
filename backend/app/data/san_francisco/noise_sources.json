@@ -1,0 +1,16 @@
+[
+  { "center": [37.6213, -122.3790], "radius_km": 5, "intensity": 1.0, "label": "SFO Airport runway" },
+  { "center": [37.6150, -122.3920], "radius_km": 4, "intensity": 0.8, "label": "SFO Airport terminal area" },
+  { "center": [37.7700, -122.4010], "radius_km": 1.0, "intensity": 0.6, "label": "US-101 (SoMa)" },
+  { "center": [37.7400, -122.3950], "radius_km": 1.0, "intensity": 0.6, "label": "US-101 (Bayview)" },
+  { "center": [37.7850, -122.4060], "radius_km": 0.8, "intensity": 0.5, "label": "I-80 (Financial District approach)" },
+  { "center": [37.7790, -122.3930], "radius_km": 1.0, "intensity": 0.6, "label": "I-80 / Bay Bridge on-ramp" },
+  { "center": [37.7550, -122.4130], "radius_km": 0.8, "intensity": 0.5, "label": "I-280 (Mission)" },
+  { "center": [37.7300, -122.4050], "radius_km": 0.8, "intensity": 0.5, "label": "I-280 (Bayview)" },
+  { "center": [37.8000, -122.4500], "radius_km": 0.7, "intensity": 0.4, "label": "US-101 (Presidio/Lombard)" },
+  { "center": [37.8080, -122.4177], "radius_km": 0.5, "intensity": 0.3, "label": "Fisherman's Wharf tourist area" },
+  { "center": [37.7760, -122.4260], "radius_km": 0.4, "intensity": 0.3, "label": "Market Street corridor" },
+  { "center": [37.7847, -122.4090], "radius_km": 0.6, "intensity": 0.4, "label": "BART Civic Center / Powell tunnel" },
+  { "center": [37.7650, -122.4200], "radius_km": 0.5, "intensity": 0.3, "label": "16th St BART station area" },
+  { "center": [37.7520, -122.4180], "radius_km": 0.5, "intensity": 0.3, "label": "24th St BART station area" }
+]

@@ -5,11 +5,11 @@ import { CriteriaPanel } from "@/components/criteria/CriteriaPanel";
 import { MapView } from "@/components/map/MapView";
 import { useCriteriaStore } from "@/stores/criteria-store";
 
-export default function DubaiPage() {
+export default function SanFranciscoPage() {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
 
   useEffect(() => {
-    loadCityConfig("dubai");
+    loadCityConfig("san-francisco");
   }, [loadCityConfig]);
 
   return (

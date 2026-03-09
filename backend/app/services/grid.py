@@ -1,7 +1,7 @@
 """
 Grid generation and management.
 
-Generates an H3 hexagonal grid covering the active city's urban areas,
+Generates an H3 hexagonal grid covering a city's urban areas,
 filtered to land-only cells using the global-land-mask dataset.
 """
 from __future__ import annotations
@@ -11,24 +11,23 @@ import json
 import h3
 from global_land_mask import globe
 
-from app.city_config import get_active_city
+from app.city_config import CityConfig
 from app.grid_config import (
     DEFAULT_RESOLUTION,
     cell_size_to_h3_res,
 )
 
 _GRID_VERSION = 4
-_city = get_active_city()
 
 
-def _grid_path(h3_res: int):
-    return _city.data_dir / f"grid_h3r{h3_res}.geojson"
+def _grid_path(city: CityConfig, h3_res: int):
+    return city.data_dir / f"grid_h3r{h3_res}.geojson"
 
 
-def generate_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
+def generate_grid(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
     """Generate a GeoJSON FeatureCollection of H3 hex cells over the city (land only)."""
     h3_res = cell_size_to_h3_res(cell_size_m)
-    bounds = _city.bounds
+    bounds = city.bounds
 
     boundary = h3.LatLngPoly([
         (bounds["min_lat"], bounds["min_lng"]),
@@ -57,25 +56,25 @@ def generate_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
     return {"type": "FeatureCollection", "features": features}
 
 
-def load_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
+def load_grid(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
     """Load the grid from disk, regenerating when the version changes."""
     h3_res = cell_size_to_h3_res(cell_size_m)
-    path = _grid_path(h3_res)
+    path = _grid_path(city, h3_res)
     if path.exists():
         grid = json.loads(path.read_text())
         if grid.get("_version") == _GRID_VERSION:
             return grid
 
-    grid = generate_grid(cell_size_m)
+    grid = generate_grid(city, cell_size_m)
     grid["_version"] = _GRID_VERSION
-    _city.data_dir.mkdir(parents=True, exist_ok=True)
+    city.data_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(grid))
     return grid
 
 
-def get_grid_centroids(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> list[dict]:
+def get_grid_centroids(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> list[dict]:
     """Return list of {cell_id, lat, lng} dicts."""
-    grid = load_grid(cell_size_m)
+    grid = load_grid(city, cell_size_m)
     centroids = []
     for f in grid["features"]:
         coords = f["geometry"]["coordinates"]

@@ -1,17 +1,16 @@
 from fastapi import APIRouter, HTTPException
 import httpx
 
-from app.city_config import get_active_city
+from app.city_config import get_city
 from app.models.schemas import GeocodeRequest, GeocodeResponse
 
 router = APIRouter()
-
-_city = get_active_city()
 
 
 @router.post("/geocode", response_model=GeocodeResponse)
 async def geocode_address(request: GeocodeRequest):
     """Geocode an address string to lat/lng using Nominatim (OSM)."""
+    city = get_city(request.city)
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             "https://nominatim.openstreetmap.org/search",
@@ -19,7 +18,7 @@ async def geocode_address(request: GeocodeRequest):
                 "q": request.address,
                 "format": "json",
                 "limit": 1,
-                "countrycodes": _city.country_code,
+                "countrycodes": city.country_code,
             },
             headers={"User-Agent": "OptimHouse/1.0"},
         )

@@ -34,10 +34,11 @@ class CityConfig:
     timezone_offset_hours: int
     default_zoom: int
     default_destinations: tuple[Destination, ...] = field(default_factory=tuple)
+    data_dir_name: str | None = None
 
     @property
     def data_dir(self) -> Path:
-        return DATA_DIR / self.slug
+        return DATA_DIR / (self.data_dir_name or self.slug)
 
 
 CITIES: dict[str, CityConfig] = {
@@ -61,13 +62,42 @@ CITIES: dict[str, CityConfig] = {
             Destination(label="", lat=25.2048, lng=55.2708, icon="map-pin"),
         ),
     ),
+    "san-francisco": CityConfig(
+        slug="san-francisco",
+        name="San Francisco",
+        country_code="us",
+        bounds={
+            "min_lat": 37.70,
+            "max_lat": 37.82,
+            "min_lng": -122.52,
+            "max_lng": -122.35,
+        },
+        center_lat=37.7749,
+        center_lng=-122.4194,
+        timezone_offset_hours=-8,
+        default_zoom=12,
+        default_destinations=(
+            Destination(label="", lat=37.7749, lng=-122.4194, icon="briefcase"),
+            Destination(label="SFO Airport", lat=37.6213, lng=-122.3790, icon="plane"),
+            Destination(label="", lat=37.7749, lng=-122.4194, icon="map-pin"),
+        ),
+        data_dir_name="san_francisco",
+    ),
 }
 
 
-def get_active_city() -> CityConfig:
-    slug = os.getenv("CITY", "dubai").lower()
-    if slug not in CITIES:
+def _normalize_slug(slug: str) -> str:
+    return slug.lower().replace("_", "-")
+
+
+def get_city(slug: str) -> CityConfig:
+    normalized = _normalize_slug(slug)
+    if normalized not in CITIES:
         raise ValueError(
             f"Unknown city '{slug}'. Available: {', '.join(CITIES.keys())}"
         )
-    return CITIES[slug]
+    return CITIES[normalized]
+
+
+def get_active_city() -> CityConfig:
+    return get_city(os.getenv("CITY", "dubai"))

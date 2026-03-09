@@ -1,0 +1,63 @@
+{
+  "financial_district": { "center": [37.7946, -122.3999], "radius_km": 0.8, "avg_rent": 3800 },
+  "soma": { "center": [37.7785, -122.3950], "radius_km": 1.2, "avg_rent": 3500 },
+  "mission_bay": { "center": [37.7700, -122.3930], "radius_km": 1.0, "avg_rent": 3600 },
+  "south_beach": { "center": [37.7860, -122.3880], "radius_km": 0.6, "avg_rent": 3900 },
+  "rincon_hill": { "center": [37.7870, -122.3920], "radius_km": 0.5, "avg_rent": 3700 },
+
+  "nob_hill": { "center": [37.7930, -122.4160], "radius_km": 0.6, "avg_rent": 3200 },
+  "russian_hill": { "center": [37.8010, -122.4190], "radius_km": 0.6, "avg_rent": 3400 },
+  "pacific_heights": { "center": [37.7925, -122.4350], "radius_km": 0.8, "avg_rent": 4200 },
+  "cow_hollow": { "center": [37.7985, -122.4370], "radius_km": 0.5, "avg_rent": 3800 },
+  "marina": { "center": [37.8020, -122.4370], "radius_km": 0.7, "avg_rent": 3600 },
+  "presidio_heights": { "center": [37.7880, -122.4500], "radius_km": 0.6, "avg_rent": 4000 },
+  "laurel_heights": { "center": [37.7850, -122.4520], "radius_km": 0.5, "avg_rent": 3400 },
+
+  "north_beach": { "center": [37.8060, -122.4100], "radius_km": 0.6, "avg_rent": 2900 },
+  "chinatown": { "center": [37.7941, -122.4078], "radius_km": 0.4, "avg_rent": 2200 },
+  "tenderloin": { "center": [37.7847, -122.4130], "radius_km": 0.5, "avg_rent": 1800 },
+  "union_square": { "center": [37.7880, -122.4075], "radius_km": 0.4, "avg_rent": 3000 },
+  "civic_center": { "center": [37.7793, -122.4193], "radius_km": 0.6, "avg_rent": 2400 },
+
+  "hayes_valley": { "center": [37.7760, -122.4260], "radius_km": 0.5, "avg_rent": 3200 },
+  "lower_haight": { "center": [37.7720, -122.4310], "radius_km": 0.4, "avg_rent": 2800 },
+  "haight_ashbury": { "center": [37.7700, -122.4470], "radius_km": 0.6, "avg_rent": 2900 },
+  "cole_valley": { "center": [37.7660, -122.4500], "radius_km": 0.4, "avg_rent": 3100 },
+  "nopa": { "center": [37.7740, -122.4400], "radius_km": 0.5, "avg_rent": 3000 },
+  "western_addition": { "center": [37.7810, -122.4350], "radius_km": 0.7, "avg_rent": 2600 },
+  "alamo_square": { "center": [37.7760, -122.4350], "radius_km": 0.4, "avg_rent": 3000 },
+
+  "castro": { "center": [37.7609, -122.4350], "radius_km": 0.5, "avg_rent": 3100 },
+  "noe_valley": { "center": [37.7502, -122.4332], "radius_km": 0.7, "avg_rent": 3500 },
+  "glen_park": { "center": [37.7340, -122.4330], "radius_km": 0.6, "avg_rent": 3000 },
+  "diamond_heights": { "center": [37.7430, -122.4400], "radius_km": 0.5, "avg_rent": 2800 },
+  "twin_peaks": { "center": [37.7544, -122.4477], "radius_km": 0.5, "avg_rent": 2900 },
+
+  "mission": { "center": [37.7599, -122.4148], "radius_km": 1.0, "avg_rent": 2800 },
+  "mission_dolores": { "center": [37.7640, -122.4268], "radius_km": 0.4, "avg_rent": 3000 },
+  "potrero_hill": { "center": [37.7600, -122.3990], "radius_km": 0.7, "avg_rent": 3200 },
+  "dogpatch": { "center": [37.7580, -122.3870], "radius_km": 0.5, "avg_rent": 3100 },
+  "bernal_heights": { "center": [37.7395, -122.4154], "radius_km": 0.7, "avg_rent": 3000 },
+
+  "inner_richmond": { "center": [37.7800, -122.4610], "radius_km": 0.7, "avg_rent": 2600 },
+  "outer_richmond": { "center": [37.7790, -122.4900], "radius_km": 1.0, "avg_rent": 2300 },
+  "inner_sunset": { "center": [37.7620, -122.4650], "radius_km": 0.8, "avg_rent": 2700 },
+  "outer_sunset": { "center": [37.7550, -122.4950], "radius_km": 1.2, "avg_rent": 2200 },
+  "parkside": { "center": [37.7440, -122.4870], "radius_km": 0.7, "avg_rent": 2400 },
+  "forest_hill": { "center": [37.7480, -122.4590], "radius_km": 0.5, "avg_rent": 2800 },
+  "west_portal": { "center": [37.7400, -122.4660], "radius_km": 0.5, "avg_rent": 2700 },
+  "st_francis_wood": { "center": [37.7350, -122.4620], "radius_km": 0.4, "avg_rent": 3200 },
+
+  "bayview": { "center": [37.7300, -122.3900], "radius_km": 1.0, "avg_rent": 2200 },
+  "hunters_point": { "center": [37.7280, -122.3750], "radius_km": 0.8, "avg_rent": 1900 },
+  "visitacion_valley": { "center": [37.7180, -122.4050], "radius_km": 0.7, "avg_rent": 2000 },
+  "excelsior": { "center": [37.7250, -122.4270], "radius_km": 0.7, "avg_rent": 2300 },
+  "portola": { "center": [37.7290, -122.4060], "radius_km": 0.5, "avg_rent": 2200 },
+  "oceanview": { "center": [37.7180, -122.4550], "radius_km": 0.6, "avg_rent": 2100 },
+  "ingleside": { "center": [37.7230, -122.4490], "radius_km": 0.6, "avg_rent": 2200 },
+
+  "telegraph_hill": { "center": [37.8020, -122.4050], "radius_km": 0.4, "avg_rent": 3300 },
+  "fishermans_wharf": { "center": [37.8080, -122.4177], "radius_km": 0.5, "avg_rent": 3000 },
+  "embarcadero": { "center": [37.7935, -122.3940], "radius_km": 0.5, "avg_rent": 3800 },
+  "sea_cliff": { "center": [37.7870, -122.4890], "radius_km": 0.5, "avg_rent": 4500 }
+}

@@ -1,29 +1,44 @@
 """
 Static data scoring: rent zones, neighborhood reputation, noise index.
 
-Zone data is loaded from JSON files in data/<city>/ at import time.
+Zone data is loaded lazily from JSON files in data/<city>/ and cached per city.
 """
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
+from pathlib import Path
 
-from app.city_config import get_active_city
+from app.city_config import CityConfig
 from app.utils.geo import haversine_km
 
-_city = get_active_city()
-_CITY_DATA_DIR = _city.data_dir
+
+@dataclass
+class CityStaticData:
+    rent_zones: dict[str, dict] = field(default_factory=dict)
+    neighborhood_scores: dict[str, dict] = field(default_factory=dict)
+    noise_sources: list[dict] = field(default_factory=list)
 
 
-def _load_json(filename: str) -> dict | list:
-    path = _CITY_DATA_DIR / filename
+_cache: dict[str, CityStaticData] = {}
+
+
+def _load_json(data_dir: Path, filename: str) -> dict | list:
+    path = data_dir / filename
     if not path.exists():
         return {} if filename.endswith("scores.json") or filename == "rent_zones.json" else []
     return json.loads(path.read_text())
 
 
-RENT_ZONES: dict[str, dict] = _load_json("rent_zones.json")
-NEIGHBORHOOD_SCORES: dict[str, dict] = _load_json("neighborhood_scores.json")
-NOISE_SOURCES: list[dict] = _load_json("noise_sources.json")
+def _get_data(city: CityConfig) -> CityStaticData:
+    if city.slug not in _cache:
+        d = city.data_dir
+        _cache[city.slug] = CityStaticData(
+            rent_zones=_load_json(d, "rent_zones.json"),
+            neighborhood_scores=_load_json(d, "neighborhood_scores.json"),
+            noise_sources=_load_json(d, "noise_sources.json"),
+        )
+    return _cache[city.slug]
 
 
 def _find_zone_value(
@@ -77,17 +92,14 @@ def _format_zone_name(key: str) -> str:
     )
 
 
-def find_nearest_zone_name(lat: float, lng: float) -> str | None:
-    """Return the display name of the closest rent zone.
+def find_nearest_zone_name(city: CityConfig, lat: float, lng: float) -> str | None:
+    """Return the display name of the closest rent zone."""
+    rent_zones = _get_data(city).rent_zones
 
-    Returns the name of the zone the point falls inside (closest wins),
-    or the single nearest zone if within 5 km. Returns None if too far
-    from any known zone.
-    """
     best_name: str | None = None
     best_dist = float("inf")
 
-    for name, zone in RENT_ZONES.items():
+    for name, zone in rent_zones.items():
         center = zone["center"]
         dist = haversine_km(lat, lng, center[0], center[1])
         if dist <= zone["radius_km"] and dist < best_dist:
@@ -99,7 +111,7 @@ def find_nearest_zone_name(lat: float, lng: float) -> str | None:
 
     nearest_name: str | None = None
     nearest_dist = float("inf")
-    for name, zone in RENT_ZONES.items():
+    for name, zone in rent_zones.items():
         center = zone["center"]
         dist = haversine_km(lat, lng, center[0], center[1])
         if dist < nearest_dist:
@@ -113,13 +125,14 @@ def find_nearest_zone_name(lat: float, lng: float) -> str | None:
 
 
 def score_budget(
-    centroids: list[dict], max_monthly_rent: float
+    city: CityConfig, centroids: list[dict], max_monthly_rent: float
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by how affordable they are relative to user's budget."""
+    rent_zones = _get_data(city).rent_zones
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
-        avg_rent = _find_zone_value(c["lat"], c["lng"], RENT_ZONES, "avg_rent", 6000)
+        avg_rent = _find_zone_value(c["lat"], c["lng"], rent_zones, "avg_rent", 6000)
         ratio = avg_rent / max_monthly_rent
         if ratio <= 1.0:
             scores[c["cell_id"]] = 1.0 - 0.5 * ratio
@@ -130,27 +143,29 @@ def score_budget(
 
 
 def score_neighborhood(
-    centroids: list[dict],
+    city: CityConfig, centroids: list[dict],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by neighborhood reputation."""
+    neighborhood_scores = _get_data(city).neighborhood_scores
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
-        rep = _find_zone_value(c["lat"], c["lng"], NEIGHBORHOOD_SCORES, "score", 5.0)
+        rep = _find_zone_value(c["lat"], c["lng"], neighborhood_scores, "score", 5.0)
         scores[c["cell_id"]] = rep / 10.0
         metrics[c["cell_id"]] = round(rep, 1)
     return scores, metrics
 
 
 def score_noise(
-    centroids: list[dict],
+    city: CityConfig, centroids: list[dict],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by noise level (higher score = quieter = better)."""
+    noise_sources = _get_data(city).noise_sources
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
         max_noise = 0.0
-        for src in NOISE_SOURCES:
+        for src in noise_sources:
             dist = haversine_km(c["lat"], c["lng"], src["center"][0], src["center"][1])
             if dist < src["radius_km"]:
                 noise = src["intensity"] * (1 - dist / src["radius_km"])

@@ -7,7 +7,7 @@ import math
 import httpx
 from cachetools import TTLCache
 
-from app.city_config import get_active_city
+from app.city_config import CityConfig
 from app.grid_config import DEFAULT_RESOLUTION, amenity_search_radius_m
 from app.utils.geo import to_meters
 
@@ -29,10 +29,6 @@ CATEGORY_TO_OSM: dict[str, str] = {
     "mosque": '["amenity"="place_of_worship"]["religion"="muslim"]',
 }
 
-_city = get_active_city()
-_BOUNDS = _city.bounds
-_MID_LAT = (_BOUNDS["min_lat"] + _BOUNDS["max_lat"]) / 2
-
 
 def _build_spatial_bins(
     points: list[tuple[float, float]], bin_size_m: float
@@ -45,16 +41,18 @@ def _build_spatial_bins(
     return bins
 
 
-async def _fetch_pois(category: str) -> list[dict]:
-    """Query Overpass API for POIs of a given category. Results are cached in-memory."""
-    if category in _poi_cache:
-        return _poi_cache[category]
+async def _fetch_pois(city: CityConfig, category: str) -> list[dict]:
+    """Query Overpass API for POIs of a given category. Results are cached per city+category."""
+    cache_key = f"{city.slug}:{category}"
+    if cache_key in _poi_cache:
+        return _poi_cache[cache_key]
 
     osm_tag = CATEGORY_TO_OSM.get(category)
     if not osm_tag:
         return []
 
-    bbox = f"{_BOUNDS['min_lat']},{_BOUNDS['min_lng']},{_BOUNDS['max_lat']},{_BOUNDS['max_lng']}"
+    bounds = city.bounds
+    bbox = f"{bounds['min_lat']},{bounds['min_lng']},{bounds['max_lat']},{bounds['max_lng']}"
     query = f"""
     [out:json][timeout:25];
     (
@@ -82,32 +80,38 @@ async def _fetch_pois(category: str) -> list[dict]:
         if lat and lon:
             pois.append({"lat": lat, "lng": lon})
 
-    _poi_cache[category] = pois
+    _poi_cache[cache_key] = pois
     return pois
 
 
 async def score_amenities(
-    centroids: list[dict], categories: list[str], cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m
+    city: CityConfig,
+    centroids: list[dict],
+    categories: list[str],
+    cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m,
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score each cell based on density of nearby amenities."""
     all_pois: list[dict] = []
     for cat in categories:
-        pois = await _fetch_pois(cat)
+        pois = await _fetch_pois(city, cat)
         all_pois.extend(pois)
 
     if not all_pois:
         empty = {c["cell_id"]: 0.5 for c in centroids}
         return empty, {c["cell_id"]: 0 for c in centroids}
 
+    bounds = city.bounds
+    mid_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2
+
     radius_m = float(amenity_search_radius_m(cell_size_m))
     radius_m2 = radius_m * radius_m
     bin_size_m = max(radius_m, 1.0)
-    poi_xy = [to_meters(float(p["lat"]), float(p["lng"]), _MID_LAT) for p in all_pois]
+    poi_xy = [to_meters(float(p["lat"]), float(p["lng"]), mid_lat) for p in all_pois]
     poi_bins = _build_spatial_bins(poi_xy, bin_size_m)
     raw_counts: dict[str, int] = {}
 
     for c in centroids:
-        cx, cy = to_meters(float(c["lat"]), float(c["lng"]), _MID_LAT)
+        cx, cy = to_meters(float(c["lat"]), float(c["lng"]), mid_lat)
         bx = int(math.floor(cx / bin_size_m))
         by = int(math.floor(cy / bin_size_m))
 

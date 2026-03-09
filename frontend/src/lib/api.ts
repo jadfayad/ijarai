@@ -14,17 +14,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export async function computeScores(body: ScoreRequest): Promise<ScoreResponse> {
+export async function computeScores(body: ScoreRequest & { city?: string }): Promise<ScoreResponse> {
   return request<ScoreResponse>("/api/score", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export async function geocodeAddress(address: string): Promise<GeocodeResult> {
+export async function geocodeAddress(address: string, city?: string): Promise<GeocodeResult> {
   return request<GeocodeResult>("/api/geocode", {
     method: "POST",
-    body: JSON.stringify({ address }),
+    body: JSON.stringify({ address, ...(city && { city }) }),
   });
 }
 
@@ -32,6 +32,7 @@ export async function healthCheck(): Promise<{ status: string }> {
   return request("/health");
 }
 
-export async function fetchCityConfig(): Promise<CityConfig> {
-  return request<CityConfig>("/api/city");
+export async function fetchCityConfig(slug?: string): Promise<CityConfig> {
+  const params = slug ? `?slug=${encodeURIComponent(slug)}` : "";
+  return request<CityConfig>(`/api/city${params}`);
 }

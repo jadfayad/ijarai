@@ -1,0 +1,275 @@
+{
+  "financial_district": {
+    "center": [37.7946, -122.3999], "radius_km": 0.8, "score": 7.0,
+    "safety": 7, "walkability": 9, "green_spaces": 4, "community": 5,
+    "infrastructure": 9, "aesthetics": 7, "amenities": 9, "desirability": 8
+  },
+  "soma": {
+    "center": [37.7785, -122.3950], "radius_km": 1.2, "score": 6.0,
+    "safety": 5, "walkability": 8, "green_spaces": 4, "community": 5,
+    "infrastructure": 8, "aesthetics": 6, "amenities": 8, "desirability": 7
+  },
+  "mission_bay": {
+    "center": [37.7700, -122.3930], "radius_km": 1.0, "score": 7.5,
+    "safety": 8, "walkability": 8, "green_spaces": 7, "community": 7,
+    "infrastructure": 9, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "south_beach": {
+    "center": [37.7860, -122.3880], "radius_km": 0.6, "score": 7.8,
+    "safety": 8, "walkability": 9, "green_spaces": 6, "community": 7,
+    "infrastructure": 9, "aesthetics": 8, "amenities": 8, "desirability": 8
+  },
+  "rincon_hill": {
+    "center": [37.7870, -122.3920], "radius_km": 0.5, "score": 7.3,
+    "safety": 7, "walkability": 8, "green_spaces": 5, "community": 6,
+    "infrastructure": 9, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+
+  "nob_hill": {
+    "center": [37.7930, -122.4160], "radius_km": 0.6, "score": 8.0,
+    "safety": 8, "walkability": 8, "green_spaces": 6, "community": 8,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "russian_hill": {
+    "center": [37.8010, -122.4190], "radius_km": 0.6, "score": 8.5,
+    "safety": 9, "walkability": 8, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 10, "amenities": 8, "desirability": 9
+  },
+  "pacific_heights": {
+    "center": [37.7925, -122.4350], "radius_km": 0.8, "score": 9.2,
+    "safety": 10, "walkability": 8, "green_spaces": 8, "community": 9,
+    "infrastructure": 9, "aesthetics": 10, "amenities": 9, "desirability": 10
+  },
+  "cow_hollow": {
+    "center": [37.7985, -122.4370], "radius_km": 0.5, "score": 8.3,
+    "safety": 9, "walkability": 8, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "marina": {
+    "center": [37.8020, -122.4370], "radius_km": 0.7, "score": 8.5,
+    "safety": 9, "walkability": 9, "green_spaces": 8, "community": 8,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 9, "desirability": 9
+  },
+  "presidio_heights": {
+    "center": [37.7880, -122.4500], "radius_km": 0.6, "score": 8.8,
+    "safety": 10, "walkability": 7, "green_spaces": 9, "community": 9,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 7, "desirability": 9
+  },
+  "laurel_heights": {
+    "center": [37.7850, -122.4520], "radius_km": 0.5, "score": 7.5,
+    "safety": 8, "walkability": 7, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 7, "amenities": 7, "desirability": 8
+  },
+
+  "north_beach": {
+    "center": [37.8060, -122.4100], "radius_km": 0.6, "score": 7.8,
+    "safety": 7, "walkability": 9, "green_spaces": 6, "community": 8,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 9, "desirability": 8
+  },
+  "chinatown": {
+    "center": [37.7941, -122.4078], "radius_km": 0.4, "score": 6.0,
+    "safety": 5, "walkability": 9, "green_spaces": 3, "community": 8,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 8, "desirability": 6
+  },
+  "tenderloin": {
+    "center": [37.7847, -122.4130], "radius_km": 0.5, "score": 3.0,
+    "safety": 2, "walkability": 8, "green_spaces": 2, "community": 3,
+    "infrastructure": 5, "aesthetics": 3, "amenities": 6, "desirability": 2
+  },
+  "union_square": {
+    "center": [37.7880, -122.4075], "radius_km": 0.4, "score": 6.5,
+    "safety": 6, "walkability": 10, "green_spaces": 4, "community": 5,
+    "infrastructure": 8, "aesthetics": 7, "amenities": 10, "desirability": 7
+  },
+  "civic_center": {
+    "center": [37.7793, -122.4193], "radius_km": 0.6, "score": 4.5,
+    "safety": 3, "walkability": 8, "green_spaces": 4, "community": 4,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 7, "desirability": 4
+  },
+
+  "hayes_valley": {
+    "center": [37.7760, -122.4260], "radius_km": 0.5, "score": 8.0,
+    "safety": 7, "walkability": 9, "green_spaces": 6, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 9, "desirability": 9
+  },
+  "lower_haight": {
+    "center": [37.7720, -122.4310], "radius_km": 0.4, "score": 6.5,
+    "safety": 6, "walkability": 8, "green_spaces": 5, "community": 7,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 7, "desirability": 7
+  },
+  "haight_ashbury": {
+    "center": [37.7700, -122.4470], "radius_km": 0.6, "score": 7.0,
+    "safety": 6, "walkability": 8, "green_spaces": 8, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "cole_valley": {
+    "center": [37.7660, -122.4500], "radius_km": 0.4, "score": 7.8,
+    "safety": 8, "walkability": 8, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "nopa": {
+    "center": [37.7740, -122.4400], "radius_km": 0.5, "score": 7.3,
+    "safety": 7, "walkability": 8, "green_spaces": 6, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 8, "desirability": 8
+  },
+  "western_addition": {
+    "center": [37.7810, -122.4350], "radius_km": 0.7, "score": 5.5,
+    "safety": 5, "walkability": 7, "green_spaces": 5, "community": 6,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 6, "desirability": 5
+  },
+  "alamo_square": {
+    "center": [37.7760, -122.4350], "radius_km": 0.4, "score": 7.5,
+    "safety": 7, "walkability": 8, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 9, "amenities": 7, "desirability": 8
+  },
+
+  "castro": {
+    "center": [37.7609, -122.4350], "radius_km": 0.5, "score": 7.8,
+    "safety": 7, "walkability": 9, "green_spaces": 6, "community": 9,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 8, "desirability": 8
+  },
+  "noe_valley": {
+    "center": [37.7502, -122.4332], "radius_km": 0.7, "score": 8.5,
+    "safety": 9, "walkability": 8, "green_spaces": 7, "community": 9,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "glen_park": {
+    "center": [37.7340, -122.4330], "radius_km": 0.6, "score": 7.5,
+    "safety": 8, "walkability": 7, "green_spaces": 8, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 8
+  },
+  "diamond_heights": {
+    "center": [37.7430, -122.4400], "radius_km": 0.5, "score": 6.5,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 5, "desirability": 7
+  },
+  "twin_peaks": {
+    "center": [37.7544, -122.4477], "radius_km": 0.5, "score": 6.8,
+    "safety": 8, "walkability": 4, "green_spaces": 9, "community": 6,
+    "infrastructure": 6, "aesthetics": 9, "amenities": 4, "desirability": 7
+  },
+
+  "mission": {
+    "center": [37.7599, -122.4148], "radius_km": 1.0, "score": 6.5,
+    "safety": 5, "walkability": 9, "green_spaces": 5, "community": 8,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 9, "desirability": 7
+  },
+  "mission_dolores": {
+    "center": [37.7640, -122.4268], "radius_km": 0.4, "score": 7.5,
+    "safety": 7, "walkability": 9, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 8, "desirability": 8
+  },
+  "potrero_hill": {
+    "center": [37.7600, -122.3990], "radius_km": 0.7, "score": 7.5,
+    "safety": 7, "walkability": 7, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "dogpatch": {
+    "center": [37.7580, -122.3870], "radius_km": 0.5, "score": 7.0,
+    "safety": 7, "walkability": 7, "green_spaces": 5, "community": 7,
+    "infrastructure": 8, "aesthetics": 7, "amenities": 7, "desirability": 8
+  },
+  "bernal_heights": {
+    "center": [37.7395, -122.4154], "radius_km": 0.7, "score": 7.3,
+    "safety": 7, "walkability": 7, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 8
+  },
+
+  "inner_richmond": {
+    "center": [37.7800, -122.4610], "radius_km": 0.7, "score": 7.0,
+    "safety": 7, "walkability": 7, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "outer_richmond": {
+    "center": [37.7790, -122.4900], "radius_km": 1.0, "score": 6.5,
+    "safety": 7, "walkability": 6, "green_spaces": 8, "community": 7,
+    "infrastructure": 6, "aesthetics": 7, "amenities": 6, "desirability": 7
+  },
+  "inner_sunset": {
+    "center": [37.7620, -122.4650], "radius_km": 0.8, "score": 7.3,
+    "safety": 8, "walkability": 7, "green_spaces": 8, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "outer_sunset": {
+    "center": [37.7550, -122.4950], "radius_km": 1.2, "score": 6.0,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "parkside": {
+    "center": [37.7440, -122.4870], "radius_km": 0.7, "score": 6.3,
+    "safety": 7, "walkability": 6, "green_spaces": 7, "community": 7,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 6, "desirability": 6
+  },
+  "forest_hill": {
+    "center": [37.7480, -122.4590], "radius_km": 0.5, "score": 7.0,
+    "safety": 8, "walkability": 5, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 5, "desirability": 7
+  },
+  "west_portal": {
+    "center": [37.7400, -122.4660], "radius_km": 0.5, "score": 7.0,
+    "safety": 8, "walkability": 7, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "st_francis_wood": {
+    "center": [37.7350, -122.4620], "radius_km": 0.4, "score": 7.8,
+    "safety": 9, "walkability": 5, "green_spaces": 9, "community": 8,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 5, "desirability": 8
+  },
+
+  "bayview": {
+    "center": [37.7300, -122.3900], "radius_km": 1.0, "score": 4.0,
+    "safety": 3, "walkability": 5, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 3
+  },
+  "hunters_point": {
+    "center": [37.7280, -122.3750], "radius_km": 0.8, "score": 3.0,
+    "safety": 2, "walkability": 4, "green_spaces": 4, "community": 3,
+    "infrastructure": 3, "aesthetics": 3, "amenities": 3, "desirability": 2
+  },
+  "visitacion_valley": {
+    "center": [37.7180, -122.4050], "radius_km": 0.7, "score": 4.5,
+    "safety": 4, "walkability": 5, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 4
+  },
+  "excelsior": {
+    "center": [37.7250, -122.4270], "radius_km": 0.7, "score": 5.5,
+    "safety": 5, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 6, "desirability": 5
+  },
+  "portola": {
+    "center": [37.7290, -122.4060], "radius_km": 0.5, "score": 5.0,
+    "safety": 5, "walkability": 5, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+  "oceanview": {
+    "center": [37.7180, -122.4550], "radius_km": 0.6, "score": 4.8,
+    "safety": 5, "walkability": 5, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 5, "desirability": 4
+  },
+  "ingleside": {
+    "center": [37.7230, -122.4490], "radius_km": 0.6, "score": 5.3,
+    "safety": 5, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+
+  "telegraph_hill": {
+    "center": [37.8020, -122.4050], "radius_km": 0.4, "score": 8.3,
+    "safety": 8, "walkability": 7, "green_spaces": 8, "community": 8,
+    "infrastructure": 7, "aesthetics": 10, "amenities": 7, "desirability": 9
+  },
+  "fishermans_wharf": {
+    "center": [37.8080, -122.4177], "radius_km": 0.5, "score": 6.5,
+    "safety": 7, "walkability": 9, "green_spaces": 5, "community": 5,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 8, "desirability": 6
+  },
+  "embarcadero": {
+    "center": [37.7935, -122.3940], "radius_km": 0.5, "score": 8.0,
+    "safety": 8, "walkability": 9, "green_spaces": 6, "community": 6,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "sea_cliff": {
+    "center": [37.7870, -122.4890], "radius_km": 0.5, "score": 8.8,
+    "safety": 10, "walkability": 5, "green_spaces": 10, "community": 8,
+    "infrastructure": 8, "aesthetics": 10, "amenities": 5, "desirability": 9
+  }
+}

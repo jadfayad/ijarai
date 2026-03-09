@@ -19,6 +19,7 @@ class CriterionRequest(BaseModel):
 class ScoreRequest(BaseModel):
     criteria: list[CriterionRequest]
     cell_size_m: int = Field(default=1000, ge=200, le=2500)
+    city: str = "dubai"
 
 
 class ScoreResponse(BaseModel):
@@ -28,6 +29,7 @@ class ScoreResponse(BaseModel):
 
 class GeocodeRequest(BaseModel):
     address: str
+    city: str = "dubai"
 
 
 class GeocodeResponse(BaseModel):

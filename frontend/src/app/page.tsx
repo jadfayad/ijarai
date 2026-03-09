@@ -181,6 +181,26 @@ function BerlinSkyline({ className }: { className?: string }) {
   );
 }
 
+function SanFranciscoSkyline({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 100" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18,100 L18,52 L22,52 L22,44 L25,44 L25,52 L29,52 L29,100 Z" />
+      <path d="M38,100 L38,48 L42,48 L42,38 L44,34 L46,38 L46,48 L50,48 L50,100 Z" />
+      <path d="M58,100 L58,55 L63,55 L63,100 Z" />
+      <path d="M72,100 L72,42 L75,42 L75,32 L77,28 L79,32 L79,42 L82,42 L82,100 Z" />
+      <path d="M90,100 L90,50 L94,50 L94,100 Z" />
+      <path d="M100,80 C105,50 110,40 120,35 C130,40 135,50 140,80 Z" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <path d="M108,80 L108,75 L110,73 L112,75 L112,80 Z" />
+      <path d="M125,80 L125,72 L128,70 L131,72 L131,80 Z" />
+      <path d="M100,80 L140,80 L140,100 L100,100 Z" opacity="0.15" />
+      <path d="M150,100 L150,45 L153,45 L153,35 L155,30 L157,35 L157,45 L160,45 L160,100 Z" />
+      <path d="M168,100 L168,52 L173,52 L173,100 Z" />
+      <path d="M180,100 L180,48 L185,48 L185,100 Z" />
+      <rect x="0" y="98" width="200" height="2" />
+    </svg>
+  );
+}
+
 const skylines: Record<string, React.FC<{ className?: string }>> = {
   dubai: DubaiSkyline,
   "new-york": NewYorkSkyline,
@@ -192,10 +212,12 @@ const skylines: Record<string, React.FC<{ className?: string }>> = {
   paris: ParisSkyline,
   toronto: TorontoSkyline,
   berlin: BerlinSkyline,
+  "san-francisco": SanFranciscoSkyline,
 };
 
 const cities = [
   { name: "Dubai", slug: "dubai", country: "UAE", available: true },
+  { name: "San Francisco", slug: "san-francisco", country: "USA", available: true },
   { name: "New York", slug: "new-york", country: "USA", available: false },
   { name: "London", slug: "london", country: "UK", available: false },
   { name: "Singapore", slug: "singapore", country: "Singapore", available: false },

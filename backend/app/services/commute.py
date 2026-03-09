@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from cachetools import TTLCache
 
-from app.city_config import get_active_city
+from app.city_config import CityConfig
 from app.utils.geo import haversine_km
 
 logger = logging.getLogger(__name__)
@@ -32,12 +32,10 @@ _ScoreResult = tuple[dict[str, float], dict[str, float]]
 _isochrone_cache: TTLCache[tuple, list[tuple[int, object]]] = TTLCache(maxsize=32, ttl=3600)
 _google_duration_cache: TTLCache[tuple, dict[tuple[float, float], float]] = TTLCache(maxsize=64, ttl=3600)
 
-_city = get_active_city()
-_CITY_TZ = timezone(timedelta(hours=_city.timezone_offset_hours))
 
-
-def _next_weekday_timestamp(hour: int) -> int:
-    now = datetime.now(_CITY_TZ)
+def _next_weekday_timestamp(hour: int, tz_offset_hours: int) -> int:
+    city_tz = timezone(timedelta(hours=tz_offset_hours))
+    now = datetime.now(city_tz)
     target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
     if target <= now:
         target += timedelta(days=1)
@@ -199,6 +197,7 @@ async def _fetch_google_durations(
     dest_lat: float, dest_lng: float,
     google_mode: str,
     is_peak: bool,
+    tz_offset_hours: int = 0,
 ) -> dict[tuple[float, float], float]:
     """Fetch durations from Google Directions API with concurrent calls.
 
@@ -212,7 +211,7 @@ async def _fetch_google_durations(
     if not GOOGLE_API_KEY:
         return {}
 
-    departure_ts = _next_weekday_timestamp(8 if is_peak else 11)
+    departure_ts = _next_weekday_timestamp(8 if is_peak else 11, tz_offset_hours)
     durations: dict[tuple[float, float], float] = {}
     sem = asyncio.Semaphore(_GOOGLE_CONCURRENCY)
 
@@ -326,9 +325,10 @@ def _score_from_google_durations(
 async def _score_via_google(
     centroids: list[dict], dest_lat: float, dest_lng: float,
     google_mode: str, is_peak: bool = True,
+    tz_offset_hours: int = 0,
 ) -> _ScoreResult:
     durations = await _fetch_google_durations(
-        centroids, dest_lat, dest_lng, google_mode, is_peak,
+        centroids, dest_lat, dest_lng, google_mode, is_peak, tz_offset_hours,
     )
     return _score_from_google_durations(centroids, durations, dest_lat, dest_lng)
 
@@ -338,20 +338,24 @@ async def _score_via_google(
 # ---------------------------------------------------------------------------
 
 async def score_commute(
-    centroids: list[dict], params: dict
+    city: CityConfig, centroids: list[dict], params: dict
 ) -> _ScoreResult:
     dest = params.get("destination", {})
-    dest_lat = dest.get("lat", _city.center_lat)
-    dest_lng = dest.get("lng", _city.center_lng)
+    dest_lat = dest.get("lat", city.center_lat)
+    dest_lng = dest.get("lng", city.center_lng)
     mode = params.get("mode", "car")
     source = params.get("source", "isochrone")
     time_of_day = params.get("time_of_day", "peak")
     is_peak = time_of_day == "peak"
 
     if mode == "transit":
-        return await _score_via_google(centroids, dest_lat, dest_lng, "transit", is_peak)
+        return await _score_via_google(
+            centroids, dest_lat, dest_lng, "transit", is_peak, city.timezone_offset_hours,
+        )
 
     if source == "google":
-        return await _score_via_google(centroids, dest_lat, dest_lng, "driving", is_peak)
+        return await _score_via_google(
+            centroids, dest_lat, dest_lng, "driving", is_peak, city.timezone_offset_hours,
+        )
 
     return await _score_via_ors_isochrone(centroids, dest_lat, dest_lng, is_peak)

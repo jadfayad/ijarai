@@ -1,11 +1,11 @@
 from dataclasses import asdict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.scoring import router as scoring_router
 from app.api.geocode import router as geocode_router
-from app.city_config import get_active_city
+from app.city_config import get_city, get_active_city
 from app.models.schemas import CityConfigResponse
 
 app = FastAPI(title="OptimHouse API", version="0.1.0")
@@ -28,5 +28,8 @@ async def health():
 
 
 @app.get("/api/city", response_model=CityConfigResponse)
-async def city_config():
-    return asdict(get_active_city())
+async def city_config(slug: str = Query(default=None)):
+    city = get_city(slug) if slug else get_active_city()
+    data = asdict(city)
+    data.pop("data_dir_name", None)
+    return data

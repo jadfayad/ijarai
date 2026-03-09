@@ -133,7 +133,7 @@ interface CriteriaStore {
   gridResolution: GridResolution;
   wizardCompleted: boolean;
 
-  loadCityConfig: () => Promise<void>;
+  loadCityConfig: (slug?: string) => Promise<void>;
   setCriteria: (criteria: CriterionConfig[]) => void;
   addCriterion: (criterion: CriterionConfig) => void;
   removeCriterion: (id: string) => void;
@@ -162,9 +162,9 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   gridResolution: "normal",
   wizardCompleted: false,
 
-  loadCityConfig: async () => {
+  loadCityConfig: async (slug?: string) => {
     try {
-      const config = await fetchCityConfig();
+      const config = await fetchCityConfig(slug);
       set({ cityConfig: config, cityLoaded: true });
     } catch {
       set({ cityLoaded: true });
@@ -202,7 +202,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   },
 
   generate: async () => {
-    const { criteria, gridResolution } = get();
+    const { criteria, gridResolution, cityConfig } = get();
     set({ loading: true, error: null });
 
     try {
@@ -220,7 +220,11 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       }
 
       const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
-      const data = await computeScores({ criteria: activeCriteria, cell_size_m });
+      const data = await computeScores({
+        criteria: activeCriteria,
+        cell_size_m,
+        city: cityConfig.slug,
+      });
       set({ scoreData: data });
     } catch (err) {
       set({
