@@ -121,6 +121,7 @@ export function MapView() {
     y: number;
     properties: Record<string, unknown>;
   } | null>(null);
+  const [areaName, setAreaName] = useState<string | null>(null);
 
   const scoreRange = useMemo(() => {
     if (!scoreData?.features?.length) return { min: 0, max: 1 };
@@ -178,7 +179,7 @@ export function MapView() {
   const totalCount = scoreData?.features?.length ?? 0;
 
   const handleClick = useCallback(
-    (info: { object?: Record<string, unknown>; x?: number; y?: number }) => {
+    (info: { object?: Record<string, unknown>; x?: number; y?: number; coordinate?: number[] }) => {
       if (info.object) {
         const cellId = info.object.cell_id as string;
         setSelectedCellId(cellId);
@@ -187,9 +188,31 @@ export function MapView() {
           y: info.y ?? 0,
           properties: info.object,
         });
+
+        const zoneName = info.object.zone_name as string | undefined;
+        if (zoneName) {
+          setAreaName(zoneName);
+        } else {
+          setAreaName(null);
+          if (info.coordinate && info.coordinate.length >= 2) {
+            const [lng, lat] = info.coordinate;
+            fetch(
+              `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lng}&latitude=${lat}&types=neighborhood,locality,place&access_token=${MAPBOX_TOKEN}`
+            )
+              .then((res) => res.json())
+              .then((data) => {
+                const feature = data.features?.[0];
+                if (feature) {
+                  setAreaName(feature.properties?.name ?? feature.properties?.full_address ?? null);
+                }
+              })
+              .catch(() => {});
+          }
+        }
       } else {
         setSelectedCellId(null);
         setPopupInfo(null);
+        setAreaName(null);
       }
     },
     [setSelectedCellId]
@@ -242,9 +265,11 @@ export function MapView() {
           x={popupInfo.x}
           y={popupInfo.y}
           properties={popupInfo.properties}
+          areaName={areaName}
           onClose={() => {
             setPopupInfo(null);
             setSelectedCellId(null);
+            setAreaName(null);
           }}
         />
       )}

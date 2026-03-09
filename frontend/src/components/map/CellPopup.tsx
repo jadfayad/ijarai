@@ -82,10 +82,11 @@ interface CellPopupProps {
   x: number;
   y: number;
   properties: Record<string, unknown>;
+  areaName?: string | null;
   onClose: () => void;
 }
 
-export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
+export function CellPopup({ x, y, properties, areaName, onClose }: CellPopupProps) {
   const score = properties.score as number;
   const pct = Math.round(score * 100);
   const breakdownKeys = Object.keys(properties).filter((k) =>
@@ -104,7 +105,14 @@ export function CellPopup({ x, y, properties, onClose }: CellPopupProps) {
       className="absolute z-50 w-[290px] bg-[rgba(14,14,24,0.92)] backdrop-blur-2xl border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       style={{ left: x + 12, top: y - 12 }}
     >
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      {areaName && (
+        <div className="px-4 pt-3.5 pb-0">
+          <p className="text-[13px] font-semibold text-white truncate">
+            {areaName}
+          </p>
+        </div>
+      )}
+      <div className={`flex items-center justify-between px-4 pb-2 ${areaName ? "pt-2" : "pt-4"}`}>
         <div>
           <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
             Overall Score

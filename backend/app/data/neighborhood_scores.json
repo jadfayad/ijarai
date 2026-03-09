@@ -1,27 +1,465 @@
 {
-  "downtown": { "center": [25.1972, 55.2744], "radius_km": 1.5, "score": 9.5 },
-  "difc": { "center": [25.2100, 55.2800], "radius_km": 1, "score": 9.0 },
-  "marina": { "center": [25.0800, 55.1380], "radius_km": 1.5, "score": 8.5 },
-  "jbr": { "center": [25.0780, 55.1300], "radius_km": 1, "score": 8.5 },
-  "palm_jumeirah": { "center": [25.1124, 55.1390], "radius_km": 2, "score": 9.0 },
-  "business_bay": { "center": [25.1860, 55.2700], "radius_km": 1.5, "score": 8.0 },
-  "creek_harbour": { "center": [25.1980, 55.3350], "radius_km": 1.5, "score": 8.5 },
-  "jumeirah": { "center": [25.2150, 55.2450], "radius_km": 2, "score": 8.0 },
-  "jlt": { "center": [25.0750, 55.1450], "radius_km": 1.5, "score": 7.0 },
-  "jvc": { "center": [25.0650, 55.2100], "radius_km": 2, "score": 6.5 },
-  "barsha": { "center": [25.1130, 55.1950], "radius_km": 2, "score": 6.5 },
-  "tecom": { "center": [25.0960, 55.1730], "radius_km": 1.5, "score": 6.0 },
-  "silicon_oasis": { "center": [25.1170, 55.3800], "radius_km": 2, "score": 6.0 },
-  "mirdif": { "center": [25.2200, 55.4200], "radius_km": 2.5, "score": 7.5 },
-  "deira": { "center": [25.2710, 55.3320], "radius_km": 3, "score": 5.5 },
-  "bur_dubai": { "center": [25.2520, 55.2930], "radius_km": 2, "score": 5.5 },
-  "karama": { "center": [25.2430, 55.3030], "radius_km": 1.5, "score": 5.0 },
-  "international_city": { "center": [25.1640, 55.4080], "radius_km": 2, "score": 4.5 },
-  "discovery_gardens": { "center": [25.0375, 55.1308], "radius_km": 2, "score": 5.0 },
-  "damac_hills": { "center": [25.0300, 55.2500], "radius_km": 2, "score": 7.0 },
-  "arabian_ranches": { "center": [25.0550, 55.2700], "radius_km": 2, "score": 8.0 },
-  "umm_suqeim": { "center": [25.1450, 55.2030], "radius_km": 2, "score": 7.5 },
-  "production_city": { "center": [25.0420, 55.1900], "radius_km": 2, "score": 5.0 },
-  "sports_city": { "center": [25.0480, 55.2250], "radius_km": 2, "score": 6.0 },
-  "dubailand": { "center": [25.1300, 55.3000], "radius_km": 3, "score": 5.5 }
+  "jebel_ali_industrial": {
+    "center": [25.0550, 55.0800], "radius_km": 2.5, "score": 2.9,
+    "safety": 4, "walkability": 2, "green_spaces": 2, "community": 2,
+    "infrastructure": 5, "aesthetics": 2, "amenities": 3, "desirability": 3
+  },
+  "jebel_ali_gardens": {
+    "center": [25.0500, 55.1050], "radius_km": 1.5, "score": 4.4,
+    "safety": 5, "walkability": 4, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 4
+  },
+  "discovery_gardens": {
+    "center": [25.0370, 55.1350], "radius_km": 1.5, "score": 5.1,
+    "safety": 6, "walkability": 5, "green_spaces": 5, "community": 6,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 5, "desirability": 5
+  },
+  "al_furjan": {
+    "center": [25.0400, 55.1530], "radius_km": 1.5, "score": 6.0,
+    "safety": 7, "walkability": 5, "green_spaces": 6, "community": 6,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "ibn_battuta": {
+    "center": [25.0450, 55.1200], "radius_km": 1, "score": 5.3,
+    "safety": 6, "walkability": 6, "green_spaces": 3, "community": 4,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 7, "desirability": 5
+  },
+  "green_community_dip": {
+    "center": [25.0250, 55.1750], "radius_km": 1.5, "score": 6.4,
+    "safety": 8, "walkability": 4, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 4, "desirability": 6
+  },
+  "dubai_investment_park": {
+    "center": [25.0150, 55.1500], "radius_km": 2, "score": 3.9,
+    "safety": 5, "walkability": 3, "green_spaces": 3, "community": 3,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 4
+  },
+  "production_city": {
+    "center": [25.0420, 55.1900], "radius_km": 1.5, "score": 4.1,
+    "safety": 5, "walkability": 3, "green_spaces": 4, "community": 4,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 4
+  },
+  "studio_city": {
+    "center": [25.0400, 55.2100], "radius_km": 1, "score": 5.5,
+    "safety": 7, "walkability": 4, "green_spaces": 5, "community": 5,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "sports_city": {
+    "center": [25.0480, 55.2250], "radius_km": 1.5, "score": 5.8,
+    "safety": 7, "walkability": 4, "green_spaces": 6, "community": 6,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "motor_city": {
+    "center": [25.0460, 55.2400], "radius_km": 1, "score": 6.6,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 6, "desirability": 7
+  },
+  "majan": {
+    "center": [25.0430, 55.2000], "radius_km": 1, "score": 4.9,
+    "safety": 6, "walkability": 4, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 4, "desirability": 5
+  },
+
+  "palm_jumeirah": {
+    "center": [25.1124, 55.1390], "radius_km": 2, "score": 8.8,
+    "safety": 9, "walkability": 7, "green_spaces": 8, "community": 8,
+    "infrastructure": 9, "aesthetics": 10, "amenities": 9, "desirability": 10
+  },
+  "bluewaters_island": {
+    "center": [25.0820, 55.1200], "radius_km": 0.8, "score": 8.1,
+    "safety": 9, "walkability": 8, "green_spaces": 6, "community": 7,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "jbr": {
+    "center": [25.0780, 55.1300], "radius_km": 0.8, "score": 8.0,
+    "safety": 8, "walkability": 9, "green_spaces": 6, "community": 7,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 9, "desirability": 9
+  },
+  "marina": {
+    "center": [25.0770, 55.1380], "radius_km": 1.2, "score": 8.3,
+    "safety": 8, "walkability": 9, "green_spaces": 6, "community": 8,
+    "infrastructure": 8, "aesthetics": 9, "amenities": 9, "desirability": 9
+  },
+  "jlt": {
+    "center": [25.0720, 55.1500], "radius_km": 1.2, "score": 6.8,
+    "safety": 7, "walkability": 7, "green_spaces": 6, "community": 6,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "emirates_hills": {
+    "center": [25.0800, 55.1650], "radius_km": 1, "score": 9.1,
+    "safety": 10, "walkability": 6, "green_spaces": 10, "community": 9,
+    "infrastructure": 10, "aesthetics": 10, "amenities": 8, "desirability": 10
+  },
+  "the_greens": {
+    "center": [25.0870, 55.1700], "radius_km": 1, "score": 7.1,
+    "safety": 7, "walkability": 7, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "the_views": {
+    "center": [25.0830, 55.1750], "radius_km": 0.8, "score": 7.1,
+    "safety": 7, "walkability": 7, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 7, "desirability": 7
+  },
+  "meadows_springs": {
+    "center": [25.0700, 55.1650], "radius_km": 1.2, "score": 7.8,
+    "safety": 8, "walkability": 6, "green_spaces": 9, "community": 9,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 6, "desirability": 8
+  },
+  "the_lakes": {
+    "center": [25.0780, 55.1800], "radius_km": 0.8, "score": 7.6,
+    "safety": 8, "walkability": 6, "green_spaces": 9, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 6, "desirability": 8
+  },
+  "al_sufouh": {
+    "center": [25.1000, 55.1550], "radius_km": 1, "score": 6.5,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+  "media_city": {
+    "center": [25.0980, 55.1600], "radius_km": 0.8, "score": 6.6,
+    "safety": 7, "walkability": 7, "green_spaces": 5, "community": 5,
+    "infrastructure": 8, "aesthetics": 7, "amenities": 7, "desirability": 7
+  },
+
+  "tecom": {
+    "center": [25.0960, 55.1730], "radius_km": 1, "score": 5.6,
+    "safety": 6, "walkability": 6, "green_spaces": 4, "community": 5,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 7, "desirability": 6
+  },
+  "barsha": {
+    "center": [25.1130, 55.1950], "radius_km": 1.5, "score": 6.5,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 8, "desirability": 7
+  },
+  "barsha_south": {
+    "center": [25.0950, 55.2000], "radius_km": 1, "score": 5.4,
+    "safety": 6, "walkability": 5, "green_spaces": 5, "community": 5,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 5, "desirability": 6
+  },
+
+  "jvc": {
+    "center": [25.0650, 55.2100], "radius_km": 1.5, "score": 6.4,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 6, "desirability": 6
+  },
+  "jvt": {
+    "center": [25.0550, 55.2050], "radius_km": 1, "score": 5.9,
+    "safety": 7, "walkability": 5, "green_spaces": 6, "community": 6,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "arjan": {
+    "center": [25.0600, 55.2400], "radius_km": 1, "score": 5.3,
+    "safety": 6, "walkability": 4, "green_spaces": 5, "community": 5,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 5, "desirability": 6
+  },
+  "al_barari": {
+    "center": [25.0700, 55.2700], "radius_km": 1, "score": 8.0,
+    "safety": 9, "walkability": 4, "green_spaces": 10, "community": 8,
+    "infrastructure": 9, "aesthetics": 10, "amenities": 5, "desirability": 9
+  },
+  "remraam": {
+    "center": [25.0600, 55.2650], "radius_km": 1, "score": 4.9,
+    "safety": 6, "walkability": 4, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 4, "desirability": 5
+  },
+
+  "dubai_hills": {
+    "center": [25.1000, 55.2400], "radius_km": 2, "score": 8.6,
+    "safety": 9, "walkability": 7, "green_spaces": 9, "community": 9,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 8, "desirability": 9
+  },
+  "al_quoz": {
+    "center": [25.1550, 55.2300], "radius_km": 1.5, "score": 4.4,
+    "safety": 5, "walkability": 4, "green_spaces": 3, "community": 4,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 5, "desirability": 4
+  },
+  "al_quoz_industrial": {
+    "center": [25.1380, 55.2200], "radius_km": 1, "score": 3.0,
+    "safety": 4, "walkability": 2, "green_spaces": 2, "community": 2,
+    "infrastructure": 5, "aesthetics": 3, "amenities": 3, "desirability": 3
+  },
+  "umm_suqeim": {
+    "center": [25.1450, 55.2030], "radius_km": 1.5, "score": 7.6,
+    "safety": 8, "walkability": 6, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 8, "desirability": 8
+  },
+  "al_safa": {
+    "center": [25.1800, 55.2350], "radius_km": 1, "score": 7.9,
+    "safety": 8, "walkability": 7, "green_spaces": 9, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+
+  "damac_hills": {
+    "center": [25.0300, 55.2500], "radius_km": 1.5, "score": 7.0,
+    "safety": 8, "walkability": 5, "green_spaces": 8, "community": 7,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 6, "desirability": 7
+  },
+  "damac_hills_2": {
+    "center": [25.0100, 55.2800], "radius_km": 2, "score": 4.5,
+    "safety": 6, "walkability": 3, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 3, "desirability": 4
+  },
+  "arabian_ranches": {
+    "center": [25.0550, 55.2700], "radius_km": 1.5, "score": 8.5,
+    "safety": 9, "walkability": 6, "green_spaces": 9, "community": 10,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 7, "desirability": 9
+  },
+  "arabian_ranches_2": {
+    "center": [25.0400, 55.2900], "radius_km": 1.5, "score": 6.9,
+    "safety": 8, "walkability": 5, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 6, "desirability": 7
+  },
+  "town_square": {
+    "center": [25.0250, 55.2700], "radius_km": 1.2, "score": 5.6,
+    "safety": 7, "walkability": 5, "green_spaces": 6, "community": 6,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+  "mudon": {
+    "center": [25.0350, 55.2830], "radius_km": 1.2, "score": 6.8,
+    "safety": 8, "walkability": 5, "green_spaces": 7, "community": 8,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 5, "desirability": 7
+  },
+  "villanova": {
+    "center": [25.0500, 55.3000], "radius_km": 1.2, "score": 6.6,
+    "safety": 8, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 5, "desirability": 7
+  },
+  "tilal_al_ghaf": {
+    "center": [25.0600, 55.2500], "radius_km": 1, "score": 7.1,
+    "safety": 8, "walkability": 5, "green_spaces": 8, "community": 7,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 5, "desirability": 8
+  },
+
+  "dubailand": {
+    "center": [25.1300, 55.3000], "radius_km": 2, "score": 4.8,
+    "safety": 5, "walkability": 3, "green_spaces": 5, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+  "liwan": {
+    "center": [25.0950, 55.3000], "radius_km": 1.5, "score": 4.4,
+    "safety": 6, "walkability": 3, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 4, "desirability": 4
+  },
+  "living_legends": {
+    "center": [25.0800, 55.3100], "radius_km": 1, "score": 5.5,
+    "safety": 7, "walkability": 4, "green_spaces": 6, "community": 6,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 4, "desirability": 5
+  },
+  "sustainable_city": {
+    "center": [25.0800, 55.3200], "radius_km": 0.8, "score": 7.5,
+    "safety": 8, "walkability": 7, "green_spaces": 9, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 5, "desirability": 7
+  },
+
+  "silicon_oasis": {
+    "center": [25.1170, 55.3800], "radius_km": 1.5, "score": 6.1,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 6, "desirability": 6
+  },
+  "academic_city": {
+    "center": [25.1200, 55.3950], "radius_km": 1.2, "score": 4.8,
+    "safety": 6, "walkability": 4, "green_spaces": 4, "community": 4,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 4, "desirability": 5
+  },
+  "international_city": {
+    "center": [25.1640, 55.4080], "radius_km": 2, "score": 4.0,
+    "safety": 5, "walkability": 4, "green_spaces": 3, "community": 5,
+    "infrastructure": 4, "aesthetics": 3, "amenities": 4, "desirability": 4
+  },
+  "warsan": {
+    "center": [25.1700, 55.3900], "radius_km": 1.5, "score": 3.5,
+    "safety": 5, "walkability": 3, "green_spaces": 3, "community": 3,
+    "infrastructure": 5, "aesthetics": 3, "amenities": 3, "desirability": 3
+  },
+
+  "downtown": {
+    "center": [25.1972, 55.2744], "radius_km": 1, "score": 9.3,
+    "safety": 9, "walkability": 9, "green_spaces": 8, "community": 8,
+    "infrastructure": 10, "aesthetics": 10, "amenities": 10, "desirability": 10
+  },
+  "business_bay": {
+    "center": [25.1860, 55.2700], "radius_km": 1.2, "score": 7.6,
+    "safety": 8, "walkability": 7, "green_spaces": 6, "community": 7,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 8, "desirability": 9
+  },
+  "city_walk": {
+    "center": [25.2050, 55.2600], "radius_km": 0.8, "score": 8.9,
+    "safety": 9, "walkability": 10, "green_spaces": 7, "community": 8,
+    "infrastructure": 9, "aesthetics": 10, "amenities": 9, "desirability": 9
+  },
+  "difc": {
+    "center": [25.2100, 55.2800], "radius_km": 0.8, "score": 8.6,
+    "safety": 9, "walkability": 8, "green_spaces": 6, "community": 7,
+    "infrastructure": 10, "aesthetics": 10, "amenities": 9, "desirability": 10
+  },
+  "zabeel": {
+    "center": [25.2250, 55.2900], "radius_km": 1, "score": 6.5,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 6,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 6, "desirability": 7
+  },
+  "world_trade_centre": {
+    "center": [25.2280, 55.2800], "radius_km": 0.8, "score": 6.8,
+    "safety": 7, "walkability": 7, "green_spaces": 5, "community": 5,
+    "infrastructure": 8, "aesthetics": 7, "amenities": 8, "desirability": 7
+  },
+
+  "jumeirah_1": {
+    "center": [25.2200, 55.2500], "radius_km": 1.5, "score": 8.0,
+    "safety": 8, "walkability": 7, "green_spaces": 7, "community": 9,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 8, "desirability": 9
+  },
+  "jumeirah_2_3": {
+    "center": [25.1900, 55.2350], "radius_km": 1.5, "score": 7.5,
+    "safety": 8, "walkability": 6, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "al_wasl": {
+    "center": [25.2100, 55.2550], "radius_km": 0.8, "score": 7.6,
+    "safety": 8, "walkability": 7, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "satwa": {
+    "center": [25.2150, 55.2700], "radius_km": 0.8, "score": 5.6,
+    "safety": 6, "walkability": 7, "green_spaces": 4, "community": 6,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 7, "desirability": 5
+  },
+
+  "creek_harbour": {
+    "center": [25.1980, 55.3350], "radius_km": 1.2, "score": 8.3,
+    "safety": 9, "walkability": 7, "green_spaces": 8, "community": 8,
+    "infrastructure": 9, "aesthetics": 9, "amenities": 7, "desirability": 9
+  },
+  "mbr_city": {
+    "center": [25.1700, 55.3100], "radius_km": 2, "score": 7.6,
+    "safety": 8, "walkability": 6, "green_spaces": 8, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "nad_al_sheba": {
+    "center": [25.1600, 55.3250], "radius_km": 1.5, "score": 6.3,
+    "safety": 7, "walkability": 5, "green_spaces": 7, "community": 7,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "ras_al_khor": {
+    "center": [25.1900, 55.3400], "radius_km": 1, "score": 3.5,
+    "safety": 5, "walkability": 2, "green_spaces": 5, "community": 2,
+    "infrastructure": 5, "aesthetics": 3, "amenities": 3, "desirability": 3
+  },
+
+  "bur_dubai": {
+    "center": [25.2520, 55.2930], "radius_km": 1.5, "score": 5.6,
+    "safety": 6, "walkability": 7, "green_spaces": 4, "community": 6,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 7, "desirability": 5
+  },
+  "karama": {
+    "center": [25.2430, 55.3030], "radius_km": 1, "score": 5.0,
+    "safety": 5, "walkability": 7, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 6, "desirability": 4
+  },
+  "mankhool": {
+    "center": [25.2500, 55.2850], "radius_km": 0.8, "score": 4.9,
+    "safety": 5, "walkability": 6, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 6, "desirability": 4
+  },
+  "oud_metha": {
+    "center": [25.2350, 55.3110], "radius_km": 1, "score": 6.3,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 7, "desirability": 6
+  },
+  "healthcare_city": {
+    "center": [25.2280, 55.3200], "radius_km": 0.8, "score": 6.0,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 5,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 6, "desirability": 6
+  },
+  "al_jaddaf": {
+    "center": [25.2200, 55.3350], "radius_km": 1, "score": 5.6,
+    "safety": 6, "walkability": 6, "green_spaces": 5, "community": 5,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 6
+  },
+  "culture_village": {
+    "center": [25.2300, 55.3400], "radius_km": 1, "score": 7.0,
+    "safety": 7, "walkability": 6, "green_spaces": 6, "community": 7,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 7, "desirability": 8
+  },
+  "festival_city": {
+    "center": [25.2250, 55.3550], "radius_km": 1.5, "score": 7.5,
+    "safety": 8, "walkability": 6, "green_spaces": 7, "community": 8,
+    "infrastructure": 8, "aesthetics": 8, "amenities": 8, "desirability": 7
+  },
+  "port_rashid": {
+    "center": [25.2650, 55.2750], "radius_km": 1, "score": 6.6,
+    "safety": 7, "walkability": 6, "green_spaces": 6, "community": 6,
+    "infrastructure": 7, "aesthetics": 8, "amenities": 6, "desirability": 7
+  },
+
+  "deira": {
+    "center": [25.2710, 55.3320], "radius_km": 1.5, "score": 5.5,
+    "safety": 5, "walkability": 7, "green_spaces": 4, "community": 6,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 7, "desirability": 5
+  },
+  "al_rigga": {
+    "center": [25.2650, 55.3250], "radius_km": 0.8, "score": 5.8,
+    "safety": 6, "walkability": 8, "green_spaces": 4, "community": 5,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 7, "desirability": 5
+  },
+  "hor_al_anz": {
+    "center": [25.2750, 55.3350], "radius_km": 0.8, "score": 4.6,
+    "safety": 5, "walkability": 6, "green_spaces": 3, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 5, "desirability": 4
+  },
+  "al_mamzar": {
+    "center": [25.2900, 55.3450], "radius_km": 1, "score": 6.8,
+    "safety": 7, "walkability": 6, "green_spaces": 8, "community": 7,
+    "infrastructure": 6, "aesthetics": 7, "amenities": 6, "desirability": 7
+  },
+  "al_nahda_dubai": {
+    "center": [25.2850, 55.3700], "radius_km": 1.5, "score": 4.9,
+    "safety": 6, "walkability": 5, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 5, "desirability": 4
+  },
+  "al_qusais": {
+    "center": [25.2700, 55.3800], "radius_km": 1.5, "score": 4.6,
+    "safety": 5, "walkability": 5, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 5, "desirability": 4
+  },
+  "al_muhaisnah": {
+    "center": [25.2650, 55.4000], "radius_km": 1.5, "score": 3.6,
+    "safety": 4, "walkability": 4, "green_spaces": 3, "community": 4,
+    "infrastructure": 4, "aesthetics": 3, "amenities": 4, "desirability": 3
+  },
+  "al_twar": {
+    "center": [25.2500, 55.3850], "radius_km": 1, "score": 4.6,
+    "safety": 5, "walkability": 5, "green_spaces": 4, "community": 5,
+    "infrastructure": 5, "aesthetics": 4, "amenities": 5, "desirability": 4
+  },
+  "garhoud": {
+    "center": [25.2400, 55.3450], "radius_km": 1.2, "score": 6.3,
+    "safety": 7, "walkability": 6, "green_spaces": 5, "community": 6,
+    "infrastructure": 7, "aesthetics": 6, "amenities": 7, "desirability": 6
+  },
+
+  "mirdif": {
+    "center": [25.2200, 55.4200], "radius_km": 2, "score": 7.4,
+    "safety": 8, "walkability": 6, "green_spaces": 7, "community": 9,
+    "infrastructure": 7, "aesthetics": 7, "amenities": 7, "desirability": 8
+  },
+  "al_warqa": {
+    "center": [25.2100, 55.4100], "radius_km": 1.5, "score": 5.1,
+    "safety": 6, "walkability": 4, "green_spaces": 5, "community": 6,
+    "infrastructure": 5, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+  "al_rashidiya": {
+    "center": [25.2350, 55.3950], "radius_km": 1.2, "score": 5.1,
+    "safety": 6, "walkability": 5, "green_spaces": 4, "community": 5,
+    "infrastructure": 6, "aesthetics": 5, "amenities": 5, "desirability": 5
+  },
+  "al_khawaneej": {
+    "center": [25.2600, 55.4400], "radius_km": 2, "score": 5.6,
+    "safety": 7, "walkability": 3, "green_spaces": 7, "community": 7,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 4, "desirability": 5
+  },
+  "mushrif": {
+    "center": [25.2400, 55.4200], "radius_km": 1.5, "score": 5.8,
+    "safety": 7, "walkability": 4, "green_spaces": 7, "community": 6,
+    "infrastructure": 6, "aesthetics": 6, "amenities": 5, "desirability": 5
+  }
 }

@@ -60,6 +60,52 @@ def _find_zone_value(
     return interpolated * (1 - fade) + default * fade
 
 
+_ABBREVIATIONS = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
+
+
+def _format_zone_name(key: str) -> str:
+    """Turn a zone key like 'al_furjan' into 'Al Furjan', preserving abbreviations."""
+    words = key.split("_")
+    return " ".join(
+        w.upper() if w in _ABBREVIATIONS else w.capitalize() for w in words
+    )
+
+
+def find_nearest_zone_name(lat: float, lng: float) -> str | None:
+    """Return the display name of the closest rent zone.
+
+    Returns the name of the zone the point falls inside (closest wins),
+    or the single nearest zone if within 5 km. Returns None if too far
+    from any known zone.
+    """
+    best_name: str | None = None
+    best_dist = float("inf")
+
+    for name, zone in RENT_ZONES.items():
+        center = zone["center"]
+        dist = haversine_km(lat, lng, center[0], center[1])
+        if dist <= zone["radius_km"] and dist < best_dist:
+            best_dist = dist
+            best_name = name
+
+    if best_name is not None:
+        return _format_zone_name(best_name)
+
+    nearest_name: str | None = None
+    nearest_dist = float("inf")
+    for name, zone in RENT_ZONES.items():
+        center = zone["center"]
+        dist = haversine_km(lat, lng, center[0], center[1])
+        if dist < nearest_dist:
+            nearest_dist = dist
+            nearest_name = name
+
+    if nearest_name is not None and nearest_dist <= 5.0:
+        return _format_zone_name(nearest_name)
+
+    return None
+
+
 def score_budget(
     centroids: list[dict], max_monthly_rent: float
 ) -> tuple[dict[str, float], dict[str, float]]:
