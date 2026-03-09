@@ -29,6 +29,32 @@ export type CriterionType =
   | "neighborhood"
   | "noise";
 
+export type CommutePreset =
+  | "office"
+  | "airport"
+  | "partner"
+  | "family"
+  | "school"
+  | "gym"
+  | "other";
+
+export interface CommutePresetConfig {
+  preset: CommutePreset;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+export const COMMUTE_PRESETS: CommutePresetConfig[] = [
+  { preset: "office", label: "Office", icon: "briefcase", description: "Daily commute to your workplace" },
+  { preset: "airport", label: "Airport", icon: "plane", description: "Travel time to the airport" },
+  { preset: "partner", label: "Partner", icon: "heart", description: "Commute to your partner's place" },
+  { preset: "family", label: "Family", icon: "users", description: "Visit family easily" },
+  { preset: "school", label: "School", icon: "graduation-cap", description: "School or university commute" },
+  { preset: "gym", label: "Gym", icon: "dumbbell", description: "Get to the gym quickly" },
+  { preset: "other", label: "Other", icon: "map-pin", description: "Any other frequent destination" },
+];
+
 export interface CommuteParams {
   destination: LatLng;
   mode: TransportMode;

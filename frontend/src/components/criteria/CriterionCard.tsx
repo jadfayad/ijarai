@@ -8,9 +8,12 @@ import {
   Wallet,
   Star,
   VolumeX,
+  Heart,
+  Users,
+  GraduationCap,
+  Dumbbell,
   Info,
-  Check,
-  Plus,
+  Trash2,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
@@ -40,6 +43,30 @@ const ICON_CONFIG: Record<
     bg: "bg-sky-500/10",
     text: "text-sky-400",
     activeBg: "bg-sky-500/20",
+  },
+  heart: {
+    icon: <Heart size={15} />,
+    bg: "bg-pink-500/10",
+    text: "text-pink-400",
+    activeBg: "bg-pink-500/20",
+  },
+  users: {
+    icon: <Users size={15} />,
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    activeBg: "bg-amber-500/20",
+  },
+  "graduation-cap": {
+    icon: <GraduationCap size={15} />,
+    bg: "bg-indigo-500/10",
+    text: "text-indigo-400",
+    activeBg: "bg-indigo-500/20",
+  },
+  dumbbell: {
+    icon: <Dumbbell size={15} />,
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    activeBg: "bg-emerald-500/20",
   },
   "map-pin": {
     icon: <MapPin size={15} />,
@@ -85,32 +112,22 @@ interface Props {
 }
 
 export function CriterionCard({ criterion }: Props) {
-  const { updateCriterion } = useCriteriaStore();
+  const { updateCriterion, removeCriterion } = useCriteriaStore();
   const iconCfg = ICON_CONFIG[criterion.icon] ?? DEFAULT_ICON_CONFIG;
 
   return (
-    <div
-      className={`rounded-xl border transition-all duration-250 ${
-        criterion.enabled
-          ? "bg-white/[0.06] border-white/[0.1] hover:border-white/[0.16]"
-          : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/[0.08]"
-      }`}
-    >
+    <div className="rounded-xl border bg-white/[0.06] border-white/[0.1] hover:border-white/[0.16] transition-all duration-250">
       <div className="p-3.5 space-y-3">
         <div className="flex items-center gap-3">
           <div
-            className={`rounded-lg ${criterion.enabled ? iconCfg.activeBg : iconCfg.bg} ${iconCfg.text} p-2 shrink-0 transition-colors duration-200`}
+            className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-2 shrink-0 transition-colors duration-200`}
           >
             {iconCfg.icon}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label
-                  className={`text-sm font-medium transition-colors duration-200 ${
-                    criterion.enabled ? "text-white" : "text-white/50"
-                  }`}
-                >
+                <Label className="text-sm font-medium text-white">
                   {criterion.label}
                 </Label>
                 <Tooltip>
@@ -122,82 +139,67 @@ export function CriterionCard({ criterion }: Props) {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <button
-                onClick={() =>
-                  updateCriterion(criterion.id, {
-                    enabled: !criterion.enabled,
-                  })
-                }
-                className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all duration-200 ${
-                  criterion.enabled
-                    ? "bg-primary/15 text-primary border-primary/25 hover:bg-primary/25"
-                    : "bg-white/[0.04] text-white/40 border-white/[0.08] hover:bg-white/[0.08] hover:text-white/60"
-                }`}
-              >
-                {criterion.enabled ? (
-                  <>
-                    <Check size={11} strokeWidth={2.5} />
-                    Added
-                  </>
-                ) : (
-                  <>
-                    <Plus size={11} strokeWidth={2.5} />
-                    Add
-                  </>
-                )}
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  onClick={() => removeCriterion(criterion.id)}
+                  className="text-white/20 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-all duration-200"
+                >
+                  <Trash2 size={13} />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Remove
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>
 
-        {criterion.enabled && (
-          <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
-                    Priority
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger className="text-white/15 hover:text-white/40 transition-colors">
-                      <Info size={10} />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="max-w-[200px] text-xs"
-                    >
-                      Higher priority means this criterion has more influence on
-                      the final score.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <span className="text-xs font-mono font-semibold tabular-nums text-white/70">
-                  {criterion.weight}/10
+        <div className="space-y-3 pt-1">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+                  Priority
                 </span>
+                <Tooltip>
+                  <TooltipTrigger className="text-white/15 hover:text-white/40 transition-colors">
+                    <Info size={10} />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="max-w-[200px] text-xs"
+                  >
+                    Higher priority means this criterion has more influence on
+                    the final score.
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <Slider
-                value={[criterion.weight]}
-                min={1}
-                max={10}
-                step={1}
-                onValueChange={(val) => {
-                  const w = Array.isArray(val) ? val[0] : val;
-                  updateCriterion(criterion.id, { weight: w });
-                }}
-              />
+              <span className="text-xs font-mono font-semibold tabular-nums text-white/70">
+                {criterion.weight}/10
+              </span>
             </div>
-
-            {criterion.type === "commute" && (
-              <CommuteConfig criterion={criterion} />
-            )}
-            {criterion.type === "amenities" && (
-              <AmenityConfig criterion={criterion} />
-            )}
-            {criterion.type === "budget" && (
-              <BudgetConfig criterion={criterion} />
-            )}
+            <Slider
+              value={[criterion.weight]}
+              min={1}
+              max={10}
+              step={1}
+              onValueChange={(val) => {
+                const w = Array.isArray(val) ? val[0] : val;
+                updateCriterion(criterion.id, { weight: w });
+              }}
+            />
           </div>
-        )}
+
+          {criterion.type === "commute" && (
+            <CommuteConfig criterion={criterion} />
+          )}
+          {criterion.type === "amenities" && (
+            <AmenityConfig criterion={criterion} />
+          )}
+          {criterion.type === "budget" && (
+            <BudgetConfig criterion={criterion} />
+          )}
+        </div>
       </div>
     </div>
   );

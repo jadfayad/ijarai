@@ -1,125 +1,108 @@
 import { create } from "zustand";
 import { computeScores, fetchCityConfig } from "@/lib/api";
-import { GRID_RESOLUTION_CONFIG } from "@/lib/types";
+import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
 import type {
   CriterionConfig,
   GridResolution,
   ScoreResponse,
   CityConfig,
   DestinationConfig,
+  CommutePreset,
 } from "@/lib/types";
 
-function buildDefaultCriteria(city: CityConfig): CriterionConfig[] {
-  const dests = city.default_destinations;
-  const officeDest = dests.find((d: DestinationConfig) => d.icon === "briefcase") ?? {
-    lat: city.center_lat,
-    lng: city.center_lng,
-    label: "",
-    icon: "briefcase",
-  };
-  const airportDest = dests.find((d: DestinationConfig) => d.icon === "plane") ?? {
-    lat: city.center_lat,
-    lng: city.center_lng,
-    label: "Airport",
-    icon: "plane",
-  };
-  const customDest = dests.find((d: DestinationConfig) => d.icon === "map-pin") ?? {
-    lat: city.center_lat,
-    lng: city.center_lng,
-    label: "",
-    icon: "map-pin",
-  };
+let commuteCounter = 0;
 
-  return [
-    {
-      id: "commute-office",
-      type: "commute",
-      label: "Commute to Office",
-      description: "Travel time from each area to your workplace",
-      weight: 8,
-      enabled: false,
-      params: {
-        destination: { lat: officeDest.lat, lng: officeDest.lng },
-        mode: "car" as const,
-        source: "isochrone" as const,
-        time_of_day: "peak" as const,
-        label: officeDest.label,
-      },
-      icon: "briefcase",
+export function createCommuteCriterion(
+  preset: CommutePreset,
+  dest?: { lat: number; lng: number; label?: string }
+): CriterionConfig {
+  const presetCfg = COMMUTE_PRESETS.find((p) => p.preset === preset)!;
+  commuteCounter++;
+  return {
+    id: `commute-${preset}-${commuteCounter}`,
+    type: "commute",
+    label: `Commute to ${presetCfg.label}`,
+    description: presetCfg.description,
+    weight: preset === "office" ? 8 : preset === "airport" ? 4 : 5,
+    enabled: true,
+    params: {
+      destination: dest ? { lat: dest.lat, lng: dest.lng } : { lat: 0, lng: 0 },
+      mode: "car" as const,
+      source: "isochrone" as const,
+      time_of_day: "peak" as const,
+      label: dest?.label ?? "",
     },
-    {
-      id: "commute-airport",
-      type: "commute",
-      label: "Commute to Airport",
-      description: `Travel time to the nearest major airport`,
-      weight: 4,
-      enabled: false,
-      params: {
-        destination: { lat: airportDest.lat, lng: airportDest.lng },
-        mode: "car" as const,
-        source: "isochrone" as const,
-        time_of_day: "peak" as const,
-        label: airportDest.label,
-      },
-      icon: "plane",
-    },
-    {
-      id: "commute-custom",
-      type: "commute",
-      label: "Commute to Custom Place",
-      description: "Travel time to a place you visit often",
-      weight: 5,
-      enabled: false,
-      params: {
-        destination: { lat: customDest.lat, lng: customDest.lng },
-        mode: "car" as const,
-        source: "isochrone" as const,
-        time_of_day: "peak" as const,
-        label: customDest.label,
-      },
-      icon: "map-pin",
-    },
-    {
-      id: "amenities",
-      type: "amenities",
-      label: "Nearby Amenities",
-      description: "Gyms, cafes, beaches, pools, parks nearby",
-      weight: 6,
-      enabled: false,
-      params: { categories: ["gym", "cafe", "beach", "park"] },
-      icon: "trees",
-    },
-    {
-      id: "budget",
-      type: "budget",
-      label: "Budget / Rent",
-      description: "Match areas to your monthly rent budget",
-      weight: 9,
-      enabled: false,
-      params: { max_monthly_rent: 7000 },
-      icon: "wallet",
-    },
-    {
-      id: "neighborhood",
-      type: "neighborhood",
-      label: "Neighborhood Quality",
-      description: "Overall reputation and livability of the area",
-      weight: 5,
-      enabled: false,
-      params: {},
-      icon: "star",
-    },
-    {
-      id: "noise",
-      type: "noise",
-      label: "Low Noise",
-      description: "Distance from highways, airports, construction",
-      weight: 4,
-      enabled: false,
-      params: {},
-      icon: "volume-x",
-    },
-  ];
+    icon: presetCfg.icon,
+  };
+}
+
+export function createAmenityCriterion(
+  categories: string[] = ["gym", "cafe", "park", "supermarket"]
+): CriterionConfig {
+  return {
+    id: "amenities",
+    type: "amenities",
+    label: "Nearby Amenities",
+    description: "Gyms, cafes, beaches, pools, parks nearby",
+    weight: 6,
+    enabled: true,
+    params: { categories },
+    icon: "trees",
+  };
+}
+
+export function createBudgetCriterion(
+  maxRent = 7000
+): CriterionConfig {
+  return {
+    id: "budget",
+    type: "budget",
+    label: "Budget / Rent",
+    description: "Match areas to your monthly rent budget",
+    weight: 9,
+    enabled: true,
+    params: { max_monthly_rent: maxRent },
+    icon: "wallet",
+  };
+}
+
+export function createNeighborhoodCriterion(): CriterionConfig {
+  return {
+    id: "neighborhood",
+    type: "neighborhood",
+    label: "Neighborhood Quality",
+    description: "Overall reputation and livability of the area",
+    weight: 5,
+    enabled: true,
+    params: {},
+    icon: "star",
+  };
+}
+
+export function createNoiseCriterion(): CriterionConfig {
+  return {
+    id: "noise",
+    type: "noise",
+    label: "Low Noise",
+    description: "Distance from highways, airports, construction",
+    weight: 4,
+    enabled: true,
+    params: {},
+    icon: "volume-x",
+  };
+}
+
+function resolveDefaultDestination(
+  dests: DestinationConfig[],
+  icon: string,
+  city: CityConfig
+): { lat: number; lng: number; label: string } {
+  const found = dests.find((d) => d.icon === icon);
+  return {
+    lat: found?.lat ?? city.center_lat,
+    lng: found?.lng ?? city.center_lng,
+    label: found?.label ?? "",
+  };
 }
 
 const FALLBACK_CITY: CityConfig = {
@@ -148,9 +131,12 @@ interface CriteriaStore {
   selectedCellId: string | null;
   scoreThreshold: number;
   gridResolution: GridResolution;
+  wizardCompleted: boolean;
 
   loadCityConfig: () => Promise<void>;
   setCriteria: (criteria: CriterionConfig[]) => void;
+  addCriterion: (criterion: CriterionConfig) => void;
+  removeCriterion: (id: string) => void;
   updateCriterion: (id: string, updates: Partial<CriterionConfig>) => void;
   setScoreData: (data: ScoreResponse | null) => void;
   setLoading: (loading: boolean) => void;
@@ -158,45 +144,62 @@ interface CriteriaStore {
   setSelectedCellId: (cellId: string | null) => void;
   setScoreThreshold: (threshold: number) => void;
   setGridResolution: (resolution: GridResolution) => void;
+  setWizardCompleted: (completed: boolean) => void;
   generate: () => Promise<void>;
+
+  resolveDefaultDest: (icon: string) => { lat: number; lng: number; label: string };
 }
 
 export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   cityConfig: FALLBACK_CITY,
   cityLoaded: false,
-  criteria: buildDefaultCriteria(FALLBACK_CITY),
+  criteria: [],
   scoreData: null,
   loading: false,
   error: null,
   selectedCellId: null,
   scoreThreshold: 0,
   gridResolution: "normal",
+  wizardCompleted: false,
 
   loadCityConfig: async () => {
     try {
       const config = await fetchCityConfig();
-      set({
-        cityConfig: config,
-        cityLoaded: true,
-        criteria: buildDefaultCriteria(config),
-      });
+      set({ cityConfig: config, cityLoaded: true });
     } catch {
       set({ cityLoaded: true });
     }
   },
+
   setCriteria: (criteria) => set({ criteria }),
+
+  addCriterion: (criterion) =>
+    set((state) => ({ criteria: [...state.criteria, criterion] })),
+
+  removeCriterion: (id) =>
+    set((state) => ({
+      criteria: state.criteria.filter((c) => c.id !== id),
+    })),
+
   updateCriterion: (id, updates) =>
     set((state) => ({
       criteria: state.criteria.map((c) =>
         c.id === id ? { ...c, ...updates } : c
       ),
     })),
+
   setScoreData: (data) => set({ scoreData: data }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
   setScoreThreshold: (threshold) => set({ scoreThreshold: threshold }),
   setGridResolution: (resolution) => set({ gridResolution: resolution }),
+  setWizardCompleted: (completed) => set({ wizardCompleted: completed }),
+
+  resolveDefaultDest: (icon: string) => {
+    const { cityConfig } = get();
+    return resolveDefaultDestination(cityConfig.default_destinations, icon, cityConfig);
+  },
 
   generate: async () => {
     const { criteria, gridResolution } = get();

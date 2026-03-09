@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, ChevronLeft, Zap } from "lucide-react";
+import { Menu, ChevronLeft, Zap, LayoutList } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { healthCheck } from "@/lib/api";
 import {
@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CriterionCard } from "./CriterionCard";
+import { AddCriterionDialog } from "./AddCriterionDialog";
 
 export function CriteriaPanel() {
   const { cityConfig, criteria, error, scoreData } = useCriteriaStore();
@@ -45,7 +46,7 @@ export function CriteriaPanel() {
             </div>
             <div>
               <h1 className="text-lg font-semibold text-white tracking-tight">
-                OptimHouse
+                IJAR.AI
               </h1>
               <p className="text-[11px] text-white/40 mt-0">
                 Find your ideal home in {cityConfig.name}
@@ -91,9 +92,23 @@ export function CriteriaPanel() {
             </div>
           )}
 
+          {criteria.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-4">
+                <LayoutList size={22} className="text-white/20" />
+              </div>
+              <p className="text-sm text-white/30 mb-1">No criteria yet</p>
+              <p className="text-xs text-white/20">
+                Add criteria below to start scoring areas
+              </p>
+            </div>
+          )}
+
           {criteria.map((criterion) => (
             <CriterionCard key={criterion.id} criterion={criterion} />
           ))}
+
+          <AddCriterionDialog />
         </div>
 
         <div className="p-4 space-y-2">

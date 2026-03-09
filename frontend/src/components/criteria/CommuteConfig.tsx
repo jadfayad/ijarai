@@ -80,22 +80,20 @@ export function CommuteConfig({ criterion }: Props) {
               ] as const
             ).map(({ value, icon: Icon, label, tip }) => (
               <Tooltip key={value}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() =>
-                      updateCriterion(criterion.id, {
-                        params: { ...params, source: value as CommuteSource },
-                      })
-                    }
-                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
-                      (params.source ?? "isochrone") === value
-                        ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                        : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
-                    }`}
-                  >
-                    <Icon size={12} />
-                    {label}
-                  </button>
+                <TooltipTrigger
+                  onClick={() =>
+                    updateCriterion(criterion.id, {
+                      params: { ...params, source: value as CommuteSource },
+                    })
+                  }
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+                    (params.source ?? "isochrone") === value
+                      ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
+                      : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                  }`}
+                >
+                  <Icon size={12} />
+                  {label}
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs max-w-[180px]">
                   {tip}

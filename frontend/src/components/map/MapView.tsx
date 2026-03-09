@@ -12,7 +12,10 @@ import {
   MapPin,
   Briefcase,
   Plane,
-  Compass,
+  Heart,
+  Users,
+  GraduationCap,
+  Dumbbell,
   Sparkles,
   Grid2x2,
   Grid3x3,
@@ -31,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CellPopup } from "./CellPopup";
+import { SetupWizard } from "@/components/criteria/SetupWizard";
 import { GRID_RESOLUTION_CONFIG, type CommuteParams, type GridResolution } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -44,6 +48,10 @@ const RESOLUTION_ICONS: Record<GridResolution, React.ReactNode> = {
 const ICON_MAP: Record<string, typeof MapPin> = {
   briefcase: Briefcase,
   plane: Plane,
+  heart: Heart,
+  users: Users,
+  "graduation-cap": GraduationCap,
+  dumbbell: Dumbbell,
   "map-pin": MapPin,
 };
 
@@ -88,6 +96,8 @@ export function MapView() {
     setGridResolution,
     loading,
     generate,
+    wizardCompleted,
+    setWizardCompleted,
   } = useCriteriaStore();
 
   const cityView = useMemo(
@@ -101,12 +111,13 @@ export function MapView() {
     [cityConfig]
   );
 
-  const hasActiveCriteria = criteria.some((c) => c.enabled);
+  const hasActiveCriteria = criteria.length > 0;
+  const showWizard = !wizardCompleted && criteria.length === 0;
 
   const destinations = useMemo(
     () =>
       criteria
-        .filter((c) => c.enabled && c.type === "commute")
+        .filter((c) => c.type === "commute")
         .map((c) => {
           const params = c.params as CommuteParams;
           return {
@@ -309,21 +320,8 @@ export function MapView() {
         </div>
       )}
 
-      {!scoreData && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-[rgba(12,12,20,0.85)] backdrop-blur-2xl border border-white/[0.12] rounded-3xl px-10 py-8 text-center max-w-md shadow-2xl shadow-black/40 animate-in fade-in zoom-in-95 duration-500">
-            <div className="mx-auto mb-5 w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
-              <Compass className="text-primary" size={26} />
-            </div>
-            <h3 className="text-xl font-semibold mb-2 text-white tracking-tight">
-              Welcome to OptimHouse
-            </h3>
-            <p className="text-white/40 text-sm leading-relaxed mb-1">
-              Configure your preferences in the sidebar, then generate your
-              personalized heatmap to find the ideal location in {cityConfig.name}.
-            </p>
-          </div>
-        </div>
+      {showWizard && (
+        <SetupWizard onComplete={() => setWizardCompleted(true)} />
       )}
 
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
