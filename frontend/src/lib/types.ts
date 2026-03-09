@@ -88,3 +88,22 @@ export interface GeocodeResult {
   lng: number;
   display_name: string;
 }
+
+export interface DestinationConfig {
+  label: string;
+  lat: number;
+  lng: number;
+  icon: string;
+}
+
+export interface CityConfig {
+  slug: string;
+  name: string;
+  country_code: string;
+  bounds: { min_lat: number; max_lat: number; min_lng: number; max_lng: number };
+  center_lat: number;
+  center_lng: number;
+  timezone_offset_hours: number;
+  default_zoom: number;
+  default_destinations: DestinationConfig[];
+}

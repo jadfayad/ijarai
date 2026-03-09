@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from cachetools import TTLCache
 
+from app.city_config import get_active_city
 from app.utils.geo import haversine_km
 
 logger = logging.getLogger(__name__)
@@ -31,11 +32,12 @@ _ScoreResult = tuple[dict[str, float], dict[str, float]]
 _isochrone_cache: TTLCache[tuple, list[tuple[int, object]]] = TTLCache(maxsize=32, ttl=3600)
 _google_duration_cache: TTLCache[tuple, dict[tuple[float, float], float]] = TTLCache(maxsize=64, ttl=3600)
 
-DUBAI_TZ = timezone(timedelta(hours=4))
+_city = get_active_city()
+_CITY_TZ = timezone(timedelta(hours=_city.timezone_offset_hours))
 
 
 def _next_weekday_timestamp(hour: int) -> int:
-    now = datetime.now(DUBAI_TZ)
+    now = datetime.now(_CITY_TZ)
     target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
     if target <= now:
         target += timedelta(days=1)
@@ -339,8 +341,8 @@ async def score_commute(
     centroids: list[dict], params: dict
 ) -> _ScoreResult:
     dest = params.get("destination", {})
-    dest_lat = dest.get("lat", 25.2048)
-    dest_lng = dest.get("lng", 55.2708)
+    dest_lat = dest.get("lat", _city.center_lat)
+    dest_lng = dest.get("lng", _city.center_lng)
     mode = params.get("mode", "car")
     source = params.get("source", "isochrone")
     time_of_day = params.get("time_of_day", "peak")

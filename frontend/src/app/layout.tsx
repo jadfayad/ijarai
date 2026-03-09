@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OptimHouse — Find Your Dream Apartment in Dubai",
+  title: "OptimHouse — Find Your Dream Apartment",
   description:
-    "Interactive heatmap tool that scores Dubai neighborhoods based on commute, amenities, budget, and lifestyle preferences.",
+    "Interactive heatmap tool that scores neighborhoods based on commute, amenities, budget, and lifestyle preferences.",
 };
 
 export default function RootLayout({

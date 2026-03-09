@@ -7,7 +7,8 @@ import math
 import httpx
 from cachetools import TTLCache
 
-from app.grid_config import DUBAI_BOUNDS, DEFAULT_RESOLUTION, amenity_search_radius_m
+from app.city_config import get_active_city
+from app.grid_config import DEFAULT_RESOLUTION, amenity_search_radius_m
 from app.utils.geo import to_meters
 
 _poi_cache: TTLCache[str, list[dict]] = TTLCache(maxsize=64, ttl=3600)
@@ -28,7 +29,9 @@ CATEGORY_TO_OSM: dict[str, str] = {
     "mosque": '["amenity"="place_of_worship"]["religion"="muslim"]',
 }
 
-_MID_LAT = (DUBAI_BOUNDS["min_lat"] + DUBAI_BOUNDS["max_lat"]) / 2
+_city = get_active_city()
+_BOUNDS = _city.bounds
+_MID_LAT = (_BOUNDS["min_lat"] + _BOUNDS["max_lat"]) / 2
 
 
 def _build_spatial_bins(
@@ -43,7 +46,7 @@ def _build_spatial_bins(
 
 
 async def _fetch_pois(category: str) -> list[dict]:
-    """Query Overpass API for POIs of a given category in Dubai. Results are cached in-memory."""
+    """Query Overpass API for POIs of a given category. Results are cached in-memory."""
     if category in _poi_cache:
         return _poi_cache[category]
 
@@ -51,7 +54,7 @@ async def _fetch_pois(category: str) -> list[dict]:
     if not osm_tag:
         return []
 
-    bbox = f"{DUBAI_BOUNDS['min_lat']},{DUBAI_BOUNDS['min_lng']},{DUBAI_BOUNDS['max_lat']},{DUBAI_BOUNDS['max_lng']}"
+    bbox = f"{_BOUNDS['min_lat']},{_BOUNDS['min_lng']},{_BOUNDS['max_lat']},{_BOUNDS['max_lng']}"
     query = f"""
     [out:json][timeout:25];
     (

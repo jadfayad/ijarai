@@ -1,100 +1,146 @@
 import { create } from "zustand";
-import { computeScores } from "@/lib/api";
+import { computeScores, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG } from "@/lib/types";
-import type { CriterionConfig, GridResolution, ScoreResponse } from "@/lib/types";
+import type {
+  CriterionConfig,
+  GridResolution,
+  ScoreResponse,
+  CityConfig,
+  DestinationConfig,
+} from "@/lib/types";
 
-const DEFAULT_CRITERIA: CriterionConfig[] = [
-  {
-    id: "commute-office",
-    type: "commute",
-    label: "Commute to Office",
-    description: "Travel time from each area to your workplace",
-    weight: 8,
-    enabled: false,
-    params: {
-      destination: { lat: 25.2048, lng: 55.2708 },
-      mode: "car" as const,
-      source: "isochrone" as const,
-      time_of_day: "peak" as const,
-      label: "",
-    },
+function buildDefaultCriteria(city: CityConfig): CriterionConfig[] {
+  const dests = city.default_destinations;
+  const officeDest = dests.find((d: DestinationConfig) => d.icon === "briefcase") ?? {
+    lat: city.center_lat,
+    lng: city.center_lng,
+    label: "",
     icon: "briefcase",
-  },
-  {
-    id: "commute-airport",
-    type: "commute",
-    label: "Commute to Airport",
-    description: "Travel time to Dubai International Airport (DXB)",
-    weight: 4,
-    enabled: false,
-    params: {
-      destination: { lat: 25.2532, lng: 55.3657 },
-      mode: "car" as const,
-      source: "isochrone" as const,
-      time_of_day: "peak" as const,
-      label: "DXB Airport",
-    },
+  };
+  const airportDest = dests.find((d: DestinationConfig) => d.icon === "plane") ?? {
+    lat: city.center_lat,
+    lng: city.center_lng,
+    label: "Airport",
     icon: "plane",
-  },
-  {
-    id: "commute-custom",
-    type: "commute",
-    label: "Commute to Custom Place",
-    description: "Travel time to a place you visit often",
-    weight: 5,
-    enabled: false,
-    params: {
-      destination: { lat: 25.2048, lng: 55.2708 },
-      mode: "car" as const,
-      source: "isochrone" as const,
-      time_of_day: "peak" as const,
-      label: "",
-    },
+  };
+  const customDest = dests.find((d: DestinationConfig) => d.icon === "map-pin") ?? {
+    lat: city.center_lat,
+    lng: city.center_lng,
+    label: "",
     icon: "map-pin",
-  },
-  {
-    id: "amenities",
-    type: "amenities",
-    label: "Nearby Amenities",
-    description: "Gyms, cafes, beaches, pools, parks nearby",
-    weight: 6,
-    enabled: false,
-    params: { categories: ["gym", "cafe", "beach", "park"] },
-    icon: "trees",
-  },
-  {
-    id: "budget",
-    type: "budget",
-    label: "Budget / Rent",
-    description: "Match areas to your monthly rent budget",
-    weight: 9,
-    enabled: false,
-    params: { max_monthly_rent: 7000 },
-    icon: "wallet",
-  },
-  {
-    id: "neighborhood",
-    type: "neighborhood",
-    label: "Neighborhood Quality",
-    description: "Overall reputation and livability of the area",
-    weight: 5,
-    enabled: false,
-    params: {},
-    icon: "star",
-  },
-  {
-    id: "noise",
-    type: "noise",
-    label: "Low Noise",
-    description: "Distance from highways, airports, construction",
-    weight: 4,
-    enabled: false,
-    params: {},
-    icon: "volume-x",
-  },
-];
+  };
+
+  return [
+    {
+      id: "commute-office",
+      type: "commute",
+      label: "Commute to Office",
+      description: "Travel time from each area to your workplace",
+      weight: 8,
+      enabled: false,
+      params: {
+        destination: { lat: officeDest.lat, lng: officeDest.lng },
+        mode: "car" as const,
+        source: "isochrone" as const,
+        time_of_day: "peak" as const,
+        label: officeDest.label,
+      },
+      icon: "briefcase",
+    },
+    {
+      id: "commute-airport",
+      type: "commute",
+      label: "Commute to Airport",
+      description: `Travel time to the nearest major airport`,
+      weight: 4,
+      enabled: false,
+      params: {
+        destination: { lat: airportDest.lat, lng: airportDest.lng },
+        mode: "car" as const,
+        source: "isochrone" as const,
+        time_of_day: "peak" as const,
+        label: airportDest.label,
+      },
+      icon: "plane",
+    },
+    {
+      id: "commute-custom",
+      type: "commute",
+      label: "Commute to Custom Place",
+      description: "Travel time to a place you visit often",
+      weight: 5,
+      enabled: false,
+      params: {
+        destination: { lat: customDest.lat, lng: customDest.lng },
+        mode: "car" as const,
+        source: "isochrone" as const,
+        time_of_day: "peak" as const,
+        label: customDest.label,
+      },
+      icon: "map-pin",
+    },
+    {
+      id: "amenities",
+      type: "amenities",
+      label: "Nearby Amenities",
+      description: "Gyms, cafes, beaches, pools, parks nearby",
+      weight: 6,
+      enabled: false,
+      params: { categories: ["gym", "cafe", "beach", "park"] },
+      icon: "trees",
+    },
+    {
+      id: "budget",
+      type: "budget",
+      label: "Budget / Rent",
+      description: "Match areas to your monthly rent budget",
+      weight: 9,
+      enabled: false,
+      params: { max_monthly_rent: 7000 },
+      icon: "wallet",
+    },
+    {
+      id: "neighborhood",
+      type: "neighborhood",
+      label: "Neighborhood Quality",
+      description: "Overall reputation and livability of the area",
+      weight: 5,
+      enabled: false,
+      params: {},
+      icon: "star",
+    },
+    {
+      id: "noise",
+      type: "noise",
+      label: "Low Noise",
+      description: "Distance from highways, airports, construction",
+      weight: 4,
+      enabled: false,
+      params: {},
+      icon: "volume-x",
+    },
+  ];
+}
+
+const FALLBACK_CITY: CityConfig = {
+  slug: "dubai",
+  name: "Dubai",
+  country_code: "ae",
+  bounds: { min_lat: 25.0, max_lat: 25.3, min_lng: 55.05, max_lng: 55.45 },
+  center_lat: 25.2048,
+  center_lng: 55.2708,
+  timezone_offset_hours: 4,
+  default_zoom: 11,
+  default_destinations: [
+    { label: "", lat: 25.2048, lng: 55.2708, icon: "briefcase" },
+    { label: "DXB Airport", lat: 25.2532, lng: 55.3657, icon: "plane" },
+    { label: "", lat: 25.2048, lng: 55.2708, icon: "map-pin" },
+  ],
+};
 
 interface CriteriaStore {
+  cityConfig: CityConfig;
+  cityLoaded: boolean;
   criteria: CriterionConfig[];
   scoreData: ScoreResponse | null;
   loading: boolean;
@@ -103,6 +149,7 @@ interface CriteriaStore {
   scoreThreshold: number;
   gridResolution: GridResolution;
 
+  loadCityConfig: () => Promise<void>;
   setCriteria: (criteria: CriterionConfig[]) => void;
   updateCriterion: (id: string, updates: Partial<CriterionConfig>) => void;
   setScoreData: (data: ScoreResponse | null) => void;
@@ -115,7 +162,9 @@ interface CriteriaStore {
 }
 
 export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
-  criteria: DEFAULT_CRITERIA,
+  cityConfig: FALLBACK_CITY,
+  cityLoaded: false,
+  criteria: buildDefaultCriteria(FALLBACK_CITY),
   scoreData: null,
   loading: false,
   error: null,
@@ -123,6 +172,18 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   scoreThreshold: 0,
   gridResolution: "normal",
 
+  loadCityConfig: async () => {
+    try {
+      const config = await fetchCityConfig();
+      set({
+        cityConfig: config,
+        cityLoaded: true,
+        criteria: buildDefaultCriteria(config),
+      });
+    } catch {
+      set({ cityLoaded: true });
+    }
+  },
   setCriteria: (criteria) => set({ criteria }),
   updateCriterion: (id, updates) =>
     set((state) => ({

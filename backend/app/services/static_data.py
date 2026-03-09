@@ -1,18 +1,24 @@
 """
 Static data scoring: rent zones, neighborhood reputation, noise index.
 
-Zone data is loaded from JSON files in app/data/ at import time.
+Zone data is loaded from JSON files in data/<city>/ at import time.
 """
 from __future__ import annotations
 
 import json
 
-from app.grid_config import DATA_DIR
+from app.city_config import get_active_city
 from app.utils.geo import haversine_km
+
+_city = get_active_city()
+_CITY_DATA_DIR = _city.data_dir
 
 
 def _load_json(filename: str) -> dict | list:
-    return json.loads((DATA_DIR / filename).read_text())
+    path = _CITY_DATA_DIR / filename
+    if not path.exists():
+        return {} if filename.endswith("scores.json") or filename == "rent_zones.json" else []
+    return json.loads(path.read_text())
 
 
 RENT_ZONES: dict[str, dict] = _load_json("rent_zones.json")

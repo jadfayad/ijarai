@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 
 interface Prediction {
@@ -13,13 +13,18 @@ interface Props {
   onSelect: (result: { lat: number; lng: number; display_name: string }) => void;
   placeholder?: string;
   className?: string;
+  centerLat?: number;
+  centerLng?: number;
+  countryCode?: string;
 }
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY ?? "";
 
-const DUBAI_CENTER = { latitude: 25.2048, longitude: 55.2708 };
-
-async function fetchAutocomplete(input: string): Promise<Prediction[]> {
+async function fetchAutocomplete(
+  input: string,
+  center: { latitude: number; longitude: number },
+  countryCode: string
+): Promise<Prediction[]> {
   const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
     method: "POST",
     headers: {
@@ -29,9 +34,9 @@ async function fetchAutocomplete(input: string): Promise<Prediction[]> {
     body: JSON.stringify({
       input,
       locationBias: {
-        circle: { center: DUBAI_CENTER, radius: 50000.0 },
+        circle: { center, radius: 50000.0 },
       },
-      includedRegionCodes: ["ae"],
+      includedRegionCodes: [countryCode],
     }),
   });
 
@@ -68,7 +73,14 @@ export function AddressAutocomplete({
   onSelect,
   placeholder = "Search for an address...",
   className,
+  centerLat = 25.2048,
+  centerLng = 55.2708,
+  countryCode = "ae",
 }: Props) {
+  const center = useMemo(
+    () => ({ latitude: centerLat, longitude: centerLng }),
+    [centerLat, centerLng]
+  );
   const [query, setQuery] = useState(value);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [open, setOpen] = useState(false);
@@ -85,9 +97,9 @@ export function AddressAutocomplete({
       setPredictions([]);
       return;
     }
-    const results = await fetchAutocomplete(text.trim());
+    const results = await fetchAutocomplete(text.trim(), center, countryCode);
     setPredictions(results);
-  }, []);
+  }, [center, countryCode]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;

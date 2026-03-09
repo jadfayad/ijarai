@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function CommuteConfig({ criterion }: Props) {
-  const { updateCriterion } = useCriteriaStore();
+  const { updateCriterion, cityConfig } = useCriteriaStore();
   const params = criterion.params as CommuteParams;
 
   const handleSelect = useCallback(
@@ -40,6 +40,9 @@ export function CommuteConfig({ criterion }: Props) {
         onSelect={handleSelect}
         placeholder="Search for a destination..."
         className="text-xs h-8 rounded-lg bg-white/[0.05] border-white/[0.1] placeholder:text-white/25 focus:border-primary/40 transition-colors"
+        centerLat={cityConfig.center_lat}
+        centerLng={cityConfig.center_lng}
+        countryCode={cityConfig.country_code}
       />
 
       <div className="flex items-center gap-2.5">

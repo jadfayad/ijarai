@@ -1,7 +1,7 @@
 """
-Dubai grid generation and management.
+Grid generation and management.
 
-Generates an H3 hexagonal grid covering the main urban areas,
+Generates an H3 hexagonal grid covering the active city's urban areas,
 filtered to land-only cells using the global-land-mask dataset.
 """
 from __future__ import annotations
@@ -11,30 +11,30 @@ import json
 import h3
 from global_land_mask import globe
 
+from app.city_config import get_active_city
 from app.grid_config import (
-    DUBAI_BOUNDS,
     DEFAULT_RESOLUTION,
-    DATA_DIR,
-    RESOLUTIONS,
     cell_size_to_h3_res,
 )
 
 _GRID_VERSION = 4
+_city = get_active_city()
 
 
 def _grid_path(h3_res: int):
-    return DATA_DIR / f"dubai_grid_h3r{h3_res}.geojson"
+    return _city.data_dir / f"grid_h3r{h3_res}.geojson"
 
 
 def generate_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
-    """Generate a GeoJSON FeatureCollection of H3 hex cells over Dubai (land only)."""
+    """Generate a GeoJSON FeatureCollection of H3 hex cells over the city (land only)."""
     h3_res = cell_size_to_h3_res(cell_size_m)
+    bounds = _city.bounds
 
     boundary = h3.LatLngPoly([
-        (DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["min_lng"]),
-        (DUBAI_BOUNDS["max_lat"], DUBAI_BOUNDS["min_lng"]),
-        (DUBAI_BOUNDS["max_lat"], DUBAI_BOUNDS["max_lng"]),
-        (DUBAI_BOUNDS["min_lat"], DUBAI_BOUNDS["max_lng"]),
+        (bounds["min_lat"], bounds["min_lng"]),
+        (bounds["max_lat"], bounds["min_lng"]),
+        (bounds["max_lat"], bounds["max_lng"]),
+        (bounds["min_lat"], bounds["max_lng"]),
     ])
     all_cells = h3.h3shape_to_cells(boundary, h3_res)
 
@@ -68,7 +68,7 @@ def load_grid(cell_size_m: int = DEFAULT_RESOLUTION.cell_size_m) -> dict:
 
     grid = generate_grid(cell_size_m)
     grid["_version"] = _GRID_VERSION
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _city.data_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(grid))
     return grid
 

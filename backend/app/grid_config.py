@@ -1,29 +1,14 @@
 """
-Grid configuration for Dubai housing optimiser.
+Grid configuration for the housing optimiser.
 
-Single source of truth for grid bounds, resolution presets, and derived
-geometry.  Both the backend grid generator and the frontend type definitions
+Single source of truth for resolution presets and derived geometry.
+City-specific bounds and paths come from city_config.
+Both the backend grid generator and the frontend type definitions
 should stay in sync with the values here.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-DATA_DIR = Path(__file__).resolve().parent / "data"
-
-# ---------------------------------------------------------------------------
-# Geographic bounds
-# ---------------------------------------------------------------------------
-DUBAI_BOUNDS = {
-    "min_lat": 25.00,
-    "max_lat": 25.30,
-    "min_lng": 55.05,
-    "max_lng": 55.45,
-}
 
 # ---------------------------------------------------------------------------
 # Resolution presets (H3 hex grid)

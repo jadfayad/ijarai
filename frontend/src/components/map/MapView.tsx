@@ -49,14 +49,6 @@ const ICON_MAP: Record<string, typeof MapPin> = {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
-const DUBAI_VIEW = {
-  longitude: 55.27,
-  latitude: 25.2,
-  zoom: 11,
-  pitch: 0,
-  bearing: 0,
-};
-
 const COLOR_RAMP: [number, number, number][] = [
   [215, 25, 28],
   [253, 174, 97],
@@ -86,6 +78,7 @@ function scoreToColor(
 
 export function MapView() {
   const {
+    cityConfig,
     criteria,
     scoreData,
     setSelectedCellId,
@@ -96,6 +89,17 @@ export function MapView() {
     loading,
     generate,
   } = useCriteriaStore();
+
+  const cityView = useMemo(
+    () => ({
+      longitude: cityConfig.center_lng,
+      latitude: cityConfig.center_lat,
+      zoom: cityConfig.default_zoom,
+      pitch: 0,
+      bearing: 0,
+    }),
+    [cityConfig]
+  );
 
   const hasActiveCriteria = criteria.some((c) => c.enabled);
 
@@ -221,7 +225,7 @@ export function MapView() {
   return (
     <div className="relative w-full h-full">
       <DeckGL
-        initialViewState={DUBAI_VIEW}
+        initialViewState={cityView}
         controller={true}
         layers={layers}
         onClick={handleClick}
@@ -316,7 +320,7 @@ export function MapView() {
             </h3>
             <p className="text-white/40 text-sm leading-relaxed mb-1">
               Configure your preferences in the sidebar, then generate your
-              personalized heatmap to find the ideal location in Dubai.
+              personalized heatmap to find the ideal location in {cityConfig.name}.
             </p>
           </div>
         </div>

@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException
 import httpx
 
+from app.city_config import get_active_city
 from app.models.schemas import GeocodeRequest, GeocodeResponse
 
 router = APIRouter()
+
+_city = get_active_city()
 
 
 @router.post("/geocode", response_model=GeocodeResponse)
@@ -16,7 +19,7 @@ async def geocode_address(request: GeocodeRequest):
                 "q": request.address,
                 "format": "json",
                 "limit": 1,
-                "countrycodes": "ae",
+                "countrycodes": _city.country_code,
             },
             headers={"User-Agent": "OptimHouse/1.0"},
         )

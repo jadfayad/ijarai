@@ -12,7 +12,7 @@ import {
 import { CriterionCard } from "./CriterionCard";
 
 export function CriteriaPanel() {
-  const { criteria, error, scoreData } = useCriteriaStore();
+  const { cityConfig, criteria, error, scoreData } = useCriteriaStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
 
@@ -48,7 +48,7 @@ export function CriteriaPanel() {
                 OptimHouse
               </h1>
               <p className="text-[11px] text-white/40 mt-0">
-                Find your ideal home in Dubai
+                Find your ideal home in {cityConfig.name}
               </p>
             </div>
           </div>

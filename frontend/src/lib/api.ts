@@ -1,4 +1,4 @@
-import type { ScoreRequest, ScoreResponse, GeocodeResult } from "./types";
+import type { ScoreRequest, ScoreResponse, GeocodeResult, CityConfig } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -30,4 +30,8 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
 
 export async function healthCheck(): Promise<{ status: string }> {
   return request("/health");
+}
+
+export async function fetchCityConfig(): Promise<CityConfig> {
+  return request<CityConfig>("/api/city");
 }
