@@ -25,6 +25,7 @@ class ScoreRequest(BaseModel):
 class ScoreResponse(BaseModel):
     type: str = "FeatureCollection"
     features: list[dict]
+    criterion_labels: dict[str, str] = Field(default_factory=dict)
 
 
 class GeocodeRequest(BaseModel):

@@ -342,6 +342,7 @@ export function MapView() {
           y={popupInfo.y}
           properties={popupInfo.properties}
           areaName={areaName}
+          criterionLabels={scoreData?.criterion_labels}
           onClose={() => {
             setPopupInfo(null);
             setSelectedCellId(null);

@@ -3,24 +3,20 @@
 import { X } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 
-const SCORE_LABELS: Record<string, string> = {
-  s_commute_car_peak: "Car (Peak)",
-  s_commute_car_off_peak: "Car (Off-Peak)",
-  s_commute_car_google_peak: "Car Traffic (Peak)",
-  s_commute_car_google_off_peak: "Car Traffic (Off-Peak)",
-  s_commute_transit_peak: "Transit (Peak)",
-  s_commute_transit_off_peak: "Transit (Off-Peak)",
-  s_commute_car: "Car",
-  s_commute_transit: "Transit",
-  s_amenities: "Amenities",
-  s_budget: "Budget Match",
-  s_neighborhood: "Neighborhood",
-  s_noise: "Low Noise",
+/**
+ * Fallback labels for legacy keys or when criterion_labels is absent.
+ */
+const FALLBACK_LABELS: Record<string, string> = {
+  amenities: "Amenities",
+  budget: "Budget Match",
+  neighborhood: "Neighborhood",
+  noise: "Low Noise",
 };
 
 function formatScoreKey(key: string): string {
   return key
     .replace(/^s_/, "")
+    .replace(/_\d+$/, "")          // strip trailing index
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -63,7 +59,7 @@ function ScoreBar({
 
   return (
     <div className="flex items-center gap-2.5">
-      <span className="text-[11px] text-white/40 w-28 shrink-0 truncate">
+      <span className="text-[11px] text-white/40 w-32 shrink-0 truncate" title={label}>
         {label}
       </span>
       <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
@@ -84,10 +80,12 @@ interface CellPopupProps {
   y: number;
   properties: Record<string, unknown>;
   areaName?: string | null;
+  /** Maps raw criterion keys (without s_ prefix) to display labels */
+  criterionLabels?: Record<string, string>;
   onClose: () => void;
 }
 
-export function CellPopup({ x, y, properties, areaName, onClose }: CellPopupProps) {
+export function CellPopup({ x, y, properties, areaName, criterionLabels, onClose }: CellPopupProps) {
   const currencySymbol = useCriteriaStore((s) => s.cityConfig.currency_symbol);
   const score = properties.score as number;
   const pct = Math.round(score * 100);
@@ -135,15 +133,22 @@ export function CellPopup({ x, y, properties, areaName, onClose }: CellPopupProp
 
       <div className="px-4 pb-4 pt-3 space-y-2">
         {breakdownKeys.map((key) => {
-          const metricKey = key.replace(/^s_/, "m_");
+          const rawKey = key.replace(/^s_/, "");
+          const metricKey = `m_${rawKey}`;
           const metricValue = properties[metricKey] as number | undefined;
           const metric =
             metricValue !== undefined ? formatMetric(key, metricValue, currencySymbol) : null;
 
+          // Prefer backend-supplied label, then fallback map, then auto-format
+          const label =
+            criterionLabels?.[rawKey] ??
+            FALLBACK_LABELS[rawKey] ??
+            formatScoreKey(key);
+
           return (
             <ScoreBar
               key={key}
-              label={SCORE_LABELS[key] ?? formatScoreKey(key)}
+              label={label}
               value={properties[key] as number}
               metric={metric}
             />

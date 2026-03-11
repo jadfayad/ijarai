@@ -107,6 +107,8 @@ export interface GeoJSONFeature {
 export interface ScoreResponse {
   type: "FeatureCollection";
   features: GeoJSONFeature[];
+  /** Maps criterion keys (e.g. "commute_car_peak_0") to display labels */
+  criterion_labels?: Record<string, string>;
 }
 
 export interface GeocodeResult {
