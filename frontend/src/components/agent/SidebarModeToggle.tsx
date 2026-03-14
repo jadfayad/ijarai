@@ -1,11 +1,11 @@
 "use client";
 
-import { LayoutList, Sparkles } from "lucide-react";
+import { LayoutList, Bot } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 
 const modes = [
   { id: "criteria" as const, label: "Criteria", icon: LayoutList },
-  { id: "agent" as const, label: "Agent", icon: Sparkles },
+  { id: "agent" as const, label: "Agent", icon: Bot },
 ];
 
 export function SidebarModeToggle() {

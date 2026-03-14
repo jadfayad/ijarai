@@ -10,7 +10,10 @@ import {
   Layers,
   FileStack,
 } from "lucide-react";
-import { useScenarioStore } from "@/stores/scenario-store";
+import {
+  useScenarioStore,
+  syncActiveScenarioToCriteria,
+} from "@/stores/scenario-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 
 export function ScenarioSwitcher() {
@@ -33,6 +36,22 @@ export function ScenarioSwitcher() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
+
+  // On mount, wait for persist hydration then sync the active scenario's
+  // criteria into the (non-persisted) criteria store.
+  useEffect(() => {
+    const sync = () => syncActiveScenarioToCriteria(useScenarioStore.getState());
+
+    if (useScenarioStore.persist.hasHydrated()) {
+      sync();
+    } else {
+      const unsub = useScenarioStore.persist.onFinishHydration(() => {
+        sync();
+        unsub();
+      });
+      return unsub;
+    }
+  }, []);
 
   useEffect(() => {
     if (editingId && editRef.current) {

@@ -38,6 +38,19 @@ function nextScenarioName(scenarios: Scenario[], city: string): string {
   return `Scenario ${n}`;
 }
 
+function syncActiveScenarioToCriteria(state: ScenarioStore) {
+  if (!state.activeScenarioId) return;
+  const scenario = state.scenarios.find(
+    (s) => s.id === state.activeScenarioId
+  );
+  if (!scenario) return;
+  const cs = useCriteriaStore.getState();
+  cs.setCriteria(structuredClone(scenario.criteria));
+  cs.setGridResolution(scenario.gridResolution);
+  cs.setScoreThreshold(scenario.scoreThreshold);
+  cs.setScoreData(scenario.scoreData);
+}
+
 export const useScenarioStore = create<ScenarioStore>()(
   persist(
     (set, get) => ({
@@ -112,3 +125,5 @@ export const useScenarioStore = create<ScenarioStore>()(
     }
   )
 );
+
+export { syncActiveScenarioToCriteria };
