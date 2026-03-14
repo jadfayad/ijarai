@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   Maximize,
   Filter,
+  Square,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,7 @@ export function MapView() {
     setGridResolution,
     loading,
     generate,
+    cancelGeneration,
     wizardOpen,
     setWizardOpen,
   } = useCriteriaStore();
@@ -436,12 +438,12 @@ export function MapView() {
 
           {loading ? (
             <Button
-              className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/85 shadow-lg shadow-primary/20 transition-all duration-200 border-0 text-white"
+              className="h-11 px-8 text-sm font-medium rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 hover:bg-[rgba(24,24,40,0.9)] hover:border-white/[0.2] transition-all duration-200 text-white/70 hover:text-white"
               size="lg"
-              disabled
+              onClick={cancelGeneration}
             >
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <span className="flex items-center gap-2.5">
+                <svg className="animate-spin h-3.5 w-3.5 text-white/40" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -458,6 +460,7 @@ export function MapView() {
                   />
                 </svg>
                 Computing...
+                <Square size={12} className="fill-white/50 text-white/50" />
               </span>
             </Button>
           ) : !hasActiveCriteria ? (

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { computeScores, fetchCityConfig } from "@/lib/api";
+import { computeScores, cancelScoring, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
 import type {
   CriterionConfig,
@@ -152,9 +152,12 @@ interface CriteriaStore {
   setGridResolution: (resolution: GridResolution) => void;
   setWizardOpen: (open: boolean) => void;
   generate: () => Promise<void>;
+  cancelGeneration: () => void;
 
   resolveDefaultDest: (icon: string) => { lat: number; lng: number; label: string };
 }
+
+let _abortController: AbortController | null = null;
 
 export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   cityConfig: FALLBACK_CITY,
@@ -207,7 +210,23 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
     return resolveDefaultDestination(cityConfig.default_destinations, icon, cityConfig);
   },
 
+  cancelGeneration: () => {
+    if (_abortController) {
+      _abortController.abort();
+      _abortController = null;
+    }
+    cancelScoring();
+    set({ loading: false, error: null });
+  },
+
   generate: async () => {
+    if (_abortController) {
+      _abortController.abort();
+    }
+
+    const controller = new AbortController();
+    _abortController = controller;
+
     const { criteria, gridResolution, cityConfig } = get();
     set({ loading: true, error: null });
 
@@ -226,17 +245,20 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       }
 
       const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
-      const data = await computeScores({
-        criteria: activeCriteria,
-        cell_size_m,
-        city: cityConfig.slug,
-      });
+      const data = await computeScores(
+        { criteria: activeCriteria, cell_size_m, city: cityConfig.slug },
+        controller.signal,
+      );
       set({ scoreData: data });
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       set({
         error: err instanceof Error ? err.message : "Failed to compute scores",
       });
     } finally {
+      if (_abortController === controller) {
+        _abortController = null;
+      }
       set({ loading: false });
     }
   },

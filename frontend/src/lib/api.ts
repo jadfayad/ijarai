@@ -14,11 +14,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export async function computeScores(body: ScoreRequest & { city?: string }): Promise<ScoreResponse> {
+export async function computeScores(
+  body: ScoreRequest & { city?: string },
+  signal?: AbortSignal,
+): Promise<ScoreResponse> {
   return request<ScoreResponse>("/api/score", {
     method: "POST",
     body: JSON.stringify(body),
+    signal,
   });
+}
+
+export async function cancelScoring(): Promise<void> {
+  try {
+    await fetch(`${API_URL}/api/score/cancel`, { method: "POST" });
+  } catch {
+    // best-effort — ignore network errors during cancel
+  }
 }
 
 export async function geocodeAddress(address: string, city?: string): Promise<GeocodeResult> {

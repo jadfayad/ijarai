@@ -8,12 +8,23 @@ so the frontend can display a human-readable label for every score row.
 """
 from __future__ import annotations
 
+import asyncio
+
 from app.city_config import CityConfig
 from app.models.schemas import CriterionRequest, ScoreRequest, ScoreResponse
 from app.services.grid import get_grid_centroids
 from app.services.commute import score_commute
 from app.services.amenities import score_amenities
 from app.services.static_data import score_budget, score_neighborhood, score_noise, find_nearest_zone_name
+
+
+class ComputationCancelled(Exception):
+    """Raised when a score computation is cancelled by the user."""
+
+
+def _check_cancel(cancel: asyncio.Event | None) -> None:
+    if cancel is not None and cancel.is_set():
+        raise ComputationCancelled()
 
 _MODE_LABELS = {"car": "Car", "transit": "Transit"}
 _TOD_LABELS = {"peak": "Peak", "off_peak": "Off-Peak"}
@@ -56,11 +67,15 @@ def _criterion_label(criterion: CriterionRequest, index: int) -> str:
     return label_map.get(criterion.type, criterion.type.title())
 
 
-async def compute_scores(city: CityConfig, request: ScoreRequest) -> ScoreResponse:
+async def compute_scores(
+    city: CityConfig,
+    request: ScoreRequest,
+    cancel: asyncio.Event | None = None,
+) -> ScoreResponse:
     """Compute weighted scores for every grid cell."""
+    _check_cancel(cancel)
     centroids = get_grid_centroids(city, request.cell_size_m)
 
-    # Assign a unique key + label to every active criterion.
     keyed_criteria: list[tuple[str, CriterionRequest]] = []
     criterion_labels: dict[str, str] = {}
 
@@ -73,11 +88,12 @@ async def compute_scores(city: CityConfig, request: ScoreRequest) -> ScoreRespon
         keyed_criteria.append((key, criterion))
         criterion_labels[key] = _criterion_label(criterion, idx)
 
-    # Compute raw scores & metrics per criterion key.
     criterion_scores: dict[str, dict[str, float]] = {}
     criterion_metrics: dict[str, dict[str, float]] = {}
 
     for key, criterion in keyed_criteria:
+        _check_cancel(cancel)
+
         if criterion.type == "commute":
             scores, metrics = await score_commute(city, centroids, criterion.params)
         elif criterion.type == "amenities":
@@ -125,7 +141,8 @@ async def compute_scores(city: CityConfig, request: ScoreRequest) -> ScoreRespon
         else:
             normalized_scores[key] = {cid: 1.0 for cid in scores}
 
-    # Build output features.
+    _check_cancel(cancel)
+
     features = []
     for centroid in centroids:
         cid = centroid["cell_id"]
