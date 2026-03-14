@@ -27,7 +27,8 @@ export type CriterionType =
   | "amenities"
   | "budget"
   | "neighborhood"
-  | "noise";
+  | "noise"
+  | "ai";
 
 export type CommutePreset =
   | "office"

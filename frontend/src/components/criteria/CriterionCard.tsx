@@ -13,6 +13,7 @@ import {
   Users,
   GraduationCap,
   Dumbbell,
+  Sparkles,
   Info,
   Trash2,
   ChevronDown,
@@ -105,6 +106,12 @@ const ICON_CONFIG: Record<
     text: "text-slate-400",
     activeBg: "bg-slate-500/20",
   },
+  sparkles: {
+    icon: <Sparkles size={15} />,
+    bg: "bg-violet-500/10",
+    text: "text-violet-400",
+    activeBg: "bg-violet-500/20",
+  },
 };
 
 const DEFAULT_ICON_CONFIG = {
@@ -131,6 +138,9 @@ function getSummary(criterion: CriterionConfig, currencySymbol: string): string 
   if (criterion.type === "budget") {
     const p = criterion.params as BudgetParams;
     return `Max ${currencySymbol}${p.max_monthly_rent.toLocaleString()}/mo`;
+  }
+  if (criterion.type === "ai") {
+    return criterion.description;
   }
   return "";
 }

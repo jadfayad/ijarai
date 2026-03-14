@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
 import { MapPin } from "lucide-react";
 import { skylines } from "@/components/Skylines";
 
@@ -17,14 +18,34 @@ const cities = [
   { name: "Toronto", slug: "toronto", country: "Canada", available: false },
 ];
 
+type City = (typeof cities)[number];
+
 export default function LandingPage() {
   const router = useRouter();
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+
+  const handleCityClick = useCallback(
+    (city: City) => {
+      if (!city.available || transitioning) return;
+      setSelectedCity(city);
+      setTransitioning(true);
+      setTimeout(() => router.push(`/${city.slug}`), 1500);
+    },
+    [transitioning, router]
+  );
+
+  const DestSkyline = selectedCity ? skylines[selectedCity.slug] : null;
 
   return (
     <main className="relative flex h-screen w-screen flex-col items-center justify-center overflow-hidden bg-background">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/[0.08] via-transparent to-transparent" />
 
-      <div className="relative z-10 w-full max-w-5xl space-y-12 px-6">
+      <div
+        className={`relative z-10 w-full max-w-5xl space-y-12 px-6 transition-all duration-700 ease-out ${
+          transitioning ? "scale-[0.96] opacity-0 blur-sm" : ""
+        }`}
+      >
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
@@ -52,7 +73,7 @@ export default function LandingPage() {
               return (
                 <button
                   key={city.slug}
-                  onClick={() => city.available && router.push(`/${city.slug}`)}
+                  onClick={() => handleCityClick(city)}
                   className={`group relative flex flex-col items-center overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 ${
                     city.available
                       ? "border-primary/30 bg-primary/[0.04] hover:border-primary/60 hover:bg-primary/[0.08] hover:scale-[1.04] cursor-pointer shadow-lg shadow-primary/[0.04] hover:shadow-xl hover:shadow-primary/10"
@@ -94,6 +115,41 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Travel transition overlay */}
+      {selectedCity && DestSkyline && (
+        <div
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-background transition-opacity duration-500 ${
+            transitioning ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-primary/[0.12] via-primary/[0.04] to-transparent"
+            style={{ animation: "travel-glow-pulse 2s ease-in-out infinite" }}
+          />
+
+          <div
+            className="relative z-10 text-center"
+            style={{ animation: "travel-text-appear 0.6s ease-out 0.4s both" }}
+          >
+            <p className="text-[11px] font-medium text-primary/50 uppercase tracking-[0.3em] mb-3">
+              Travelling to
+            </p>
+            <h2 className="text-5xl font-bold tracking-tight bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
+              {selectedCity.name}
+            </h2>
+            <p className="text-sm text-muted-foreground/60 mt-2 tracking-wide">
+              {selectedCity.country}
+            </p>
+          </div>
+
+          <div
+            className="absolute bottom-0 left-0 right-0 flex justify-center"
+            style={{ animation: "travel-skyline-rise 0.9s ease-out 0.2s both" }}
+          >
+            <DestSkyline className="w-full max-w-4xl h-56 text-primary/15" />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

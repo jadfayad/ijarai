@@ -93,6 +93,24 @@ export function createNoiseCriterion(): CriterionConfig {
   };
 }
 
+let aiCounter = 0;
+
+export function createAiCriterion(userPrompt: string): CriterionConfig {
+  aiCounter++;
+  const preview =
+    userPrompt.length > 60 ? userPrompt.slice(0, 57) + "..." : userPrompt;
+  return {
+    id: `ai-${aiCounter}`,
+    type: "ai",
+    label: "AI Preference",
+    description: preview,
+    weight: 5,
+    enabled: true,
+    params: {},
+    icon: "sparkles",
+  };
+}
+
 function resolveDefaultDestination(
   dests: DestinationConfig[],
   icon: string,

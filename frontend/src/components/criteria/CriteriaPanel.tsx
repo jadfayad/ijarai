@@ -78,7 +78,7 @@ export function CriteriaPanel() {
                 <Zap className="text-primary" size={16} />
               </div>
               <h1 className="text-[15px] font-semibold text-white tracking-tight">
-                IJAR.AI
+                Search Criteria
               </h1>
             </div>
             <div className="flex items-center gap-2">

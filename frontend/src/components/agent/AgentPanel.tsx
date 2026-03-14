@@ -127,7 +127,7 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
                 <Sparkles className="text-primary" size={16} />
               </div>
               <h1 className="text-[15px] font-semibold text-white tracking-tight">
-                IJAR.AI
+                AI Assistant
               </h1>
             </div>
             <div className="flex items-center gap-1">
