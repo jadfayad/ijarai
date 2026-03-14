@@ -111,6 +111,17 @@ export interface ScoreResponse {
   criterion_labels?: Record<string, string>;
 }
 
+export interface Scenario {
+  id: string;
+  name: string;
+  city: string;
+  createdAt: number;
+  criteria: CriterionConfig[];
+  gridResolution: GridResolution;
+  scoreThreshold: number;
+  scoreData: ScoreResponse;
+}
+
 export interface GeocodeResult {
   lat: number;
   lng: number;

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CriterionCard } from "./CriterionCard";
 import { AddCriterionDialog } from "./AddCriterionDialog";
+import { ScenarioSwitcher } from "./ScenarioSwitcher";
 import { SidebarModeToggle } from "@/components/agent/SidebarModeToggle";
 
 export function CriteriaPanel() {
@@ -28,7 +29,7 @@ export function CriteriaPanel() {
     return (
       <button
         onClick={() => setSidebarOpen(true)}
-        className="absolute top-4 left-4 z-40 bg-black/60 backdrop-blur-xl border border-white/[0.12] rounded-xl px-3 py-2.5 shadow-2xl hover:bg-black/70 hover:border-white/[0.18] transition-all duration-300 text-foreground group"
+        className="absolute top-14 left-4 z-40 bg-black/60 backdrop-blur-xl border border-white/[0.12] rounded-xl px-3 py-2.5 shadow-2xl hover:bg-black/70 hover:border-white/[0.18] transition-all duration-300 text-foreground group"
       >
         <Menu size={20} className="group-hover:scale-110 transition-transform duration-200" />
       </button>
@@ -36,7 +37,7 @@ export function CriteriaPanel() {
   }
 
   return (
-    <div className="absolute top-4 left-4 bottom-4 w-[380px] z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl shadow-black/40 animate-in slide-in-from-left-4 fade-in duration-300">
+    <div className="absolute top-14 left-4 bottom-4 w-[380px] z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl shadow-black/40 animate-in slide-in-from-left-4 fade-in duration-300">
       <div className="absolute inset-0 bg-gradient-to-b from-[rgba(18,18,30,0.88)] to-[rgba(10,10,18,0.92)] backdrop-blur-2xl rounded-2xl border border-white/[0.1]" />
 
       <div className="relative z-10 flex flex-col h-full">
@@ -81,6 +82,8 @@ export function CriteriaPanel() {
         </div>
 
         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
+
+        <ScenarioSwitcher />
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
           {backendOk === false && (

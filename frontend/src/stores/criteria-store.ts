@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { computeScores, cancelScoring, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
+import { useScenarioStore } from "./scenario-store";
 import type {
   CriterionConfig,
   GridResolution,
@@ -250,6 +251,14 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
         controller.signal,
       );
       set({ scoreData: data });
+
+      useScenarioStore.getState().saveScenario({
+        city: cityConfig.slug,
+        criteria,
+        gridResolution,
+        scoreThreshold: get().scoreThreshold,
+        scoreData: data,
+      });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       set({

@@ -437,32 +437,40 @@ export function MapView() {
           </Select>
 
           {loading ? (
-            <Button
-              className="h-11 px-8 text-sm font-medium rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 hover:bg-[rgba(24,24,40,0.9)] hover:border-white/[0.2] transition-all duration-200 text-white/70 hover:text-white"
-              size="lg"
-              onClick={cancelGeneration}
-            >
-              <span className="flex items-center gap-2.5">
-                <svg className="animate-spin h-3.5 w-3.5 text-white/40" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
-                Computing...
-                <Square size={12} className="fill-white/50 text-white/50" />
-              </span>
-            </Button>
+            <>
+              <Button
+                className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary shadow-lg shadow-primary/20 transition-all duration-200 border-0 text-white pointer-events-none"
+                size="lg"
+                disabled
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  Computing...
+                </span>
+              </Button>
+              <Button
+                className="h-11 w-11 p-0 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 hover:bg-white/[0.12] hover:border-white/[0.2] transition-all duration-200 text-white/50 hover:text-white"
+                size="icon"
+                onClick={cancelGeneration}
+              >
+                <Square size={14} className="fill-current" />
+              </Button>
+            </>
           ) : !hasActiveCriteria ? (
             <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 text-sm font-medium text-white/35 cursor-not-allowed select-none">
               <Sparkles size={14} className="text-white/25" />
