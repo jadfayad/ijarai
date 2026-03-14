@@ -89,7 +89,7 @@ interface Props {
 }
 
 export function SetupWizard({ onComplete }: Props) {
-  const { cityConfig, setCriteria, setWizardCompleted, generate } = useCriteriaStore();
+  const { cityConfig, setCriteria, setWizardOpen, generate } = useCriteriaStore();
   const [step, setStep] = useState(0);
 
   // Step 1: Commutes
@@ -194,14 +194,14 @@ export function SetupWizard({ onComplete }: Props) {
   const handleClose = () => {
     const criteria = buildCriteria();
     setCriteria(criteria);
-    setWizardCompleted(true);
+    setWizardOpen(false);
     onComplete();
   };
 
   const handleFinishAndGenerate = () => {
     const criteria = buildCriteria();
     setCriteria(criteria);
-    setWizardCompleted(true);
+    setWizardOpen(false);
     onComplete();
 
     if (criteria.length > 0) {

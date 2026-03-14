@@ -11,20 +11,35 @@ const modes = [
 export function SidebarModeToggle() {
   const sidebarMode = useAgentStore((s) => s.sidebarMode);
   const setSidebarMode = useAgentStore((s) => s.setSidebarMode);
+  const activeIndex = modes.findIndex((m) => m.id === sidebarMode);
 
   return (
-    <div className="flex items-center rounded-lg bg-white/[0.06] border border-white/[0.08] p-0.5">
+    <div className="relative flex items-center rounded-xl bg-white/[0.04] p-1 gap-0.5">
+      <div
+        className="absolute top-1 bottom-1 rounded-lg bg-white/[0.1] border border-white/[0.08] shadow-sm transition-all duration-300 ease-out"
+        style={{
+          width: `calc(50% - 3px)`,
+          left: activeIndex === 0 ? 4 : "calc(50% + 0px)",
+        }}
+      />
       {modes.map((mode) => (
         <button
           key={mode.id}
           onClick={() => setSidebarMode(mode.id)}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
+          className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
             sidebarMode === mode.id
-              ? "bg-primary/20 text-primary shadow-sm"
-              : "text-white/40 hover:text-white/60"
+              ? "text-white"
+              : "text-white/30 hover:text-white/50"
           }`}
         >
-          <mode.icon size={12} />
+          <mode.icon
+            size={13}
+            className={
+              sidebarMode === mode.id
+                ? "text-primary"
+                : ""
+            }
+          />
           {mode.label}
         </button>
       ))}

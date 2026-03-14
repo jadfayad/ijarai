@@ -137,7 +137,7 @@ interface CriteriaStore {
   selectedCellId: string | null;
   scoreThreshold: number;
   gridResolution: GridResolution;
-  wizardCompleted: boolean;
+  wizardOpen: boolean;
 
   loadCityConfig: (slug?: string) => Promise<void>;
   setCriteria: (criteria: CriterionConfig[]) => void;
@@ -150,7 +150,7 @@ interface CriteriaStore {
   setSelectedCellId: (cellId: string | null) => void;
   setScoreThreshold: (threshold: number) => void;
   setGridResolution: (resolution: GridResolution) => void;
-  setWizardCompleted: (completed: boolean) => void;
+  setWizardOpen: (open: boolean) => void;
   generate: () => Promise<void>;
 
   resolveDefaultDest: (icon: string) => { lat: number; lng: number; label: string };
@@ -166,7 +166,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   selectedCellId: null,
   scoreThreshold: 0,
   gridResolution: "normal",
-  wizardCompleted: false,
+  wizardOpen: false,
 
   loadCityConfig: async (slug?: string) => {
     try {
@@ -200,7 +200,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
   setScoreThreshold: (threshold) => set({ scoreThreshold: threshold }),
   setGridResolution: (resolution) => set({ gridResolution: resolution }),
-  setWizardCompleted: (completed) => set({ wizardCompleted: completed }),
+  setWizardOpen: (open) => set({ wizardOpen: open }),
 
   resolveDefaultDest: (icon: string) => {
     const { cityConfig } = get();

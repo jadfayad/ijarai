@@ -96,8 +96,8 @@ export function MapView() {
     setGridResolution,
     loading,
     generate,
-    wizardCompleted,
-    setWizardCompleted,
+    wizardOpen,
+    setWizardOpen,
   } = useCriteriaStore();
 
   const cityView = useMemo(
@@ -112,7 +112,7 @@ export function MapView() {
   );
 
   const hasActiveCriteria = criteria.length > 0;
-  const showWizard = !wizardCompleted && criteria.length === 0;
+  const showWizard = wizardOpen;
 
   const destinations = useMemo(
     () =>
@@ -383,7 +383,7 @@ export function MapView() {
       )}
 
       {showWizard && (
-        <SetupWizard onComplete={() => setWizardCompleted(true)} />
+        <SetupWizard onComplete={() => setWizardOpen(false)} />
       )}
 
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">

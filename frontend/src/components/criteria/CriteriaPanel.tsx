@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, ChevronLeft, Zap, LayoutList } from "lucide-react";
+import { Menu, ChevronLeft, Zap, Wand2 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { healthCheck } from "@/lib/api";
 import {
@@ -14,7 +14,7 @@ import { AddCriterionDialog } from "./AddCriterionDialog";
 import { SidebarModeToggle } from "@/components/agent/SidebarModeToggle";
 
 export function CriteriaPanel() {
-  const { cityConfig, criteria, error, scoreData } = useCriteriaStore();
+  const { cityConfig, criteria, error, scoreData, setWizardOpen } = useCriteriaStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
 
@@ -91,23 +91,39 @@ export function CriteriaPanel() {
             </div>
           )}
 
-          {criteria.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-4">
-                <LayoutList size={22} className="text-white/20" />
+          {criteria.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                <Wand2 size={24} className="text-primary/60" />
               </div>
-              <p className="text-sm text-white/30 mb-1">No criteria yet</p>
-              <p className="text-xs text-white/20">
-                Add criteria below to start scoring areas
+              <p className="text-sm font-medium text-white/50 mb-1">
+                What matters most to you?
               </p>
+              <p className="text-xs text-white/25 max-w-[260px] leading-relaxed mb-6">
+                Set up your preferences to discover the best areas for your lifestyle.
+              </p>
+              <button
+                onClick={() => setWizardOpen(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/20 hover:border-primary/30 text-primary font-medium text-sm px-4 py-3 transition-all duration-200 shadow-lg shadow-primary/10 hover:shadow-primary/20 group"
+              >
+                <Wand2 size={16} className="group-hover:rotate-12 transition-transform duration-300" />
+                Get started with the wizard
+              </button>
+              <div className="flex items-center gap-3 w-full my-4">
+                <div className="flex-1 h-px bg-white/[0.06]" />
+                <span className="text-[10px] text-white/20 uppercase tracking-wider">or</span>
+                <div className="flex-1 h-px bg-white/[0.06]" />
+              </div>
+              <AddCriterionDialog />
             </div>
+          ) : (
+            <>
+              {criteria.map((criterion) => (
+                <CriterionCard key={criterion.id} criterion={criterion} />
+              ))}
+              <AddCriterionDialog />
+            </>
           )}
-
-          {criteria.map((criterion) => (
-            <CriterionCard key={criterion.id} criterion={criterion} />
-          ))}
-
-          <AddCriterionDialog />
         </div>
 
         <div className="p-4 space-y-2">

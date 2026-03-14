@@ -132,7 +132,7 @@ export function AddCriterionDialog() {
   };
 
   return (
-    <div>
+    <div className="w-full">
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
