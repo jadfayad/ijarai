@@ -2,11 +2,16 @@
 
 import { useEffect } from "react";
 import { CriteriaPanel } from "@/components/criteria/CriteriaPanel";
+import { AgentPanel } from "@/components/agent/AgentPanel";
+import { SidebarModeToggle } from "@/components/agent/SidebarModeToggle";
 import { MapView } from "@/components/map/MapView";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { useAgentStore } from "@/stores/agent-store";
 
 export default function SanFranciscoPage() {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
+  const sidebarMode = useAgentStore((s) => s.sidebarMode);
+  const setSidebarMode = useAgentStore((s) => s.setSidebarMode);
 
   useEffect(() => {
     loadCityConfig("san-francisco");
@@ -17,7 +22,12 @@ export default function SanFranciscoPage() {
       <div className="absolute inset-0">
         <MapView />
       </div>
-      <CriteriaPanel />
+      <SidebarModeToggle />
+      {sidebarMode === "criteria" ? (
+        <CriteriaPanel />
+      ) : (
+        <AgentPanel onClose={() => setSidebarMode("criteria")} />
+      )}
     </main>
   );
 }
