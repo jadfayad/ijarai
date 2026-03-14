@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { AgentMessageBubble } from "./AgentMessage";
+import { SidebarModeToggle } from "./SidebarModeToggle";
 
 const SUGGESTED_PROMPTS = [
   {
@@ -119,37 +120,35 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
 
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="p-5 pb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Sparkles className="text-primary" size={18} />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">
-                Agent Mode
+        <div className="p-4 pb-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Sparkles className="text-primary" size={16} />
+              </div>
+              <h1 className="text-[15px] font-semibold text-white tracking-tight">
+                IJAR.AI
               </h1>
-              <p className="text-[11px] text-white/40 mt-0">
-                Deep research assistant
-              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={clearConversation}
+                  className="text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
+                  title="Clear conversation"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+              <button
+                onClick={onClose ?? (() => setSidebarOpen(false))}
+                className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
+              >
+                <ChevronLeft size={18} />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {messages.length > 0 && (
-              <button
-                onClick={clearConversation}
-                className="text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
-                title="Clear conversation"
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
-            <button
-              onClick={onClose ?? (() => setSidebarOpen(false))}
-              className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </div>
+          <SidebarModeToggle />
         </div>
 
         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CriterionCard } from "./CriterionCard";
 import { AddCriterionDialog } from "./AddCriterionDialog";
+import { SidebarModeToggle } from "@/components/agent/SidebarModeToggle";
 
 export function CriteriaPanel() {
   const { cityConfig, criteria, error, scoreData } = useCriteriaStore();
@@ -39,46 +40,44 @@ export function CriteriaPanel() {
       <div className="absolute inset-0 bg-gradient-to-b from-[rgba(18,18,30,0.88)] to-[rgba(10,10,18,0.92)] backdrop-blur-2xl rounded-2xl border border-white/[0.1]" />
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="p-5 pb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Zap className="text-primary" size={18} />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">
+        <div className="p-4 pb-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Zap className="text-primary" size={16} />
+              </div>
+              <h1 className="text-[15px] font-semibold text-white tracking-tight">
                 IJAR.AI
               </h1>
-              <p className="text-[11px] text-white/40 mt-0">
-                Find your ideal home in {cityConfig.name}
-              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {backendOk !== null && (
+                <Tooltip>
+                  <TooltipTrigger className="flex items-center">
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                        backendOk
+                          ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+                          : "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]"
+                      }`}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {backendOk
+                      ? "Backend connected"
+                      : "Backend offline — start the server on port 8000"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
+              >
+                <ChevronLeft size={18} />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {backendOk !== null && (
-              <Tooltip>
-                <TooltipTrigger className="flex items-center">
-                  <span
-                    className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                      backendOk
-                        ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-                        : "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]"
-                    }`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {backendOk
-                    ? "Backend connected"
-                    : "Backend offline — start the server on port 8000"}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </div>
+          <SidebarModeToggle />
         </div>
 
         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />

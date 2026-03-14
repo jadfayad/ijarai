@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { CriteriaPanel } from "@/components/criteria/CriteriaPanel";
 import { AgentPanel } from "@/components/agent/AgentPanel";
-import { SidebarModeToggle } from "@/components/agent/SidebarModeToggle";
 import { MapView } from "@/components/map/MapView";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useAgentStore } from "@/stores/agent-store";
@@ -22,7 +21,6 @@ export default function SanFranciscoPage() {
       <div className="absolute inset-0">
         <MapView />
       </div>
-      <SidebarModeToggle />
       {sidebarMode === "criteria" ? (
         <CriteriaPanel />
       ) : (
