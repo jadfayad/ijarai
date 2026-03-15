@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.scoring import router as scoring_router
 from app.api.geocode import router as geocode_router
+from app.api.agent import router as agent_router
 from app.city_config import get_city, get_active_city
 from app.models.schemas import CityConfigResponse
 
@@ -20,6 +21,7 @@ app.add_middleware(
 
 app.include_router(scoring_router, prefix="/api")
 app.include_router(geocode_router, prefix="/api")
+app.include_router(agent_router, prefix="/api")
 
 
 @app.get("/health")

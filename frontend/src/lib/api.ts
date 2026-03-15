@@ -1,4 +1,11 @@
-import type { ScoreRequest, ScoreResponse, GeocodeResult, CityConfig } from "./types";
+import type {
+  ScoreRequest,
+  ScoreResponse,
+  GeocodeResult,
+  CityConfig,
+  AgentResearchRequest,
+  AgentResearchResponse,
+} from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -47,4 +54,15 @@ export async function healthCheck(): Promise<{ status: string }> {
 export async function fetchCityConfig(slug?: string): Promise<CityConfig> {
   const params = slug ? `?slug=${encodeURIComponent(slug)}` : "";
   return request<CityConfig>(`/api/city${params}`);
+}
+
+export async function agentResearch(
+  body: AgentResearchRequest,
+  signal?: AbortSignal,
+): Promise<AgentResearchResponse> {
+  return request<AgentResearchResponse>("/api/agent/research", {
+    method: "POST",
+    body: JSON.stringify(body),
+    signal,
+  });
 }

@@ -11,7 +11,7 @@ class LatLng(BaseModel):
 
 
 class CriterionRequest(BaseModel):
-    type: Literal["commute", "amenities", "budget", "neighborhood", "noise"]
+    type: Literal["commute", "amenities", "budget", "neighborhood", "noise", "ai"]
     weight: float = Field(ge=0, le=10)
     params: dict = Field(default_factory=dict)
 

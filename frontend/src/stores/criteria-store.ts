@@ -9,6 +9,7 @@ import type {
   CityConfig,
   DestinationConfig,
   CommutePreset,
+  AgentResearchResponse,
 } from "@/lib/types";
 
 let commuteCounter = 0;
@@ -95,18 +96,33 @@ export function createNoiseCriterion(): CriterionConfig {
 
 let aiCounter = 0;
 
-export function createAiCriterion(userPrompt: string): CriterionConfig {
+export function createAiCriterion(
+  userPrompt: string,
+  researchResult?: AgentResearchResponse,
+): CriterionConfig {
   aiCounter++;
   const preview =
     userPrompt.length > 60 ? userPrompt.slice(0, 57) + "..." : userPrompt;
+  const label = researchResult?.label ?? "AI Preference";
+
+  const params: Record<string, unknown> = { prompt: userPrompt };
+  if (researchResult) {
+    params.strategy = researchResult.strategy;
+    params.metric_label = researchResult.metric_label;
+    params.zones = researchResult.zones;
+    params.pois = researchResult.pois;
+    params.poi_scoring_mode = researchResult.poi_scoring_mode;
+    params.poi_search_radius_m = researchResult.poi_search_radius_m;
+  }
+
   return {
     id: `ai-${aiCounter}`,
     type: "ai",
-    label: "AI Preference",
+    label,
     description: preview,
     weight: 5,
     enabled: true,
-    params: {},
+    params: params as CriterionConfig["params"],
     icon: "sparkles",
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Bot, User } from "lucide-react";
+import { Bot, User, Plus } from "lucide-react";
+import { useAgentStore } from "@/stores/agent-store";
 import type { AgentMessage as AgentMessageType } from "@/stores/agent-store";
 
 function formatTime(timestamp: number) {
@@ -25,6 +26,7 @@ function renderContent(text: string) {
 }
 
 export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
+  const { addCriterionFromResult } = useAgentStore();
   const isUser = message.role === "user";
 
   return (
@@ -57,10 +59,33 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         >
           {isUser ? message.content : renderContent(message.content)}
         </div>
+
+        {!isUser && message.researchResult && (
+          <button
+            onClick={() => {
+              const userMsg = findUserPromptBefore(message);
+              addCriterionFromResult(message.researchResult!, userMsg);
+            }}
+            className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
+          >
+            <Plus size={13} />
+            Add to criteria
+          </button>
+        )}
+
         <span className="text-[10px] text-white/25 mt-1 px-1">
           {formatTime(message.timestamp)}
         </span>
       </div>
     </div>
   );
+}
+
+function findUserPromptBefore(agentMsg: AgentMessageType): string {
+  const { messages } = useAgentStore.getState();
+  const idx = messages.findIndex((m) => m.id === agentMsg.id);
+  for (let i = idx - 1; i >= 0; i--) {
+    if (messages[i].role === "user") return messages[i].content;
+  }
+  return "AI Research";
 }

@@ -72,6 +72,48 @@ export interface BudgetParams {
   max_monthly_rent: number;
 }
 
+export interface AiZoneScore {
+  name: string;
+  center: [number, number];
+  radius_km: number;
+  score: number;
+  metric_value: number;
+  metric_label: string;
+}
+
+export interface AiPoiResult {
+  lat: number;
+  lng: number;
+  weight: number;
+  label: string;
+}
+
+export interface AiParams {
+  prompt: string;
+  strategy: string;
+  metric_label: string;
+  zones: AiZoneScore[];
+  pois: AiPoiResult[];
+  poi_scoring_mode: "proximity" | "density";
+  poi_search_radius_m: number;
+}
+
+export interface AgentResearchRequest {
+  prompt: string;
+  city: string;
+}
+
+export interface AgentResearchResponse {
+  strategy: string;
+  summary: string;
+  label: string;
+  metric_label: string;
+  zones: AiZoneScore[];
+  pois: AiPoiResult[];
+  poi_scoring_mode: string;
+  poi_search_radius_m: number;
+}
+
 export interface CriterionConfig {
   id: string;
   type: CriterionType;
@@ -79,7 +121,7 @@ export interface CriterionConfig {
   description: string;
   weight: number;
   enabled: boolean;
-  params: CommuteParams | AmenityParams | BudgetParams | Record<string, never>;
+  params: CommuteParams | AmenityParams | BudgetParams | AiParams | Record<string, never>;
   icon: string;
 }
 
