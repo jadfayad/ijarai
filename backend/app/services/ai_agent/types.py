@@ -64,6 +64,44 @@ class ResearchResult(BaseModel):
     poi_search_radius_m: float = 1000.0
     grid_values: dict[str, float] = Field(default_factory=dict)
 
+    @classmethod
+    def from_params(cls, params: dict) -> "ResearchResult":
+        """Rebuild a ResearchResult from the params dict sent by the frontend."""
+        zones = [
+            ZoneScore(
+                name=z.get("name", ""),
+                center=(z["center"][0], z["center"][1]),
+                radius_km=z.get("radius_km", 2.0),
+                score=z.get("score", 5.0),
+                metric_value=z.get("metric_value", z.get("score", 5.0)),
+                metric_label=z.get("metric_label", ""),
+            )
+            for z in params.get("zones", [])
+        ]
+        pois = [
+            PoiResult(
+                lat=p["lat"], lng=p["lng"],
+                weight=p.get("weight", 1.0),
+                label=p.get("label", ""),
+            )
+            for p in params.get("pois", [])
+        ]
+        strategy_str = params.get("strategy", "zone")
+        try:
+            strategy = ResearchStrategy(strategy_str)
+        except ValueError:
+            strategy = ResearchStrategy.ZONE
+
+        return cls(
+            strategy=strategy,
+            zones=zones,
+            pois=pois,
+            poi_scoring_mode=params.get("poi_scoring_mode", "density"),
+            poi_search_radius_m=params.get("poi_search_radius_m", 1000.0),
+            metric_label=params.get("metric_label", "AI Score"),
+            higher_is_better=params.get("higher_is_better", True),
+        )
+
 
 class AgentResearchRequest(BaseModel):
     prompt: str

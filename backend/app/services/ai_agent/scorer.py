@@ -4,13 +4,31 @@ Deterministic scorer — converts agent research results into per-cell scores.
 This module is intentionally LLM-free. It receives structured spatial data
 from the agent provider and produces the (scores, metrics) tuple that the
 scoring engine expects. Each strategy has its own scoring function.
+
+Uses scipy KDTree for efficient spatial queries (O(n log m) instead of O(n*m)).
 """
 from __future__ import annotations
 
+import logging
 import math
 
+import numpy as np
+from scipy.spatial import KDTree
+
 from app.services.ai_agent.types import ResearchResult, ResearchStrategy
-from app.utils.geo import haversine_km
+from app.utils.geo import m_per_deg_lat, m_per_deg_lng
+
+logger = logging.getLogger(__name__)
+
+_KM_TO_M = 1000.0
+
+
+def _build_metric_coords(lats: np.ndarray, lngs: np.ndarray) -> np.ndarray:
+    """Project lat/lng arrays to a local metre plane for KDTree queries."""
+    ref_lat = float(lats.mean())
+    xs = lngs * m_per_deg_lng(ref_lat)
+    ys = lats * m_per_deg_lat()
+    return np.column_stack([xs, ys])
 
 
 def score_ai_result(
@@ -24,6 +42,10 @@ def score_ai_result(
         return _score_pois(centroids, result)
     if result.strategy == ResearchStrategy.API:
         return _score_grid(centroids, result)
+    logger.warning(
+        "Unrecognized research strategy %r, returning default 0.5 scores",
+        result.strategy,
+    )
     return ({c["cell_id"]: 0.5 for c in centroids},
             {c["cell_id"]: 0.0 for c in centroids})
 
@@ -31,65 +53,72 @@ def score_ai_result(
 def _score_zones(
     centroids: list[dict], result: ResearchResult
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """
-    Score cells using zone data with inverse-distance weighting.
-
-    Replicates the same interpolation logic as static_data._find_zone_value.
-    """
+    """Score cells using zone data with KDTree-accelerated IDW interpolation."""
     if not result.zones:
         return ({c["cell_id"]: 0.5 for c in centroids},
                 {c["cell_id"]: 0.0 for c in centroids})
 
-    zone_list = [
-        {
-            "center": z.center,
-            "radius_km": z.radius_km,
-            "score": z.score,
-            "metric_value": z.metric_value,
-        }
-        for z in result.zones
-    ]
+    _DEFAULT = 5.0
+    k = min(3, len(result.zones))
+
+    zone_lats = np.array([z.center[0] for z in result.zones])
+    zone_lngs = np.array([z.center[1] for z in result.zones])
+    zone_radii_m = np.array([z.radius_km * _KM_TO_M for z in result.zones])
+    zone_scores = np.array([z.score for z in result.zones])
+    zone_metrics = np.array([z.metric_value for z in result.zones])
+
+    zone_coords = _build_metric_coords(zone_lats, zone_lngs)
+    tree = KDTree(zone_coords)
+
+    c_lats = np.array([c["lat"] for c in centroids])
+    c_lngs = np.array([c["lng"] for c in centroids])
+    c_coords = _build_metric_coords(c_lats, c_lngs)
+
+    dists_m, idxs = tree.query(c_coords, k=k)
+    if k == 1:
+        dists_m = dists_m.reshape(-1, 1)
+        idxs = idxs.reshape(-1, 1)
 
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
 
-    for c in centroids:
-        lat, lng = c["lat"], c["lng"]
+    for i, c in enumerate(centroids):
+        nearest_dists = dists_m[i]
+        nearest_idxs = idxs[i]
+
         inside_val = None
         inside_metric = None
         inside_dist = float("inf")
-
-        zone_dists: list[tuple[float, float, float]] = []
-        for z in zone_list:
-            dist = haversine_km(lat, lng, z["center"][0], z["center"][1])
-            if dist <= z["radius_km"] and dist < inside_dist:
-                inside_dist = dist
-                inside_val = z["score"]
-                inside_metric = z["metric_value"]
-            zone_dists.append((dist, z["score"], z["metric_value"]))
+        for j_pos in range(k):
+            j = nearest_idxs[j_pos]
+            d = nearest_dists[j_pos]
+            if d <= zone_radii_m[j] and d < inside_dist:
+                inside_dist = d
+                inside_val = zone_scores[j]
+                inside_metric = zone_metrics[j]
 
         if inside_val is not None:
-            scores[c["cell_id"]] = inside_val / 10.0
-            metrics[c["cell_id"]] = round(inside_metric, 1)
+            scores[c["cell_id"]] = float(inside_val) / 10.0
+            metrics[c["cell_id"]] = round(float(inside_metric), 1)
             continue
 
-        zone_dists.sort(key=lambda x: x[0])
-        nearest = zone_dists[:3]
-        min_dist = nearest[0][0]
-        fade = min(1.0, min_dist / 10.0)
+        min_dist_km = float(nearest_dists[0]) / _KM_TO_M
+        fade = min(1.0, min_dist_km / 10.0)
 
-        weights = [1.0 / (d + 0.01) for d, _, _ in nearest]
-        total_w = sum(weights)
-        interp_score = sum(w * s for (_, s, _), w in zip(nearest, weights)) / total_w
-        interp_metric = sum(w * m for (_, _, m), w in zip(nearest, weights)) / total_w
-
-        default_score = 5.0
-        blended = interp_score * (1 - fade) + default_score * fade
-
-        scores[c["cell_id"]] = blended / 10.0
-        metrics[c["cell_id"]] = round(
-            interp_metric * (1 - fade) + default_score * fade, 1
+        weights = np.array([1.0 / (d + 0.01) for d in nearest_dists])
+        total_w = weights.sum()
+        interp_score = float(
+            (weights * zone_scores[nearest_idxs]).sum() / total_w
         )
+        interp_metric = float(
+            (weights * zone_metrics[nearest_idxs]).sum() / total_w
+        )
+
+        blended_score = interp_score * (1 - fade) + _DEFAULT * fade
+        blended_metric = interp_metric * (1 - fade) + _DEFAULT * fade
+
+        scores[c["cell_id"]] = blended_score / 10.0
+        metrics[c["cell_id"]] = round(blended_metric, 1)
 
     return scores, metrics
 
@@ -97,32 +126,41 @@ def _score_zones(
 def _score_pois(
     centroids: list[dict], result: ResearchResult
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """Score cells by proximity to or density of POIs."""
+    """Score cells by proximity to or density of POIs using KDTree."""
     if not result.pois:
         return ({c["cell_id"]: 0.5 for c in centroids},
                 {c["cell_id"]: 0.0 for c in centroids})
 
-    radius_km = result.poi_search_radius_m / 1000.0
+    radius_km = result.poi_search_radius_m / _KM_TO_M
+
+    poi_lats = np.array([p.lat for p in result.pois])
+    poi_lngs = np.array([p.lng for p in result.pois])
+    poi_weights = np.array([p.weight for p in result.pois])
+
+    poi_coords = _build_metric_coords(poi_lats, poi_lngs)
+    tree = KDTree(poi_coords)
+
+    c_lats = np.array([c["lat"] for c in centroids])
+    c_lngs = np.array([c["lng"] for c in centroids])
+    c_coords = _build_metric_coords(c_lats, c_lngs)
+
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
 
     if result.poi_scoring_mode == "proximity":
-        for c in centroids:
-            min_dist = float("inf")
-            for poi in result.pois:
-                dist = haversine_km(c["lat"], c["lng"], poi.lat, poi.lng)
-                weighted_dist = dist / max(poi.weight, 0.01)
-                min_dist = min(min_dist, weighted_dist)
-            score = max(0.0, 1.0 - (min_dist / (radius_km * 3)))
+        dists_m, idxs = tree.query(c_coords, k=1)
+        for i, c in enumerate(centroids):
+            dist_km = float(dists_m[i]) / _KM_TO_M
+            w = max(float(poi_weights[int(idxs[i])]), 0.01)
+            weighted_dist = dist_km / w
+            score = max(0.0, 1.0 - (weighted_dist / (radius_km * 3)))
             scores[c["cell_id"]] = score
-            metrics[c["cell_id"]] = round(min_dist, 2)
+            metrics[c["cell_id"]] = round(weighted_dist, 2)
     else:
-        for c in centroids:
-            count = 0.0
-            for poi in result.pois:
-                dist = haversine_km(c["lat"], c["lng"], poi.lat, poi.lng)
-                if dist <= radius_km:
-                    count += poi.weight
+        radius_m = result.poi_search_radius_m
+        hits = tree.query_ball_point(c_coords, r=radius_m)
+        for i, c in enumerate(centroids):
+            count = float(poi_weights[hits[i]].sum()) if hits[i] else 0.0
             scores[c["cell_id"]] = count
             metrics[c["cell_id"]] = round(count, 1)
 

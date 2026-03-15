@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -10,10 +10,89 @@ class LatLng(BaseModel):
     lng: float
 
 
-class CriterionRequest(BaseModel):
-    type: Literal["commute", "amenities", "budget", "neighborhood", "noise", "ai"]
+# ── Typed params per criterion type ──────────────────────────────────────
+
+
+class CommuteParams(BaseModel):
+    destination: LatLng = Field(default_factory=lambda: LatLng(lat=0, lng=0))
+    mode: Literal["car", "transit"] = "car"
+    source: Literal["isochrone", "google"] = "isochrone"
+    time_of_day: Literal["peak", "off_peak"] = "peak"
+    label: str = ""
+
+
+class AmenityParams(BaseModel):
+    categories: list[str] = Field(default_factory=list)
+
+
+class BudgetParams(BaseModel):
+    max_monthly_rent: float = 8000
+
+
+class AiCriterionParams(BaseModel):
+    prompt: str = ""
+    strategy: str = "zone"
+    metric_label: str = "AI Score"
+    zones: list[dict] = Field(default_factory=list)
+    pois: list[dict] = Field(default_factory=list)
+    poi_scoring_mode: Literal["proximity", "density"] = "density"
+    poi_search_radius_m: float = 1000.0
+    higher_is_better: bool = True
+
+
+class EmptyParams(BaseModel):
+    """Params placeholder for criteria that take no configuration."""
+    pass
+
+
+# ── Discriminated criterion union ────────────────────────────────────────
+
+
+class _CriterionBase(BaseModel):
     weight: float = Field(ge=0, le=10)
-    params: dict = Field(default_factory=dict)
+
+
+class CommuteCriterion(_CriterionBase):
+    type: Literal["commute"] = "commute"
+    params: CommuteParams = Field(default_factory=CommuteParams)
+
+
+class AmenitiesCriterion(_CriterionBase):
+    type: Literal["amenities"] = "amenities"
+    params: AmenityParams = Field(default_factory=AmenityParams)
+
+
+class BudgetCriterion(_CriterionBase):
+    type: Literal["budget"] = "budget"
+    params: BudgetParams = Field(default_factory=BudgetParams)
+
+
+class NeighborhoodCriterion(_CriterionBase):
+    type: Literal["neighborhood"] = "neighborhood"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class NoiseCriterion(_CriterionBase):
+    type: Literal["noise"] = "noise"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class AiCriterion(_CriterionBase):
+    type: Literal["ai"] = "ai"
+    params: AiCriterionParams = Field(default_factory=AiCriterionParams)
+
+
+CriterionRequest = Annotated[
+    Union[
+        CommuteCriterion,
+        AmenitiesCriterion,
+        BudgetCriterion,
+        NeighborhoodCriterion,
+        NoiseCriterion,
+        AiCriterion,
+    ],
+    Field(discriminator="type"),
+]
 
 
 class ScoreRequest(BaseModel):

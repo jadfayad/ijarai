@@ -87,3 +87,44 @@ Comprehensive list of factors people consider when searching for an apartment to
 
 ### Not coverable at grid level (unit-level filters)
 - Bedrooms, floor level, furnishing, laundry, A/C, kitchen, pet policy, lease terms, deposit
+
+---
+
+## TODO — Location-Specific Factors
+
+Factors that can be scored on the spatial grid (neighborhood / area level).
+
+- [ ] **Safety / Crime Rate** (score 9) — Add as a first-class criterion with real crime data (currently only via AI stub with static neighborhood scores)
+- [ ] **Public Transit Proximity** (score 8) — Add standalone "distance to nearest metro/bus stop" metric, separate from commute mode
+- [ ] **Parking Availability** (score 7) — Score areas by street parking density, public parking lots, or zoning data
+- [ ] **Proximity to Schools** (score 7) — Enhance with school quality ratings, not just OSM POI count
+- [ ] **Internet / Fiber Coverage** (score 6) — Integrate ISP coverage maps or fiber availability data
+- [ ] **Proximity to Healthcare** (score 5) — Promote hospital/clinic from generic amenity to a standalone criterion with distance-based scoring
+- [ ] **Walkability Score** (score 4) — Integrate Walk Score API or compute from street network + amenity density
+- [ ] **Proximity to Green Space / Parks / Beach** (score 4) — Upgrade from POI count to actual green-space area coverage metric
+- [ ] **Views / Aesthetics** (score 4) — Score by elevation data, building density, proximity to waterfront/skyline
+- [ ] **Utility Costs** (score 3) — Regional average utility cost data per zone
+- [ ] **Sustainable / Green Features** (score 2) — EV charging station density, solar adoption rates by area
+
+---
+
+## TODO — Apartment-Specific Factors
+
+Factors that are per-unit / per-listing and cannot be scored at the grid level. These would require listing-level data (e.g. from a property API or user input filters).
+
+- [ ] **Number of Bedrooms / Unit Size** (score 9) — Hard filter by household size (studio / 1BR / 2BR / 3BR+)
+- [ ] **Lease Terms & Availability** (score 8) — Filter by move-in date, lease duration, break clauses
+- [ ] **Natural Light & Unit Orientation** (score 7) — Filter/rank by facing direction (south/west preferred), floor level, window count
+- [ ] **Building Quality & Maintenance** (score 6) — Building age, management rating, common area condition
+- [ ] **Pet Policy** (score 6) — Hard filter for pet owners (cats/dogs/size restrictions)
+- [ ] **In-Unit Laundry** (score 6) — Filter: in-unit washer/dryer vs shared vs none
+- [ ] **Air Conditioning / Heating** (score 6) — Filter by A/C type (central / split / window / none)
+- [ ] **Kitchen Quality** (score 5) — Dishwasher, counter space, stove type
+- [ ] **Storage Space** (score 5) — Closet count, basement/attic storage availability
+- [ ] **Floor Level** (score 5) — Preference for high/mid/low floor
+- [ ] **Security Features** (score 5) — Gated entry, doorman, CCTV, secure parking
+- [ ] **Deposit & Move-In Costs** (score 5) — Security deposit amount, agent fees, upfront costs
+- [ ] **Gym / Pool / Building Amenities** (score 4) — On-site fitness, pool, rooftop, coworking
+- [ ] **Furnished vs Unfurnished** (score 4) — Filter by furnishing level (fully / partially / unfurnished)
+- [ ] **Landlord Reputation** (score 3) — Rating / review score of landlord or management company
+- [ ] **Smoking Policy** (score 2) — Building-wide or floor-specific smoking rules

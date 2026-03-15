@@ -163,7 +163,9 @@ class DeepAgentProvider(AgentProvider):
                 metric_label="AI Score",
             )
 
-        return self._extract_result(result["messages"])
+        return self._validate_bounds(
+            self._extract_result(result["messages"]), city,
+        )
 
     async def run_stream(
         self, prompt: str, city: CityConfig,
@@ -226,7 +228,9 @@ class DeepAgentProvider(AgentProvider):
             }
             return
 
-        result = self._extract_result(all_messages)
+        result = self._validate_bounds(
+            self._extract_result(all_messages), city,
+        )
         yield {"type": "result", "data": result}
 
     # -- Tool factory ---------------------------------------------------
@@ -328,7 +332,13 @@ class DeepAgentProvider(AgentProvider):
         zones: list[ZoneScore] = []
         for z in args.get("zones", []):
             raw = z if isinstance(z, dict) else z.model_dump()
-            score = min(10.0, max(0.0, float(raw.get("score", 5.0))))
+            raw_score = float(raw.get("score", 5.0))
+            if raw_score < 0.0 or raw_score > 10.0:
+                logger.warning(
+                    "LLM returned out-of-range score %.1f for zone %r, clamping",
+                    raw_score, raw.get("name"),
+                )
+            score = min(10.0, max(0.0, raw_score))
             zones.append(ZoneScore(
                 name=raw.get("name", "Unknown"),
                 center=(float(raw.get("lat", 0.0)), float(raw.get("lng", 0.0))),
@@ -344,6 +354,47 @@ class DeepAgentProvider(AgentProvider):
             metric_label=args.get("metric_label", "Score"),
             zones=zones,
         )
+
+    @staticmethod
+    def _validate_bounds(result: ResearchResult, city: CityConfig) -> ResearchResult:
+        """Filter out zones/POIs whose coordinates fall outside the city bounds."""
+        bounds = city.bounds
+        margin = 0.5
+        min_lat = bounds["min_lat"] - margin
+        max_lat = bounds["max_lat"] + margin
+        min_lng = bounds["min_lng"] - margin
+        max_lng = bounds["max_lng"] + margin
+
+        def _in_bounds(lat: float, lng: float) -> bool:
+            return min_lat <= lat <= max_lat and min_lng <= lng <= max_lng
+
+        if result.zones:
+            valid_zones = []
+            for z in result.zones:
+                if _in_bounds(z.center[0], z.center[1]):
+                    valid_zones.append(z)
+                else:
+                    logger.warning(
+                        "Dropping zone %r at (%.4f, %.4f) — outside %s bounds",
+                        z.name, z.center[0], z.center[1], city.name,
+                    )
+            if len(valid_zones) != len(result.zones):
+                result = result.model_copy(update={"zones": valid_zones})
+
+        if result.pois:
+            valid_pois = []
+            for p in result.pois:
+                if _in_bounds(p.lat, p.lng):
+                    valid_pois.append(p)
+                else:
+                    logger.warning(
+                        "Dropping POI %r at (%.4f, %.4f) — outside %s bounds",
+                        p.label, p.lat, p.lng, city.name,
+                    )
+            if len(valid_pois) != len(result.pois):
+                result = result.model_copy(update={"pois": valid_pois})
+
+        return result
 
     @staticmethod
     def _parse_poi_result(args: dict, fallback_summary: str) -> ResearchResult:

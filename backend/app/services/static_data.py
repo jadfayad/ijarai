@@ -9,8 +9,11 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
+from scipy.spatial import KDTree
+
 from app.city_config import CityConfig
-from app.utils.geo import haversine_km
+from app.utils.geo import haversine_km, idw_interpolate, m_per_deg_lat, m_per_deg_lng
 
 
 @dataclass
@@ -44,41 +47,9 @@ def _get_data(city: CityConfig) -> CityStaticData:
 def _find_zone_value(
     lat: float, lng: float, zones: dict[str, dict], value_key: str, default: float
 ) -> float:
-    """Find the value for a point using inverse-distance weighting from nearby zones.
-
-    If the point is inside a zone's radius, return that zone's value directly
-    (closest zone wins). Otherwise, interpolate from the 3 nearest zones with
-    an inverse-distance weight, blended with the default based on how far the
-    point is from the nearest zone.
-    """
-    inside_val = None
-    inside_dist = float("inf")
-
-    zone_dists: list[tuple[float, float]] = []
-    for zone in zones.values():
-        center = zone["center"]
-        dist = haversine_km(lat, lng, center[0], center[1])
-        if dist <= zone["radius_km"] and dist < inside_dist:
-            inside_dist = dist
-            inside_val = zone[value_key]
-        zone_dists.append((dist, zone[value_key]))
-
-    if inside_val is not None:
-        return inside_val
-
-    zone_dists.sort(key=lambda x: x[0])
-    nearest = zone_dists[:3]
-    if not nearest:
-        return default
-
-    min_dist = nearest[0][0]
-    fade = min(1.0, min_dist / 10.0)
-
-    weights = [1.0 / (d + 0.01) for d, _ in nearest]
-    total_w = sum(weights)
-    interpolated = sum(w * v for (_, v), w in zip(nearest, weights)) / total_w
-
-    return interpolated * (1 - fade) + default * fade
+    """Find the value for a point using inverse-distance weighting from nearby zones."""
+    (val,) = idw_interpolate(lat, lng, zones.values(), [value_key], [default])
+    return val
 
 
 ZONE_ABBREVIATIONS = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
@@ -164,17 +135,46 @@ def score_neighborhood(
 def score_noise(
     city: CityConfig, centroids: list[dict],
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """Score cells by noise level (higher score = quieter = better)."""
+    """Score cells by noise level (higher score = quieter = better).
+
+    Uses KDTree to find nearby noise sources efficiently.
+    """
     noise_sources = _get_data(city).noise_sources
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
+
+    if not noise_sources:
+        for c in centroids:
+            scores[c["cell_id"]] = 1.0
+            metrics[c["cell_id"]] = 0.0
+        return scores, metrics
+
+    src_lats = np.array([s["center"][0] for s in noise_sources])
+    src_lngs = np.array([s["center"][1] for s in noise_sources])
+    src_radii_km = np.array([s["radius_km"] for s in noise_sources])
+    src_intensities = np.array([s["intensity"] for s in noise_sources])
+
+    ref_lat = float(src_lats.mean())
+    src_coords = np.column_stack([
+        src_lngs * m_per_deg_lng(ref_lat),
+        src_lats * m_per_deg_lat(),
+    ])
+    max_radius_m = float(src_radii_km.max()) * 1000.0
+    tree = KDTree(src_coords)
+
     for c in centroids:
+        cx = c["lng"] * m_per_deg_lng(ref_lat)
+        cy = c["lat"] * m_per_deg_lat()
+        nearby_idxs = tree.query_ball_point([cx, cy], r=max_radius_m)
+
         max_noise = 0.0
-        for src in noise_sources:
-            dist = haversine_km(c["lat"], c["lng"], src["center"][0], src["center"][1])
-            if dist < src["radius_km"]:
-                noise = src["intensity"] * (1 - dist / src["radius_km"])
+        for j in nearby_idxs:
+            dist = haversine_km(c["lat"], c["lng"], noise_sources[j]["center"][0], noise_sources[j]["center"][1])
+            if dist < src_radii_km[j]:
+                noise = float(src_intensities[j]) * (1 - dist / float(src_radii_km[j]))
                 max_noise = max(max_noise, noise)
+
         scores[c["cell_id"]] = 1.0 - max_noise
         metrics[c["cell_id"]] = round(max_noise, 2)
+
     return scores, metrics

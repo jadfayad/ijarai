@@ -11,55 +11,25 @@ from __future__ import annotations
 import asyncio
 
 from app.city_config import CityConfig
-from app.models.schemas import CriterionRequest, ScoreRequest, ScoreResponse
+from app.models.schemas import (
+    AiCriterion,
+    AmenitiesCriterion,
+    BudgetCriterion,
+    CommuteCriterion,
+    CriterionRequest,
+    ScoreRequest,
+    ScoreResponse,
+)
 from app.services.grid import get_grid_centroids
 from app.services.commute import score_commute
 from app.services.amenities import score_amenities
 from app.services.static_data import score_budget, score_neighborhood, score_noise, find_nearest_zone_name
 from app.services.ai_agent.scorer import score_ai_result
-from app.services.ai_agent.types import ResearchResult, ResearchStrategy, ZoneScore, PoiResult
+from app.services.ai_agent.types import ResearchResult
 
 
 class ComputationCancelled(Exception):
     """Raised when a score computation is cancelled by the user."""
-
-
-def _reconstruct_ai_result(params: dict) -> ResearchResult:
-    """Rebuild a ResearchResult from the params dict sent by the frontend."""
-    zones = [
-        ZoneScore(
-            name=z.get("name", ""),
-            center=(z["center"][0], z["center"][1]),
-            radius_km=z.get("radius_km", 2.0),
-            score=z.get("score", 5.0),
-            metric_value=z.get("metric_value", z.get("score", 5.0)),
-            metric_label=z.get("metric_label", ""),
-        )
-        for z in params.get("zones", [])
-    ]
-    pois = [
-        PoiResult(
-            lat=p["lat"], lng=p["lng"],
-            weight=p.get("weight", 1.0),
-            label=p.get("label", ""),
-        )
-        for p in params.get("pois", [])
-    ]
-    strategy_str = params.get("strategy", "zone")
-    try:
-        strategy = ResearchStrategy(strategy_str)
-    except ValueError:
-        strategy = ResearchStrategy.ZONE
-
-    return ResearchResult(
-        strategy=strategy,
-        zones=zones,
-        pois=pois,
-        poi_scoring_mode=params.get("poi_scoring_mode", "density"),
-        poi_search_radius_m=params.get("poi_search_radius_m", 1000.0),
-        metric_label=params.get("metric_label", "AI Score"),
-        higher_is_better=params.get("higher_is_better", True),
-    )
 
 
 def _check_cancel(cancel: asyncio.Event | None) -> None:
@@ -78,30 +48,26 @@ def _criterion_key(criterion: CriterionRequest, index: int) -> str | None:
     commute entries with identical mode/source/time_of_day but
     different destinations never overwrite each other.
     """
-    if criterion.type == "commute":
-        mode = criterion.params.get("mode", "car")
-        source = criterion.params.get("source", "isochrone")
-        tod = criterion.params.get("time_of_day", "peak")
-        src_tag = "_google" if source == "google" else ""
-        return f"commute_{mode}{src_tag}_{tod}_{index}"
+    if isinstance(criterion, CommuteCriterion):
+        src_tag = "_google" if criterion.params.source == "google" else ""
+        return f"commute_{criterion.params.mode}{src_tag}_{criterion.params.time_of_day}_{index}"
     if criterion.type in ("amenities", "budget", "neighborhood", "noise"):
         return criterion.type
-    if criterion.type == "ai":
+    if isinstance(criterion, AiCriterion):
         return f"ai_{index}"
     return None
 
 
 def _criterion_label(criterion: CriterionRequest, index: int) -> str:
     """Build a human-readable label for this criterion."""
-    if criterion.type == "commute":
-        dest_label = criterion.params.get("label", "")
-        # Take the short part before the first comma (street name)
+    if isinstance(criterion, CommuteCriterion):
+        dest_label = criterion.params.label
         short = dest_label.split(",")[0].strip() if dest_label else f"Destination {index + 1}"
-        mode = _MODE_LABELS.get(criterion.params.get("mode", "car"), "Car")
-        tod = _TOD_LABELS.get(criterion.params.get("time_of_day", "peak"), "Peak")
+        mode = _MODE_LABELS.get(criterion.params.mode, "Car")
+        tod = _TOD_LABELS.get(criterion.params.time_of_day, "Peak")
         return f"{short} ({mode}, {tod})"
-    if criterion.type == "ai":
-        prompt = criterion.params.get("prompt", "AI Criterion")
+    if isinstance(criterion, AiCriterion):
+        prompt = criterion.params.prompt or "AI Criterion"
         short = prompt[:40] + "..." if len(prompt) > 40 else prompt
         return f"AI: {short}"
     label_map = {
@@ -134,37 +100,44 @@ async def compute_scores(
         keyed_criteria.append((key, criterion))
         criterion_labels[key] = _criterion_label(criterion, idx)
 
-    criterion_scores: dict[str, dict[str, float]] = {}
-    criterion_metrics: dict[str, dict[str, float]] = {}
-
-    for key, criterion in keyed_criteria:
+    async def _score_one(
+        key: str, criterion: CriterionRequest,
+    ) -> tuple[str, dict[str, float], dict[str, float]] | None:
         _check_cancel(cancel)
-
-        if criterion.type == "commute":
-            scores, metrics = await score_commute(city, centroids, criterion.params)
-        elif criterion.type == "amenities":
-            scores, metrics = await score_amenities(
-                city,
-                centroids,
-                criterion.params.get("categories", []),
-                request.cell_size_m,
+        if isinstance(criterion, CommuteCriterion):
+            s, m = await score_commute(
+                city, centroids, criterion.params.model_dump(),
             )
-        elif criterion.type == "budget":
-            scores, metrics = score_budget(
-                city, centroids, criterion.params.get("max_monthly_rent", 8000)
+        elif isinstance(criterion, AmenitiesCriterion):
+            s, m = await score_amenities(
+                city, centroids, criterion.params.categories, request.cell_size_m,
+            )
+        elif isinstance(criterion, BudgetCriterion):
+            s, m = score_budget(
+                city, centroids, criterion.params.max_monthly_rent,
             )
         elif criterion.type == "neighborhood":
-            scores, metrics = score_neighborhood(city, centroids)
+            s, m = score_neighborhood(city, centroids)
         elif criterion.type == "noise":
-            scores, metrics = score_noise(city, centroids)
-        elif criterion.type == "ai":
-            ai_result = _reconstruct_ai_result(criterion.params)
-            scores, metrics = score_ai_result(centroids, ai_result)
+            s, m = score_noise(city, centroids)
+        elif isinstance(criterion, AiCriterion):
+            ai_result = ResearchResult.from_params(criterion.params.model_dump())
+            s, m = score_ai_result(centroids, ai_result)
         else:
-            continue
+            return None
+        return key, s, m
 
-        criterion_scores[key] = scores
-        criterion_metrics[key] = metrics
+    results = await asyncio.gather(
+        *(_score_one(key, crit) for key, crit in keyed_criteria)
+    )
+
+    criterion_scores: dict[str, dict[str, float]] = {}
+    criterion_metrics: dict[str, dict[str, float]] = {}
+    for r in results:
+        if r is not None:
+            key, scores, metrics = r
+            criterion_scores[key] = scores
+            criterion_metrics[key] = metrics
 
     # Normalise scores to [0, 1] per criterion.
     total_weight = sum(c.weight for _, c in keyed_criteria)

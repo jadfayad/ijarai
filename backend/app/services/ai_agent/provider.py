@@ -17,6 +17,7 @@ The provider is NOT responsible for:
 """
 from __future__ import annotations
 
+import functools
 import os
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable
@@ -68,8 +69,9 @@ PROVIDERS: dict[str, Callable[[], AgentProvider]] = {
 }
 
 
+@functools.lru_cache(maxsize=1)
 def get_provider() -> AgentProvider:
-    """Return the configured agent provider instance."""
+    """Return the configured agent provider instance (cached singleton)."""
     name = os.getenv("AI_AGENT_PROVIDER", "stub")
     factory = PROVIDERS.get(name)
     if factory is None:
