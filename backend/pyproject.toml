@@ -16,6 +16,10 @@ dependencies = [
     "global-land-mask>=1.0.0",
     "cachetools>=5.3.0",
     "h3>=4.1.0",
+    "deepagents",
+    "langchain-anthropic",
+    "langchain-openai",
+    "langchain-google-genai",
 ]
 
 [build-system]

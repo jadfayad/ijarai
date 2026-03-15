@@ -1,10 +1,10 @@
 """
 Agent provider interface and registry.
 
-To integrate a new agent framework (LangChain, Claude SDK, etc.):
+To integrate a new agent framework:
 1. Subclass AgentProvider
-2. Implement plan() and research()
-3. Register it via PROVIDERS or set AI_AGENT_PROVIDER env var
+2. Implement run() (the single required method)
+3. Register it in PROVIDERS
 
 The provider is responsible for:
 - Understanding the user's prompt
@@ -21,33 +21,22 @@ import os
 from abc import ABC, abstractmethod
 
 from app.city_config import CityConfig
-from app.services.ai_agent.types import ResearchPlan, ResearchResult
+from app.services.ai_agent.types import ResearchResult
 
 
 class AgentProvider(ABC):
     """
     Abstract base for AI agent providers.
 
-    Subclass this to plug in LangChain, Claude SDK, or any other framework.
-    The two-stage interface (plan → research) maps naturally to agent architectures:
-    - plan() = tool selection / strategy decision
-    - research() = tool execution / data gathering
+    Only ``run()`` is required. Providers that use a two-stage plan/research
+    flow (like the stub) can implement those internally; single-pass agents
+    (like DeepAgent) just override ``run()``.
     """
 
     @abstractmethod
-    async def plan(self, prompt: str, city: CityConfig) -> ResearchPlan:
-        """Analyze the prompt and decide which research strategy to use."""
-        ...
-
-    @abstractmethod
-    async def research(self, plan: ResearchPlan, city: CityConfig) -> ResearchResult:
-        """Execute the research plan and return structured spatial data."""
-        ...
-
     async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
-        """Full pipeline: plan then research. Override for single-pass agents."""
-        plan = await self.plan(prompt, city)
-        return await self.research(plan, city)
+        """Execute the full agent pipeline and return structured spatial data."""
+        ...
 
 
 def _get_stub_provider() -> AgentProvider:
@@ -55,8 +44,14 @@ def _get_stub_provider() -> AgentProvider:
     return StubAgentProvider()
 
 
+def _get_deep_provider() -> AgentProvider:
+    from app.services.ai_agent.deep_provider import DeepAgentProvider
+    return DeepAgentProvider()
+
+
 PROVIDERS: dict[str, callable] = {
     "stub": _get_stub_provider,
+    "deepagent": _get_deep_provider,
 }
 
 

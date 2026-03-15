@@ -12,16 +12,13 @@ import type {
   AgentResearchResponse,
 } from "@/lib/types";
 
-let commuteCounter = 0;
-
 export function createCommuteCriterion(
   preset: CommutePreset,
   dest?: { lat: number; lng: number; label?: string }
 ): CriterionConfig {
   const presetCfg = COMMUTE_PRESETS.find((p) => p.preset === preset)!;
-  commuteCounter++;
   return {
-    id: `commute-${preset}-${commuteCounter}`,
+    id: `commute-${preset}-${crypto.randomUUID().slice(0, 8)}`,
     type: "commute",
     label: `Commute to ${presetCfg.label}`,
     description: presetCfg.description,
@@ -94,13 +91,10 @@ export function createNoiseCriterion(): CriterionConfig {
   };
 }
 
-let aiCounter = 0;
-
 export function createAiCriterion(
   userPrompt: string,
   researchResult?: AgentResearchResponse,
 ): CriterionConfig {
-  aiCounter++;
   const preview =
     userPrompt.length > 60 ? userPrompt.slice(0, 57) + "..." : userPrompt;
   const label = researchResult?.label ?? "AI Preference";
@@ -116,7 +110,7 @@ export function createAiCriterion(
   }
 
   return {
-    id: `ai-${aiCounter}`,
+    id: `ai-${crypto.randomUUID().slice(0, 8)}`,
     type: "ai",
     label,
     description: preview,

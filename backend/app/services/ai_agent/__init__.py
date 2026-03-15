@@ -1,8 +1,9 @@
 """
 AI Agent service — modular architecture for LLM-powered spatial research.
 
-Designed for easy migration to LangChain, Claude SDK, or other agent frameworks.
 Swap the provider implementation without changing the scoring integration.
+Set AI_AGENT_PROVIDER=deepagent to use the DeepAgent SDK, or "stub" for
+the keyword-based fallback that requires no API keys.
 """
 
 from app.services.ai_agent.types import (

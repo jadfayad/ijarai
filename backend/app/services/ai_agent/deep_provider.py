@@ -1,0 +1,302 @@
+"""
+DeepAgent provider — LLM-powered spatial research using the LangChain DeepAgent SDK.
+
+Uses ``create_deep_agent`` with custom tools that let the LLM query
+neighborhood data and submit structured spatial findings (zones / POIs).
+The scorer pipeline downstream is unchanged.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+import uuid
+from typing import Any, Literal
+
+from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field
+
+from app.city_config import CityConfig
+from app.services.ai_agent.provider import AgentProvider
+from app.services.ai_agent.types import (
+    PoiResult,
+    ResearchResult,
+    ResearchStrategy,
+    ZoneScore,
+)
+
+logger = logging.getLogger(__name__)
+
+_ATTRIBUTES = [
+    "safety", "walkability", "green_spaces", "community",
+    "infrastructure", "aesthetics", "amenities", "desirability",
+]
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas for the report-tool inputs
+# ---------------------------------------------------------------------------
+
+class ZoneFinding(BaseModel):
+    name: str = Field(description="Neighborhood or area name")
+    lat: float = Field(description="Latitude of zone center")
+    lng: float = Field(description="Longitude of zone center")
+    radius_km: float = Field(default=3.0, description="Zone radius in km")
+    score: float = Field(ge=0, le=10, description="Score from 0 (worst) to 10 (best)")
+    metric_value: float = Field(default=0.0, description="Raw metric value for display")
+
+
+class ReportZonesArgs(BaseModel):
+    """Submit zone-based spatial findings."""
+    zones: list[ZoneFinding] = Field(description="List of scored geographic zones")
+    metric_label: str = Field(description="Human-readable label, e.g. 'Safety Score'")
+    summary: str = Field(default="", description="Brief text summary of findings")
+
+
+class PoiFinding(BaseModel):
+    lat: float = Field(description="Latitude")
+    lng: float = Field(description="Longitude")
+    weight: float = Field(default=1.0, ge=0, le=1, description="Relevance weight")
+    label: str = Field(default="", description="Display label")
+
+
+class ReportPoisArgs(BaseModel):
+    """Submit point-of-interest based findings."""
+    pois: list[PoiFinding] = Field(description="List of points of interest")
+    metric_label: str = Field(default="POI Score")
+    scoring_mode: Literal["proximity", "density"] = "density"
+    search_radius_m: float = Field(default=1000.0, description="Search radius in meters")
+    summary: str = Field(default="", description="Brief text summary of findings")
+
+
+# ---------------------------------------------------------------------------
+# System prompt
+# ---------------------------------------------------------------------------
+
+_SYSTEM_PROMPT = """\
+You are a spatial research assistant for a city apartment-finding application.
+Your job is to analyze the user's question about neighborhood qualities and
+produce structured spatial scores that can be visualized on a map.
+
+## Available tools
+
+### lookup_neighborhoods
+Query the neighborhood database for the current city. You can filter by a
+specific attribute (safety, walkability, green_spaces, community,
+infrastructure, aesthetics, amenities, desirability) or leave it empty to
+get all attributes.
+
+### report_zone_findings
+Submit your analysis as a list of scored geographic zones. Each zone needs a
+name, center coordinates (lat, lng), radius_km, and a score from 0-10.
+
+### report_poi_findings
+If the user is asking about specific locations/points of interest rather than
+general neighborhood qualities, submit POI-based findings instead.
+
+## Workflow
+
+1. Read the user's question and determine which spatial attribute(s) matter.
+2. Call ``lookup_neighborhoods`` to examine available data.
+3. Analyze the data in the context of the user's question — adjust scores
+   using your own knowledge if appropriate.
+4. Call exactly ONE of ``report_zone_findings`` or ``report_poi_findings``.
+5. After submitting findings, provide a brief 2-3 sentence summary.
+
+## Rules
+
+- You MUST call exactly one report tool to deliver structured results.
+- Scores use a 0-10 scale where higher is better.
+- Use the actual neighborhood coordinates from the lookup data.
+- Keep summaries concise.
+"""
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _load_neighborhood_data(city: CityConfig) -> dict[str, dict]:
+    path = city.data_dir / "neighborhood_scores.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def _format_zone_name(key: str) -> str:
+    abbreviations = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
+    words = key.split("_")
+    return " ".join(w.upper() if w in abbreviations else w.capitalize() for w in words)
+
+
+# ---------------------------------------------------------------------------
+# Provider
+# ---------------------------------------------------------------------------
+
+class DeepAgentProvider(AgentProvider):
+    """LLM-powered agent using the DeepAgent SDK from LangChain."""
+
+    async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+        from deepagents import create_deep_agent
+
+        tools = self._make_tools(city)
+        model = os.getenv("DEEPAGENT_MODEL", "anthropic:claude-sonnet-4-6")
+
+        agent = create_deep_agent(
+            model=model,
+            tools=tools,
+            system_prompt=_SYSTEM_PROMPT,
+        )
+
+        user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
+
+        try:
+            result = await agent.ainvoke(
+                {"messages": [{"role": "user", "content": user_message}]},
+                config={"configurable": {"thread_id": uuid.uuid4().hex}},
+            )
+        except Exception:
+            logger.exception("DeepAgent invocation failed")
+            return ResearchResult(
+                strategy=ResearchStrategy.LLM_DIRECT,
+                summary="The AI agent encountered an error processing this request.",
+                metric_label="AI Score",
+            )
+
+        return self._extract_result(result["messages"])
+
+    # -- Tool factory ---------------------------------------------------
+
+    def _make_tools(self, city: CityConfig) -> list:
+        neighborhood_data = _load_neighborhood_data(city)
+
+        def lookup_neighborhoods(attribute: str = "") -> str:
+            """Look up neighborhood scores for the current city.
+
+            Args:
+                attribute: Filter by one attribute (safety, walkability,
+                    green_spaces, community, infrastructure, aesthetics,
+                    amenities, desirability). Leave empty for all attributes.
+
+            Returns:
+                JSON with neighborhood data keyed by neighborhood name.
+            """
+            if not neighborhood_data:
+                return json.dumps({"error": f"No neighborhood data for {city.name}"})
+
+            out: dict[str, Any] = {}
+            for key, data in neighborhood_data.items():
+                name = _format_zone_name(key)
+                entry: dict[str, Any] = {
+                    "center": data["center"],
+                    "radius_km": data.get("radius_km", 2.0),
+                }
+                if attribute and attribute in _ATTRIBUTES:
+                    entry["score"] = data.get(attribute, data.get("score", 5.0))
+                else:
+                    entry["overall_score"] = data.get("score", 5.0)
+                    for attr in _ATTRIBUTES:
+                        entry[attr] = data.get(attr, 5.0)
+                out[name] = entry
+            return json.dumps(out)
+
+        def _report_zones(**_kwargs: Any) -> str:
+            return "Zone findings received."
+
+        def _report_pois(**_kwargs: Any) -> str:
+            return "POI findings received."
+
+        report_zones = StructuredTool.from_function(
+            func=_report_zones,
+            name="report_zone_findings",
+            description=(
+                "Submit zone-based spatial findings. Call this to deliver your "
+                "research results as a list of scored geographic zones."
+            ),
+            args_schema=ReportZonesArgs,
+        )
+
+        report_pois = StructuredTool.from_function(
+            func=_report_pois,
+            name="report_poi_findings",
+            description=(
+                "Submit point-of-interest based findings for location-specific queries."
+            ),
+            args_schema=ReportPoisArgs,
+        )
+
+        return [lookup_neighborhoods, report_zones, report_pois]
+
+    # -- Result extraction -----------------------------------------------
+
+    def _extract_result(self, messages: list) -> ResearchResult:
+        """Scan agent messages for report tool calls and build a ResearchResult."""
+        last_ai_text = ""
+
+        for msg in reversed(messages):
+            if (
+                not last_ai_text
+                and getattr(msg, "type", None) == "ai"
+                and not getattr(msg, "tool_calls", None)
+                and isinstance(getattr(msg, "content", None), str)
+                and msg.content.strip()
+            ):
+                last_ai_text = msg.content.strip()
+
+            tool_calls = getattr(msg, "tool_calls", None)
+            if not tool_calls:
+                continue
+
+            for tc in tool_calls:
+                if tc["name"] == "report_zone_findings":
+                    return self._parse_zone_result(tc["args"], last_ai_text)
+                if tc["name"] == "report_poi_findings":
+                    return self._parse_poi_result(tc["args"], last_ai_text)
+
+        return ResearchResult(
+            strategy=ResearchStrategy.LLM_DIRECT,
+            summary=last_ai_text or "The agent did not produce structured findings.",
+            metric_label="AI Score",
+        )
+
+    @staticmethod
+    def _parse_zone_result(args: dict, fallback_summary: str) -> ResearchResult:
+        zones: list[ZoneScore] = []
+        for z in args.get("zones", []):
+            raw = z if isinstance(z, dict) else z.model_dump()
+            score = min(10.0, max(0.0, float(raw.get("score", 5.0))))
+            zones.append(ZoneScore(
+                name=raw.get("name", "Unknown"),
+                center=(float(raw.get("lat", 0.0)), float(raw.get("lng", 0.0))),
+                radius_km=float(raw.get("radius_km", 3.0)),
+                score=score,
+                metric_value=float(raw.get("metric_value", score)),
+                metric_label=args.get("metric_label", "Score"),
+            ))
+
+        return ResearchResult(
+            strategy=ResearchStrategy.ZONE,
+            summary=args.get("summary", "") or fallback_summary,
+            metric_label=args.get("metric_label", "Score"),
+            zones=zones,
+        )
+
+    @staticmethod
+    def _parse_poi_result(args: dict, fallback_summary: str) -> ResearchResult:
+        pois: list[PoiResult] = []
+        for p in args.get("pois", []):
+            raw = p if isinstance(p, dict) else p.model_dump()
+            pois.append(PoiResult(
+                lat=float(raw.get("lat", 0.0)),
+                lng=float(raw.get("lng", 0.0)),
+                weight=float(raw.get("weight", 1.0)),
+                label=raw.get("label", ""),
+            ))
+
+        return ResearchResult(
+            strategy=ResearchStrategy.POI,
+            summary=args.get("summary", "") or fallback_summary,
+            metric_label=args.get("metric_label", "POI Score"),
+            pois=pois,
+            poi_scoring_mode=args.get("scoring_mode", "density"),
+            poi_search_radius_m=float(args.get("search_radius_m", 1000.0)),
+        )

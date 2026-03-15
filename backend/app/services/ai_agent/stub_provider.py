@@ -90,10 +90,14 @@ class StubAgentProvider(AgentProvider):
     Keyword-based agent that leverages existing neighborhood data.
 
     This is a placeholder — swap with a real LLM provider for production.
-    The interface (plan → research) stays identical.
+    Uses an internal plan/research split but exposes only ``run()``.
     """
 
-    async def plan(self, prompt: str, city: CityConfig) -> ResearchPlan:
+    async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+        plan = self._plan(prompt, city)
+        return self._research(plan, city)
+
+    def _plan(self, prompt: str, city: CityConfig) -> ResearchPlan:
         match = _detect_attribute(prompt)
         if match:
             attr, label = match
@@ -108,9 +112,7 @@ class StubAgentProvider(AgentProvider):
             search_queries=[f"{city.name} {prompt}"],
         )
 
-    async def research(
-        self, plan: ResearchPlan, city: CityConfig
-    ) -> ResearchResult:
+    def _research(self, plan: ResearchPlan, city: CityConfig) -> ResearchResult:
         zones_data = _load_neighborhood_zones(city)
         if not zones_data:
             return ResearchResult(
