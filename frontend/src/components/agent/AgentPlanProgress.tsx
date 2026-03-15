@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Check, Loader2, Circle } from "lucide-react";
+import { Sparkles, Check, Circle, Loader2 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 
 const TOOL_LABELS: Record<string, string> = {
@@ -8,6 +8,60 @@ const TOOL_LABELS: Record<string, string> = {
   report_zone_findings: "Submitting zone findings",
   report_poi_findings: "Submitting POI findings",
 };
+
+function StatusIcon({
+  status,
+}: {
+  status: "pending" | "in_progress" | "completed";
+}) {
+  if (status === "completed") {
+    return (
+      <div className="relative flex items-center justify-center w-[18px] h-[18px]">
+        <div className="absolute inset-0 rounded-full bg-emerald-400/20" />
+        <Check
+          size={11}
+          strokeWidth={3}
+          className="text-emerald-400 relative z-10"
+          style={{ animation: "plan-check-pop 0.4s ease-out forwards" }}
+        />
+      </div>
+    );
+  }
+
+  if (status === "in_progress") {
+    return (
+      <div className="relative flex items-center justify-center w-[18px] h-[18px]">
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--color-primary), oklch(0.75 0.18 300))",
+            opacity: 0.2,
+            animation: "plan-glow-border 2s ease-in-out infinite",
+          }}
+        />
+        <div className="flex items-center gap-[3px] relative z-10">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="w-[3px] h-[3px] rounded-full bg-primary"
+              style={{
+                animation: `plan-dot-pulse 1.2s ease-in-out infinite`,
+                animationDelay: `${i * 0.15}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center w-[18px] h-[18px]">
+      <Circle size={10} className="text-white/15" />
+    </div>
+  );
+}
 
 export function AgentPlanProgress() {
   const { currentPlan, currentStep, isThinking } = useAgentStore();
@@ -23,59 +77,87 @@ export function AgentPlanProgress() {
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-md px-4 py-3">
+        <div className="plan-glass rounded-2xl rounded-tl-md px-4 py-3.5 relative overflow-hidden">
+          {/* Subtle inner glow at top */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
           {!hasPlan ? (
-            <div className="flex items-center gap-2 text-[13px] text-white/50">
-              <Loader2 size={14} className="animate-spin text-primary/50" />
-              <span>Planning...</span>
+            <div className="flex items-center gap-3 text-[13px]">
+              <div className="relative w-5 h-5 flex items-center justify-center">
+                <Loader2
+                  size={16}
+                  className="animate-spin text-primary/70"
+                />
+              </div>
+              <span className="plan-text-shimmer font-medium">
+                Analyzing your request...
+              </span>
             </div>
           ) : (
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-white/30 mb-2">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/25 mb-3 flex items-center gap-2">
+                <span className="inline-block w-3 h-px bg-gradient-to-r from-primary/40 to-transparent" />
                 Research Plan
+                <span className="inline-block w-3 h-px bg-gradient-to-l from-primary/40 to-transparent" />
               </p>
-              {currentPlan.map((todo, idx) => (
-                <div
-                  key={todo.id ?? idx}
-                  className={`flex items-start gap-2 text-[12px] leading-relaxed transition-all duration-300 ${
-                    todo.status === "completed"
-                      ? "text-white/40"
-                      : todo.status === "in_progress"
-                        ? "text-white/90"
-                        : "text-white/30"
-                  }`}
-                >
-                  <span className="mt-0.5 shrink-0">
-                    {todo.status === "completed" ? (
-                      <Check
-                        size={13}
-                        className="text-emerald-400/80"
-                      />
-                    ) : todo.status === "in_progress" ? (
-                      <Loader2
-                        size={13}
-                        className="animate-spin text-primary"
-                      />
-                    ) : (
-                      <Circle size={13} className="text-white/20" />
-                    )}
-                  </span>
-                  <span
-                    className={
-                      todo.status === "completed"
-                        ? "line-through decoration-white/20"
-                        : ""
-                    }
+
+              {currentPlan.map((todo, idx) => {
+                const isActive = todo.status === "in_progress";
+                const isDone = todo.status === "completed";
+
+                return (
+                  <div
+                    key={todo.id ?? idx}
+                    className={`
+                      relative flex items-center gap-2.5 text-[12px] leading-relaxed
+                      rounded-lg px-2.5 py-1.5 transition-all duration-500
+                      ${isActive ? "plan-active-glow bg-white/[0.04]" : ""}
+                      ${isDone ? "opacity-50" : ""}
+                    `}
+                    style={{
+                      animation: `plan-row-enter 0.4s ease-out ${idx * 0.08}s both`,
+                    }}
                   >
-                    {todo.content}
-                  </span>
-                </div>
-              ))}
+                    <span className="shrink-0">
+                      <StatusIcon status={todo.status} />
+                    </span>
+                    <span
+                      className={`
+                        ${isActive ? "plan-text-shimmer font-medium" : ""}
+                        ${isDone ? "line-through decoration-white/15 text-white/40" : ""}
+                        ${!isActive && !isDone ? "text-white/30" : ""}
+                        transition-all duration-500
+                      `}
+                    >
+                      {todo.content}
+                    </span>
+                  </div>
+                );
+              })}
 
               {currentStep && (
-                <div className="mt-2 pt-2 border-t border-white/[0.06] flex items-center gap-2 text-[11px] text-white/40">
-                  <Loader2 size={11} className="animate-spin" />
-                  <span>{TOOL_LABELS[currentStep] ?? currentStep}</span>
+                <div
+                  className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex items-center gap-2.5 text-[11px] text-white/35"
+                  style={{
+                    animation: "plan-row-enter 0.3s ease-out forwards",
+                  }}
+                >
+                  <div className="relative overflow-hidden rounded-md bg-white/[0.04] px-2.5 py-1 flex items-center gap-2">
+                    {/* Shimmer sweep across the current step */}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"
+                      style={{
+                        animation: "plan-shimmer 2s ease-in-out infinite",
+                      }}
+                    />
+                    <Loader2
+                      size={10}
+                      className="animate-spin text-primary/60 relative z-10"
+                    />
+                    <span className="relative z-10 text-white/45">
+                      {TOOL_LABELS[currentStep] ?? currentStep}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
