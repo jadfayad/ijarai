@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
+from typing import Any
 
 from app.city_config import CityConfig
 from app.services.ai_agent.types import ResearchResult
@@ -37,6 +39,17 @@ class AgentProvider(ABC):
     async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
         """Execute the full agent pipeline and return structured spatial data."""
         ...
+
+    async def run_stream(
+        self, prompt: str, city: CityConfig,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Yield streaming events during agent execution.
+
+        Default implementation falls back to ``run()`` and yields a single
+        ``result`` event. Override in subclasses for real streaming.
+        """
+        result = await self.run(prompt, city)
+        yield {"type": "result", "data": result}
 
 
 def _get_stub_provider() -> AgentProvider:

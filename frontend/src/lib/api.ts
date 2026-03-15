@@ -5,6 +5,7 @@ import type {
   CityConfig,
   AgentResearchRequest,
   AgentResearchResponse,
+  AgentStreamEvent,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -65,4 +66,62 @@ export async function agentResearch(
     body: JSON.stringify(body),
     signal,
   });
+}
+
+export async function agentResearchStream(
+  body: AgentResearchRequest,
+  onEvent: (event: AgentStreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/agent/research/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Parse SSE frames: "event: <type>\ndata: <json>\n\n"
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+
+    for (const frame of frames) {
+      const lines = frame.trim().split("\n");
+      let eventType = "";
+      let dataStr = "";
+
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          eventType = line.slice(7);
+        } else if (line.startsWith("data: ")) {
+          dataStr = line.slice(6);
+        }
+      }
+
+      if (eventType && dataStr) {
+        try {
+          const parsed = JSON.parse(dataStr);
+          onEvent({ type: eventType, data: parsed } as AgentStreamEvent);
+        } catch {
+          // skip malformed frames
+        }
+      }
+    }
+  }
 }

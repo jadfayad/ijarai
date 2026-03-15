@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any, Literal
 
 from langchain_core.tools import StructuredTool
@@ -95,12 +96,20 @@ general neighborhood qualities, submit POI-based findings instead.
 
 ## Workflow
 
-1. Read the user's question and determine which spatial attribute(s) matter.
-2. Call ``lookup_neighborhoods`` to examine available data.
-3. Analyze the data in the context of the user's question — adjust scores
+IMPORTANT: Always start by creating a plan using ``write_todos`` so the user
+can see your progress. Break the work into clear steps, then update each
+todo's status as you go.
+
+1. **Plan** — Use ``write_todos`` to outline your research steps.
+2. Read the user's question and determine which spatial attribute(s) matter.
+3. Call ``lookup_neighborhoods`` to examine available data.
+4. Analyze the data in the context of the user's question — adjust scores
    using your own knowledge if appropriate.
-4. Call exactly ONE of ``report_zone_findings`` or ``report_poi_findings``.
-5. After submitting findings, provide a brief 2-3 sentence summary.
+5. Call exactly ONE of ``report_zone_findings`` or ``report_poi_findings``.
+6. After submitting findings, provide a brief 2-3 sentence summary.
+
+Mark each todo as ``in_progress`` when you start it and ``completed`` when
+you finish it by calling ``write_todos`` again with the updated list.
 
 ## Rules
 
@@ -135,18 +144,20 @@ def _format_zone_name(key: str) -> str:
 class DeepAgentProvider(AgentProvider):
     """LLM-powered agent using the DeepAgent SDK from LangChain."""
 
-    async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+    def _create_agent(self, city: CityConfig):
         from deepagents import create_deep_agent
 
         tools = self._make_tools(city)
         model = os.getenv("DEEPAGENT_MODEL", "anthropic:claude-sonnet-4-6")
 
-        agent = create_deep_agent(
+        return create_deep_agent(
             model=model,
             tools=tools,
             system_prompt=_SYSTEM_PROMPT,
         )
 
+    async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+        agent = self._create_agent(city)
         user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
 
         try:
@@ -163,6 +174,70 @@ class DeepAgentProvider(AgentProvider):
             )
 
         return self._extract_result(result["messages"])
+
+    async def run_stream(
+        self, prompt: str, city: CityConfig,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream agent execution events including plan updates and step progress."""
+        agent = self._create_agent(city)
+        user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
+        all_messages: list = []
+
+        _REPORT_TOOLS = {"report_zone_findings", "report_poi_findings"}
+        _CUSTOM_TOOLS = {"lookup_neighborhoods", *_REPORT_TOOLS}
+
+        try:
+            async for chunk in agent.astream(
+                {"messages": [{"role": "user", "content": user_message}]},
+                config={"configurable": {"thread_id": uuid.uuid4().hex}},
+                stream_mode="updates",
+                version="v2",
+            ):
+                if chunk["type"] != "updates":
+                    continue
+
+                for _node_name, data in chunk["data"].items():
+                    if not isinstance(data, dict):
+                        continue
+                    raw_msgs = data.get("messages", [])
+                    if not isinstance(raw_msgs, list):
+                        raw_msgs = getattr(raw_msgs, "value", [raw_msgs])
+                    for msg in raw_msgs:
+                        all_messages.append(msg)
+
+                        tool_calls = getattr(msg, "tool_calls", None)
+                        if not tool_calls:
+                            continue
+
+                        for tc in tool_calls:
+                            name = tc["name"]
+
+                            if name == "write_todos":
+                                yield {
+                                    "type": "plan",
+                                    "data": tc["args"],
+                                }
+                            elif name in _CUSTOM_TOOLS:
+                                yield {
+                                    "type": "step",
+                                    "data": {
+                                        "tool": name,
+                                        "status": "running",
+                                    },
+                                }
+
+        except Exception:
+            logger.exception("DeepAgent streaming failed")
+            yield {
+                "type": "error",
+                "data": {
+                    "message": "The AI agent encountered an error processing this request.",
+                },
+            }
+            return
+
+        result = self._extract_result(all_messages)
+        yield {"type": "result", "data": result}
 
     # -- Tool factory ---------------------------------------------------
 

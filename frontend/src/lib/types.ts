@@ -114,6 +114,18 @@ export interface AgentResearchResponse {
   poi_search_radius_m: number;
 }
 
+export interface AgentTodo {
+  id: string;
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+export type AgentStreamEvent =
+  | { type: "plan"; data: { todos: AgentTodo[] } }
+  | { type: "step"; data: { tool: string; status: string } }
+  | { type: "result"; data: AgentResearchResponse }
+  | { type: "error"; data: { message: string } };
+
 export interface CriterionConfig {
   id: string;
   type: CriterionType;

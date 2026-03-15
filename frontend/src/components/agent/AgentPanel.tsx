@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { AgentMessageBubble } from "./AgentMessage";
+import { AgentPlanProgress } from "./AgentPlanProgress";
 import { SidebarModeToggle } from "./SidebarModeToggle";
 
 const SUGGESTED_PROMPTS = [
@@ -61,7 +62,7 @@ interface AgentPanelProps {
 }
 
 export function AgentPanel({ onClose }: AgentPanelProps) {
-  const { messages, isThinking, sendMessage, clearConversation } =
+  const { messages, isThinking, currentPlan, sendMessage, clearConversation } =
     useAgentStore();
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -74,7 +75,7 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isThinking, scrollToBottom]);
+  }, [messages, isThinking, currentPlan, scrollToBottom]);
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -196,7 +197,11 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
               {messages.map((msg) => (
                 <AgentMessageBubble key={msg.id} message={msg} />
               ))}
-              {isThinking && <ThinkingIndicator />}
+              {isThinking && (
+                currentPlan.length > 0
+                  ? <AgentPlanProgress />
+                  : <ThinkingIndicator />
+              )}
               <div ref={messagesEndRef} />
             </>
           )}
