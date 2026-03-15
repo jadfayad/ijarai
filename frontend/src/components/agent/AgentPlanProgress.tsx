@@ -34,9 +34,9 @@ export function AgentPlanProgress() {
               <p className="text-[11px] font-medium uppercase tracking-wider text-white/30 mb-2">
                 Research Plan
               </p>
-              {currentPlan.map((todo) => (
+              {currentPlan.map((todo, idx) => (
                 <div
-                  key={todo.id}
+                  key={todo.id ?? idx}
                   className={`flex items-start gap-2 text-[12px] leading-relaxed transition-all duration-300 ${
                     todo.status === "completed"
                       ? "text-white/40"

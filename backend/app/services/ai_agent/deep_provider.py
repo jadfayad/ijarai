@@ -25,6 +25,7 @@ from app.services.ai_agent.types import (
     ResearchStrategy,
     ZoneScore,
 )
+from app.services.static_data import format_zone_name, load_neighborhood_data
 
 logger = logging.getLogger(__name__)
 
@@ -124,17 +125,6 @@ you finish it by calling ``write_todos`` again with the updated list.
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _load_neighborhood_data(city: CityConfig) -> dict[str, dict]:
-    path = city.data_dir / "neighborhood_scores.json"
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text())
-
-
-def _format_zone_name(key: str) -> str:
-    abbreviations = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
-    words = key.split("_")
-    return " ".join(w.upper() if w in abbreviations else w.capitalize() for w in words)
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +232,7 @@ class DeepAgentProvider(AgentProvider):
     # -- Tool factory ---------------------------------------------------
 
     def _make_tools(self, city: CityConfig) -> list:
-        neighborhood_data = _load_neighborhood_data(city)
+        neighborhood_data = load_neighborhood_data(city)
 
         def lookup_neighborhoods(attribute: str = "") -> str:
             """Look up neighborhood scores for the current city.
@@ -260,7 +250,7 @@ class DeepAgentProvider(AgentProvider):
 
             out: dict[str, Any] = {}
             for key, data in neighborhood_data.items():
-                name = _format_zone_name(key)
+                name = format_zone_name(key)
                 entry: dict[str, Any] = {
                     "center": data["center"],
                     "radius_km": data.get("radius_km", 2.0),

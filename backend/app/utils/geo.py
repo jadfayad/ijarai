@@ -18,24 +18,6 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def deg_per_m_lat() -> float:
-    """Degrees of latitude per metre (constant everywhere)."""
-    return 1 / 111_320
-
-
-def deg_per_m_lng(lat: float) -> float:
-    """Degrees of longitude per metre at the given latitude."""
-    return 1 / (111_320 * math.cos(math.radians(lat)))
-
-
-def meters_to_deg_lat(meters: float) -> float:
-    return meters * deg_per_m_lat()
-
-
-def meters_to_deg_lng(meters: float, lat: float) -> float:
-    return meters * deg_per_m_lng(lat)
-
-
 def m_per_deg_lat() -> float:
     """Metres per degree of latitude."""
     return 111_320

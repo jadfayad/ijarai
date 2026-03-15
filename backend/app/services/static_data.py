@@ -81,15 +81,20 @@ def _find_zone_value(
     return interpolated * (1 - fade) + default * fade
 
 
-_ABBREVIATIONS = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
+ZONE_ABBREVIATIONS = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
 
 
-def _format_zone_name(key: str) -> str:
+def format_zone_name(key: str) -> str:
     """Turn a zone key like 'al_furjan' into 'Al Furjan', preserving abbreviations."""
     words = key.split("_")
     return " ".join(
-        w.upper() if w in _ABBREVIATIONS else w.capitalize() for w in words
+        w.upper() if w in ZONE_ABBREVIATIONS else w.capitalize() for w in words
     )
+
+
+def load_neighborhood_data(city: CityConfig) -> dict[str, dict]:
+    """Return raw neighborhood scores dict for a city (cached)."""
+    return _get_data(city).neighborhood_scores
 
 
 def find_nearest_zone_name(city: CityConfig, lat: float, lng: float) -> str | None:
@@ -107,7 +112,7 @@ def find_nearest_zone_name(city: CityConfig, lat: float, lng: float) -> str | No
             best_name = name
 
     if best_name is not None:
-        return _format_zone_name(best_name)
+        return format_zone_name(best_name)
 
     nearest_name: str | None = None
     nearest_dist = float("inf")
@@ -119,7 +124,7 @@ def find_nearest_zone_name(city: CityConfig, lat: float, lng: float) -> str | No
             nearest_name = name
 
     if nearest_name is not None and nearest_dist <= 5.0:
-        return _format_zone_name(nearest_name)
+        return format_zone_name(nearest_name)
 
     return None
 

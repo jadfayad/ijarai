@@ -8,7 +8,6 @@ Replace this with a LangChain or Claude SDK provider for real agent capabilities
 """
 from __future__ import annotations
 
-import json
 import re
 
 from app.city_config import CityConfig
@@ -19,6 +18,7 @@ from app.services.ai_agent.types import (
     ResearchStrategy,
     ZoneScore,
 )
+from app.services.static_data import format_zone_name, load_neighborhood_data
 
 _KEYWORD_TO_ATTRIBUTE: dict[str, tuple[str, str]] = {
     "safe": ("safety", "Safety Score"),
@@ -58,16 +58,6 @@ _KEYWORD_TO_ATTRIBUTE: dict[str, tuple[str, str]] = {
     "upscale": ("desirability", "Desirability Score"),
 }
 
-_ABBREVIATIONS = {"jvc", "jvt", "jlt", "jbr", "difc", "dip", "mbr"}
-
-
-def _format_zone_name(key: str) -> str:
-    words = key.split("_")
-    return " ".join(
-        w.upper() if w in _ABBREVIATIONS else w.capitalize() for w in words
-    )
-
-
 def _detect_attribute(prompt: str) -> tuple[str, str] | None:
     """Match user prompt to a known neighborhood sub-attribute."""
     prompt_lower = prompt.lower()
@@ -76,13 +66,6 @@ def _detect_attribute(prompt: str) -> tuple[str, str] | None:
         if word in _KEYWORD_TO_ATTRIBUTE:
             return _KEYWORD_TO_ATTRIBUTE[word]
     return None
-
-
-def _load_neighborhood_zones(city: CityConfig) -> dict[str, dict]:
-    path = city.data_dir / "neighborhood_scores.json"
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text())
 
 
 class StubAgentProvider(AgentProvider):
@@ -113,7 +96,7 @@ class StubAgentProvider(AgentProvider):
         )
 
     def _research(self, plan: ResearchPlan, city: CityConfig) -> ResearchResult:
-        zones_data = _load_neighborhood_zones(city)
+        zones_data = load_neighborhood_data(city)
         if not zones_data:
             return ResearchResult(
                 strategy=plan.strategy,
@@ -147,7 +130,7 @@ class StubAgentProvider(AgentProvider):
             value = data.get(attribute, data.get("score", 5.0))
             zones.append(
                 ZoneScore(
-                    name=_format_zone_name(key),
+                    name=format_zone_name(key),
                     center=(data["center"][0], data["center"][1]),
                     radius_km=data.get("radius_km", 2.0),
                     score=float(value),
@@ -179,7 +162,7 @@ class StubAgentProvider(AgentProvider):
         for key, data in zones_data.items():
             zones.append(
                 ZoneScore(
-                    name=_format_zone_name(key),
+                    name=format_zone_name(key),
                     center=(data["center"][0], data["center"][1]),
                     radius_km=data.get("radius_km", 2.0),
                     score=data.get("score", 5.0),

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from app.city_config import CityConfig
@@ -62,7 +62,7 @@ def _get_deep_provider() -> AgentProvider:
     return DeepAgentProvider()
 
 
-PROVIDERS: dict[str, callable] = {
+PROVIDERS: dict[str, Callable[[], AgentProvider]] = {
     "stub": _get_stub_provider,
     "deepagent": _get_deep_provider,
 }

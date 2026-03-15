@@ -278,18 +278,20 @@ def _idw_interpolate(
     return sum(w * dur / total_w for w, (_, dur) in zip(weights, nearest))
 
 
+_BAND_PAIRS = sorted(BAND_SCORES.items())
+
+
 def _duration_to_score(duration_s: float) -> float:
     """Map a travel duration (seconds) to a 0-1 score via band interpolation."""
-    _BANDS = [(600, 1.0), (1200, 0.85), (1800, 0.65), (2700, 0.45), (3600, 0.25), (5400, 0.10)]
-    if duration_s <= _BANDS[0][0]:
-        return _BANDS[0][1]
-    for i in range(len(_BANDS) - 1):
-        t0, s0 = _BANDS[i]
-        t1, s1 = _BANDS[i + 1]
+    if duration_s <= _BAND_PAIRS[0][0]:
+        return _BAND_PAIRS[0][1]
+    for i in range(len(_BAND_PAIRS) - 1):
+        t0, s0 = _BAND_PAIRS[i]
+        t1, s1 = _BAND_PAIRS[i + 1]
         if duration_s <= t1:
             frac = (duration_s - t0) / (t1 - t0)
             return s0 + (s1 - s0) * frac
-    tail_decay = max(0.0, _BANDS[-1][1] * (1 - (duration_s - _BANDS[-1][0]) / _BANDS[-1][0]))
+    tail_decay = max(0.0, _BAND_PAIRS[-1][1] * (1 - (duration_s - _BAND_PAIRS[-1][0]) / _BAND_PAIRS[-1][0]))
     return tail_decay
 
 
