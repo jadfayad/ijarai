@@ -142,22 +142,13 @@ export function AgentPlanProgress() {
                     animation: "plan-row-enter 0.3s ease-out forwards",
                   }}
                 >
-                  <div className="relative overflow-hidden rounded-md bg-white/[0.04] px-2.5 py-1 flex items-center gap-2">
-                    {/* Shimmer sweep across the current step */}
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"
-                      style={{
-                        animation: "plan-shimmer 2s ease-in-out infinite",
-                      }}
-                    />
-                    <Loader2
-                      size={10}
-                      className="animate-spin text-primary/60 relative z-10"
-                    />
-                    <span className="relative z-10 text-white/45">
-                      {TOOL_LABELS[currentStep] ?? currentStep}
-                    </span>
-                  </div>
+                  <Loader2
+                    size={10}
+                    className="animate-spin text-primary/60"
+                  />
+                  <span className="plan-text-shimmer">
+                    {TOOL_LABELS[currentStep] ?? currentStep}
+                  </span>
                 </div>
               )}
             </div>

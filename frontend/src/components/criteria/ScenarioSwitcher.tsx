@@ -16,6 +16,8 @@ import {
 } from "@/stores/scenario-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 
+let _initialSyncDone = false;
+
 export function ScenarioSwitcher() {
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const allScenarios = useScenarioStore((s) => s.scenarios);
@@ -37,10 +39,18 @@ export function ScenarioSwitcher() {
   const menuRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
 
-  // On mount, wait for persist hydration then sync the active scenario's
-  // criteria into the (non-persisted) criteria store.
+  // On first mount after page load, wait for persist hydration then sync the
+  // active scenario's criteria into the (non-persisted) criteria store.
+  // The module-level flag prevents re-syncing on remount (e.g. when the
+  // sidebar toggles between agent/criteria mode), which would overwrite
+  // criteria that were just added.
   useEffect(() => {
-    const sync = () => syncActiveScenarioToCriteria(useScenarioStore.getState());
+    if (_initialSyncDone) return;
+
+    const sync = () => {
+      syncActiveScenarioToCriteria(useScenarioStore.getState());
+      _initialSyncDone = true;
+    };
 
     if (useScenarioStore.persist.hasHydrated()) {
       sync();
