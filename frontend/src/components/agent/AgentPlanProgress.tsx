@@ -5,8 +5,8 @@ import { useAgentStore } from "@/stores/agent-store";
 
 const TOOL_LABELS: Record<string, string> = {
   lookup_neighborhoods: "Looking up neighborhoods",
-  report_zone_findings: "Submitting zone findings",
-  report_poi_findings: "Submitting POI findings",
+  emit_typed_criterion: "Adding a criterion",
+  emit_ai_criterion: "Adding an AI criterion",
 };
 
 function StatusIcon({
@@ -64,11 +64,13 @@ function StatusIcon({
 }
 
 export function AgentPlanProgress() {
-  const { currentPlan, currentStep, isThinking } = useAgentStore();
+  const { currentPlan, currentStep, isThinking, emittedThisTurn } =
+    useAgentStore();
 
   if (!isThinking) return null;
 
   const hasPlan = currentPlan.length > 0;
+  const hasEmitted = emittedThisTurn.length > 0;
 
   return (
     <div className="flex gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -149,6 +151,29 @@ export function AgentPlanProgress() {
                   <span className="plan-text-shimmer">
                     {TOOL_LABELS[currentStep] ?? currentStep}
                   </span>
+                </div>
+              )}
+
+              {hasEmitted && (
+                <div
+                  className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex flex-wrap gap-1.5"
+                  style={{ animation: "plan-row-enter 0.3s ease-out forwards" }}
+                >
+                  {emittedThisTurn.map((e) => (
+                    <span
+                      key={e.criterionId}
+                      className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-full px-2 py-0.5 tabular-nums ${
+                        e.enabled
+                          ? "text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/20"
+                          : "text-amber-300/90 bg-amber-500/10 border border-amber-500/20"
+                      }`}
+                      title={e.reasoning || e.label}
+                    >
+                      <Check size={9} />
+                      {e.label}
+                      <span className="opacity-60">·w{e.weight.toFixed(0)}</span>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

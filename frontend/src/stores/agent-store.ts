@@ -1,7 +1,24 @@
 import { create } from "zustand";
 import { agentResearchStream } from "@/lib/api";
 import { useCriteriaStore, createAiCriterion } from "./criteria-store";
-import type { AgentResearchResponse, AgentTodo, TokenUsage } from "@/lib/types";
+import type {
+  AgentResearchResponse,
+  AgentTodo,
+  EmittedCriterionEvent,
+  TokenUsage,
+} from "@/lib/types";
+
+export interface EmittedCriterion {
+  criterionId: string;
+  type: string;
+  label: string;
+  icon: string;
+  weight: number;
+  enabled: boolean;
+  reasoning: string;
+  sourceTool: "typed" | "ai";
+  missingInput: string;
+}
 
 export interface AgentMessage {
   id: string;
@@ -11,8 +28,25 @@ export interface AgentMessage {
   researchResult?: AgentResearchResponse;
   usage?: TokenUsage;
   criterionAdded?: boolean;
+  /** Criteria the agent emitted during this turn (auto-added to the panel). */
+  emittedCriteria?: EmittedCriterion[];
   /** Snapshot of the agent's plan steps at completion, for transcript history. */
   plan?: AgentTodo[];
+}
+
+function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
+  const c = e.criterion;
+  return {
+    criterionId: c.id,
+    type: c.type,
+    label: c.label,
+    icon: c.icon,
+    weight: c.weight,
+    enabled: c.enabled,
+    reasoning: e.reasoning,
+    sourceTool: e.source_tool,
+    missingInput: e.missing_input,
+  };
 }
 
 let messageCounter = 0;
@@ -22,6 +56,7 @@ interface AgentStore {
   isThinking: boolean;
   currentPlan: AgentTodo[];
   currentStep: string | null;
+  emittedThisTurn: EmittedCriterion[];
   sidebarMode: "criteria" | "agent";
   abortController: AbortController | null;
 
@@ -37,6 +72,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   isThinking: false,
   currentPlan: [],
   currentStep: null,
+  emittedThisTurn: [],
   sidebarMode: "criteria",
   abortController: null,
 
@@ -57,6 +93,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isThinking: true,
       currentPlan: [],
       currentStep: null,
+      emittedThisTurn: [],
       abortController: controller,
     }));
 
@@ -75,19 +112,34 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
               set({ currentStep: event.data.tool });
               break;
 
+            case "criterion": {
+              const emitted = emittedFromEvent(event.data);
+              useCriteriaStore
+                .getState()
+                .addCriterion(event.data.criterion);
+              set((state) => ({
+                emittedThisTurn: [...state.emittedThisTurn, emitted],
+              }));
+              break;
+            }
+
             case "result": {
               const result = event.data;
               const planSnapshot = get().currentPlan;
+              const emittedSnapshot = get().emittedThisTurn;
+              const hasEmitted = emittedSnapshot.length > 0;
               const agentMsg: AgentMessage = {
                 id: `msg-${++messageCounter}`,
                 role: "agent",
-                content:
-                  result.summary +
-                  "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
+                content: hasEmitted
+                  ? result.summary
+                  : result.summary +
+                    "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
                 timestamp: Date.now(),
-                researchResult: result,
+                researchResult: hasEmitted ? undefined : result,
                 usage: result.usage,
                 plan: planSnapshot.length > 0 ? planSnapshot : undefined,
+                emittedCriteria: hasEmitted ? emittedSnapshot : undefined,
               };
 
               set((state) => ({
@@ -95,6 +147,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 isThinking: false,
                 currentPlan: [],
                 currentStep: null,
+                emittedThisTurn: [],
                 abortController: null,
               }));
               break;
@@ -113,6 +166,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 isThinking: false,
                 currentPlan: [],
                 currentStep: null,
+                emittedThisTurn: [],
                 abortController: null,
               }));
               break;
@@ -124,7 +178,13 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
       // If stream ended without a result/error event, clear thinking state
       if (get().isThinking) {
-        set({ isThinking: false, currentPlan: [], currentStep: null, abortController: null });
+        set({
+          isThinking: false,
+          currentPlan: [],
+          currentStep: null,
+          emittedThisTurn: [],
+          abortController: null,
+        });
       }
     } catch (err) {
       // Silent on user-initiated abort — stopAgent already wrote the "Stopped." message
@@ -144,6 +204,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         isThinking: false,
         currentPlan: [],
         currentStep: null,
+        emittedThisTurn: [],
         abortController: null,
       }));
     }
@@ -164,6 +225,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isThinking: false,
       currentPlan: [],
       currentStep: null,
+      emittedThisTurn: [],
       abortController: null,
     }));
   },
@@ -188,6 +250,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isThinking: false,
       currentPlan: [],
       currentStep: null,
+      emittedThisTurn: [],
       abortController: null,
     });
   },

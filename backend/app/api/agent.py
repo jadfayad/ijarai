@@ -18,7 +18,13 @@ from app.services.ai_agent.types import (
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Separate caches: the non-streaming endpoint returns an aggregated
+# AgentResearchResponse dict, while the streaming endpoint replays a full
+# list of (event_type, json_payload) pairs so clients can rebuild criteria.
 _ai_cache: TTLCache[str, dict] = TTLCache(maxsize=64, ttl=3600)
+_ai_stream_cache: TTLCache[str, list[tuple[str, str]]] = TTLCache(
+    maxsize=64, ttl=3600,
+)
 _AGENT_SEMAPHORE = asyncio.Semaphore(3)
 
 
@@ -71,10 +77,11 @@ async def agent_research(request: AgentResearchRequest):
 @router.post("/agent/research/stream")
 async def agent_research_stream(request: AgentResearchRequest):
     ck = _cache_key(request.city, request.prompt)
-    cached = _ai_cache.get(ck)
-    if cached is not None:
+    cached_events = _ai_stream_cache.get(ck)
+    if cached_events is not None:
         async def cached_generator():
-            yield f"event: result\ndata: {json.dumps(cached)}\n\n"
+            for event_type, payload_json in cached_events:
+                yield f"event: {event_type}\ndata: {payload_json}\n\n"
         return StreamingResponse(
             cached_generator(),
             media_type="text/event-stream",
@@ -91,6 +98,7 @@ async def agent_research_stream(request: AgentResearchRequest):
     provider = get_provider()
 
     async def event_generator():
+        collected: list[tuple[str, str]] = []
         try:
             async for event in provider.run_stream(request.prompt, city):
                 event_type = event["type"]
@@ -105,11 +113,11 @@ async def agent_research_stream(request: AgentResearchRequest):
                     elif usage is not None:
                         payload["usage"] = usage.model_dump()
                     _ai_cache[ck] = payload
-                    serialized = json.dumps(payload)
-                else:
-                    serialized = json.dumps(payload)
 
+                serialized = json.dumps(payload)
+                collected.append((event_type, serialized))
                 yield f"event: {event_type}\ndata: {serialized}\n\n"
+            _ai_stream_cache[ck] = collected
         finally:
             _AGENT_SEMAPHORE.release()
 

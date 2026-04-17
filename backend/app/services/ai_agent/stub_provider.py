@@ -9,8 +9,11 @@ Replace this with a LangChain or Claude SDK provider for real agent capabilities
 from __future__ import annotations
 
 import re
+from collections.abc import AsyncIterator
+from typing import Any
 
 from app.city_config import CityConfig
+from app.services.ai_agent.emit import build_ai_criterion
 from app.services.ai_agent.provider import AgentProvider
 from app.services.ai_agent.types import (
     ResearchPlan,
@@ -79,6 +82,55 @@ class StubAgentProvider(AgentProvider):
     async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
         plan = self._plan(prompt, city)
         return self._research(plan, city)
+
+    async def run_stream(
+        self, prompt: str, city: CityConfig,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Emit one criterion event wrapping the single stub result, then result."""
+        result = await self.run(prompt, city)
+
+        criterion = build_ai_criterion(
+            {
+                "prompt": prompt,
+                "strategy": (
+                    result.strategy.value
+                    if result.strategy in (ResearchStrategy.ZONE, ResearchStrategy.POI)
+                    else "zone"
+                ),
+                "zones": [
+                    {
+                        "name": z.name,
+                        "lat": z.center[0],
+                        "lng": z.center[1],
+                        "radius_km": z.radius_km,
+                        "score": z.score,
+                        "metric_value": z.metric_value,
+                    }
+                    for z in result.zones
+                ],
+                "pois": [
+                    {"lat": p.lat, "lng": p.lng, "weight": p.weight, "label": p.label}
+                    for p in result.pois
+                ],
+                "metric_label": result.metric_label,
+                "poi_scoring_mode": result.poi_scoring_mode,
+                "poi_search_radius_m": result.poi_search_radius_m,
+                "weight": 5.0,
+                "reasoning": result.summary,
+            },
+            city,
+        )
+
+        yield {
+            "type": "criterion",
+            "data": {
+                "criterion": criterion,
+                "reasoning": result.summary,
+                "source_tool": "ai",
+                "missing_input": "",
+            },
+        }
+        yield {"type": "result", "data": result}
 
     def _plan(self, prompt: str, city: CityConfig) -> ResearchPlan:
         match = _detect_attribute(prompt)

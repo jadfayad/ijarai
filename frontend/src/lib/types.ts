@@ -132,6 +132,7 @@ export interface AiParams {
   pois: AiPoiResult[];
   poi_scoring_mode: "proximity" | "density";
   poi_search_radius_m: number;
+  higher_is_better?: boolean;
 }
 
 export interface AgentResearchRequest {
@@ -162,9 +163,19 @@ export interface AgentTodo {
   status: "pending" | "in_progress" | "completed";
 }
 
+export interface EmittedCriterionEvent {
+  criterion: CriterionConfig;
+  reasoning: string;
+  source_tool: "typed" | "ai";
+  /** Machine-readable hint when the agent emitted with enabled=false due to a
+   *  missing user input (e.g. "destination", "rent_amount"). */
+  missing_input: string;
+}
+
 export type AgentStreamEvent =
   | { type: "plan"; data: { todos: AgentTodo[] } }
   | { type: "step"; data: { tool: string; status: string } }
+  | { type: "criterion"; data: EmittedCriterionEvent }
   | { type: "result"; data: AgentResearchResponse }
   | { type: "error"; data: { message: string } };
 

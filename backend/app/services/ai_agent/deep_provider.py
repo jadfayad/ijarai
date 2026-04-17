@@ -1,9 +1,13 @@
 """
 DeepAgent provider — LLM-powered spatial research using the LangChain DeepAgent SDK.
 
-Uses ``create_deep_agent`` with custom tools that let the LLM query
-neighborhood data and submit structured spatial findings (zones / POIs).
-The scorer pipeline downstream is unchanged.
+The agent answers the user's question by building up a weighted list of
+criteria that feeds the scoring heatmap. For each aspect of the user's
+question it emits either a typed criterion (safety, walkability, transit,
+etc.) via ``emit_typed_criterion``, or — when no typed criterion fits — an
+``ai`` criterion with inline zone/POI research via ``emit_ai_criterion``.
+Each emission is streamed to the frontend as a ``criterion`` SSE event so
+the criteria panel fills in live as the agent works.
 """
 from __future__ import annotations
 
@@ -18,6 +22,10 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from app.city_config import CityConfig
+from app.services.ai_agent.emit import (
+    build_ai_criterion,
+    build_typed_criterion,
+)
 from app.services.ai_agent.provider import AgentProvider
 from app.services.ai_agent.types import (
     PoiResult,
@@ -35,40 +43,76 @@ _ATTRIBUTES = [
     "infrastructure", "aesthetics", "amenities", "desirability",
 ]
 
+
 # ---------------------------------------------------------------------------
-# Pydantic schemas for the report-tool inputs
+# Pydantic schemas for the emit-tool inputs
 # ---------------------------------------------------------------------------
+
+class EmitTypedCriterionArgs(BaseModel):
+    """Emit a pre-built typed criterion into the user's scoring list."""
+    type: Literal[
+        "commute", "amenities", "budget", "neighborhood",
+        "safety", "walkability", "green_spaces", "community",
+        "infrastructure", "aesthetics", "desirability", "noise",
+        "transit", "healthcare", "schools", "hazard",
+    ] = Field(
+        description="Criterion type. Must be one of the built-in catalog.",
+    )
+    weight: float = Field(
+        default=5.0, ge=0, le=10,
+        description="0-10 weight. Tier A (safety, commute, budget) 7-9; Tier B (walkability, transit, amenities, schools) 5-7; Tier C 3-5.",
+    )
+    params: dict = Field(
+        default_factory=dict,
+        description="Type-specific params. Leave {} for zero-param types. See tool docs for each type's shape.",
+    )
+    reasoning: str = Field(
+        default="",
+        description="One-line justification shown in the chat under the criterion.",
+    )
+    label: str = Field(
+        default="",
+        description="Optional override for the display label. Leave empty to use the default.",
+    )
+
 
 class ZoneFinding(BaseModel):
     name: str = Field(description="Neighborhood or area name")
     lat: float = Field(description="Latitude of zone center")
     lng: float = Field(description="Longitude of zone center")
     radius_km: float = Field(default=3.0, description="Zone radius in km")
-    score: float = Field(ge=0, le=10, description="Score from 0 (worst) to 10 (best)")
+    score: float = Field(ge=0, le=10, description="Score 0 (worst) to 10 (best)")
     metric_value: float = Field(default=0.0, description="Raw metric value for display")
 
 
-class ReportZonesArgs(BaseModel):
-    """Submit zone-based spatial findings."""
-    zones: list[ZoneFinding] = Field(description="List of scored geographic zones")
-    metric_label: str = Field(description="Human-readable label, e.g. 'Safety Score'")
-    summary: str = Field(default="", description="Brief text summary of findings")
-
-
 class PoiFinding(BaseModel):
-    lat: float = Field(description="Latitude")
-    lng: float = Field(description="Longitude")
-    weight: float = Field(default=1.0, ge=0, le=1, description="Relevance weight")
-    label: str = Field(default="", description="Display label")
+    lat: float
+    lng: float
+    weight: float = Field(default=1.0, ge=0, le=1, description="Relevance 0-1")
+    label: str = Field(default="")
 
 
-class ReportPoisArgs(BaseModel):
-    """Submit point-of-interest based findings."""
-    pois: list[PoiFinding] = Field(description="List of points of interest")
-    metric_label: str = Field(default="POI Score")
-    scoring_mode: Literal["proximity", "density"] = "density"
-    search_radius_m: float = Field(default=1000.0, description="Search radius in meters")
-    summary: str = Field(default="", description="Brief text summary of findings")
+class EmitAiCriterionArgs(BaseModel):
+    """Emit a custom AI criterion with inline zone/POI research.
+
+    Use this only when no typed criterion fits the user's aspect. Call
+    ``lookup_neighborhoods`` first to get coordinates.
+    """
+    prompt: str = Field(
+        description="The user-facing aspect this criterion represents (e.g. 'near vegan restaurants').",
+    )
+    strategy: Literal["zone", "poi"] = Field(
+        default="zone",
+        description="'zone' for neighborhood-level scoring, 'poi' for point-density scoring.",
+    )
+    zones: list[ZoneFinding] = Field(default_factory=list)
+    pois: list[PoiFinding] = Field(default_factory=list)
+    metric_label: str = Field(default="AI Score")
+    poi_scoring_mode: Literal["proximity", "density"] = "density"
+    poi_search_radius_m: float = 1000.0
+    weight: float = Field(default=5.0, ge=0, le=10)
+    reasoning: str = Field(default="")
+    label: str = Field(default="")
 
 
 # ---------------------------------------------------------------------------
@@ -76,49 +120,86 @@ class ReportPoisArgs(BaseModel):
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
-You are a spatial research assistant for a city apartment-finding application.
-Your job is to analyze the user's question about neighborhood qualities and
-produce structured spatial scores that can be visualized on a map.
+You are a spatial research assistant for an apartment-search heatmap app.
 
-## Available tools
+## Your job
 
-### lookup_neighborhoods
-Query the neighborhood database for the current city. You can filter by a
-specific attribute (safety, walkability, green_spaces, community,
-infrastructure, aesthetics, amenities, desirability) or leave it empty to
-get all attributes.
+The user has a **criteria panel** that feeds a heatmap. For each aspect of the
+user's question, you emit a weighted criterion. When you're done, the user has
+a list of criteria that — combined — scores the city the way they asked.
 
-### report_zone_findings
-Submit your analysis as a list of scored geographic zones. Each zone needs a
-name, center coordinates (lat, lng), radius_km, and a score from 0-10.
+You do NOT produce a single answer. You compose multiple criteria.
 
-### report_poi_findings
-If the user is asking about specific locations/points of interest rather than
-general neighborhood qualities, submit POI-based findings instead.
+## Tools
+
+### write_todos (use first)
+Outline your research as one todo per aspect of the user's question.
+Update statuses to ``in_progress`` and ``completed`` as you go.
+
+### lookup_neighborhoods(attribute?: str)
+Query the city's neighborhood database. ``attribute`` can be one of:
+safety, walkability, green_spaces, community, infrastructure, aesthetics,
+amenities, desirability. Returns neighborhood names with coordinates
+and scores. Call this before emitting AI criteria that need zones.
+
+### emit_typed_criterion(type, weight, params, reasoning, label?)
+Emit a pre-built typed criterion. Use this whenever a built-in type covers
+the aspect. Types:
+
+Zero-param types (just emit with a weight, ``params={}``):
+  safety, walkability, green_spaces, community, infrastructure, aesthetics,
+  desirability, noise, neighborhood
+
+Default-safe typed criteria:
+  transit     params = {"modes": ["train","bus"]}  (or subset)
+  healthcare  params = {"facility_types": ["hospital","clinic"]}  (also "pharmacy")
+  schools     params = {"age_band": "primary" | "secondary" | "all"}
+  hazard      params = {"hazards": ["flood"]}  (or ["wildfire"] or both)
+  amenities   params = {"categories": ["gym","cafe","park","supermarket",...]}
+
+User-specific typed criteria (require inputs from the prompt):
+  commute  params = {"destination": {"lat": N, "lng": N}, "mode": "car"|"transit",
+                      "time_of_day": "peak"|"off_peak", "label": "..." }
+  budget   params = {"max_monthly_rent": N, "include_utilities": false}
+
+If the user mentioned the required input (an address/landmark for commute,
+a dollar amount for budget), include it. If not, **still emit the criterion**
+with empty params — the app will mark it disabled and ask the user to fill
+in the missing input. Do not invent values.
+
+### emit_ai_criterion(prompt, strategy, zones|pois, metric_label, weight, reasoning)
+Fallback for aspects no typed criterion covers (e.g. "near vegan restaurants",
+"cyberpunk vibes"). Call ``lookup_neighborhoods`` first for coordinates.
+  - strategy="zone": supply ``zones`` (name, lat, lng, radius_km, score 0-10)
+  - strategy="poi":  supply ``pois`` (lat, lng, weight 0-1, label)
+
+## Weight guidance (0-10)
+
+Tier A (deal-breakers): safety, commute, budget              → 7-9
+Tier B (high priority): walkability, transit, amenities,
+                        schools, healthcare                   → 5-7
+Tier C (nice-to-have):  aesthetics, desirability, green,
+                        community, hazard, noise              → 3-5
+
+Bump weights by +2 for emphasis words ("must", "critical", "essential").
+Lower by -2 for softeners ("nice to have", "prefer", "a little").
 
 ## Workflow
 
-IMPORTANT: Always start by creating a plan using ``write_todos`` so the user
-can see your progress. Break the work into clear steps, then update each
-todo's status as you go.
-
-1. **Plan** — Use ``write_todos`` to outline your research steps.
-2. Read the user's question and determine which spatial attribute(s) matter.
-3. Call ``lookup_neighborhoods`` to examine available data.
-4. Analyze the data in the context of the user's question — adjust scores
-   using your own knowledge if appropriate.
-5. Call exactly ONE of ``report_zone_findings`` or ``report_poi_findings``.
-6. After submitting findings, provide a brief 2-3 sentence summary.
-
-Mark each todo as ``in_progress`` when you start it and ``completed`` when
-you finish it by calling ``write_todos`` again with the updated list.
+1. Call ``write_todos`` with one todo per aspect of the question.
+2. For each aspect: if a typed criterion covers it, call
+   ``emit_typed_criterion``. Otherwise ``lookup_neighborhoods`` + emit
+   an ``emit_ai_criterion``.
+3. Update todo status via ``write_todos`` as you complete each.
+4. Finish with a 2-3 sentence natural-language summary.
 
 ## Rules
 
-- You MUST call exactly one report tool to deliver structured results.
-- Scores use a 0-10 scale where higher is better.
-- Use the actual neighborhood coordinates from the lookup data.
-- Keep summaries concise.
+- Emit at least one criterion.
+- One criterion per aspect. Don't double-emit the same type with the same
+  params. You MAY emit two commute criteria if the user has two destinations.
+- Do not pad with irrelevant criteria just to have more rows.
+- Always use lookup_neighborhoods' actual coordinates for AI zones.
 """
 
 
@@ -141,6 +222,74 @@ def _aggregate_token_usage(messages: list) -> TokenUsage:
     return TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
 
 
+def _last_ai_text(messages: list) -> str:
+    """Return the final natural-language AI message, if any."""
+    for msg in reversed(messages):
+        if (
+            getattr(msg, "type", None) == "ai"
+            and not getattr(msg, "tool_calls", None)
+            and isinstance(getattr(msg, "content", None), str)
+            and msg.content.strip()
+        ):
+            return msg.content.strip()
+    return ""
+
+
+def _aggregate_ai_criteria_as_result(
+    emitted_ai_criteria: list[dict],
+    summary: str,
+) -> ResearchResult:
+    """Flatten all emitted ai criteria into one ResearchResult for non-stream callers.
+
+    Unions all zones and POIs. Picks the first metric_label. Used for
+    cache and ``/api/agent/research`` (non-streaming) compatibility.
+    """
+    all_zones: list[ZoneScore] = []
+    all_pois: list[PoiResult] = []
+    metric_label = "AI Score"
+    poi_mode: Literal["proximity", "density"] = "density"
+    poi_radius = 1000.0
+
+    for i, crit in enumerate(emitted_ai_criteria):
+        params = crit.get("params", {})
+        if i == 0:
+            metric_label = params.get("metric_label", metric_label)
+            poi_mode = params.get("poi_scoring_mode", "density")
+            poi_radius = float(params.get("poi_search_radius_m", 1000.0))
+        for z in params.get("zones", []):
+            all_zones.append(ZoneScore(
+                name=z["name"],
+                center=(z["center"][0], z["center"][1]),
+                radius_km=z.get("radius_km", 3.0),
+                score=z.get("score", 5.0),
+                metric_value=z.get("metric_value", z.get("score", 5.0)),
+                metric_label=z.get("metric_label", metric_label),
+            ))
+        for p in params.get("pois", []):
+            all_pois.append(PoiResult(
+                lat=p["lat"], lng=p["lng"],
+                weight=p.get("weight", 1.0),
+                label=p.get("label", ""),
+            ))
+
+    if all_zones:
+        strategy = ResearchStrategy.ZONE
+    elif all_pois:
+        strategy = ResearchStrategy.POI
+    else:
+        strategy = ResearchStrategy.LLM_DIRECT
+
+    return ResearchResult(
+        strategy=strategy,
+        summary=summary,
+        metric_label=metric_label,
+        zones=all_zones,
+        pois=all_pois,
+        poi_scoring_mode=poi_mode,
+        poi_search_radius_m=poi_radius,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
@@ -161,6 +310,7 @@ class DeepAgentProvider(AgentProvider):
         )
 
     async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+        """Non-streaming entry — aggregates emissions into one ResearchResult."""
         agent = self._create_agent(city)
         user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
 
@@ -177,20 +327,28 @@ class DeepAgentProvider(AgentProvider):
                 metric_label="AI Score",
             )
 
-        return self._validate_bounds(
-            self._extract_result(result["messages"]), city,
-        )
+        messages = result["messages"]
+        ai_crits: list[dict] = []
+        for msg in messages:
+            for tc in getattr(msg, "tool_calls", None) or []:
+                if tc["name"] == "emit_ai_criterion":
+                    try:
+                        ai_crits.append(build_ai_criterion(tc["args"], city))
+                    except Exception:
+                        logger.exception("Failed to build ai criterion from %s", tc["args"])
+
+        return _aggregate_ai_criteria_as_result(ai_crits, _last_ai_text(messages))
 
     async def run_stream(
         self, prompt: str, city: CityConfig,
     ) -> AsyncIterator[dict[str, Any]]:
-        """Stream agent execution events including plan updates and step progress."""
+        """Stream agent execution — yields plan, step, criterion, result events."""
         agent = self._create_agent(city)
         user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
         all_messages: list = []
+        emitted_ai_criteria: list[dict] = []
 
-        _REPORT_TOOLS = {"report_zone_findings", "report_poi_findings"}
-        _CUSTOM_TOOLS = {"lookup_neighborhoods", *_REPORT_TOOLS}
+        _STEP_TOOLS = {"lookup_neighborhoods"}
 
         try:
             async for chunk in agent.astream(
@@ -219,17 +377,49 @@ class DeepAgentProvider(AgentProvider):
                             name = tc["name"]
 
                             if name == "write_todos":
+                                yield {"type": "plan", "data": tc["args"]}
+
+                            elif name == "emit_typed_criterion":
+                                try:
+                                    crit, missing = build_typed_criterion(tc["args"], city)
+                                except Exception:
+                                    logger.exception(
+                                        "Failed to build typed criterion from %s", tc["args"],
+                                    )
+                                    continue
                                 yield {
-                                    "type": "plan",
-                                    "data": tc["args"],
+                                    "type": "criterion",
+                                    "data": {
+                                        "criterion": crit,
+                                        "reasoning": tc["args"].get("reasoning", ""),
+                                        "source_tool": "typed",
+                                        "missing_input": missing,
+                                    },
                                 }
-                            elif name in _CUSTOM_TOOLS:
+
+                            elif name == "emit_ai_criterion":
+                                try:
+                                    crit = build_ai_criterion(tc["args"], city)
+                                except Exception:
+                                    logger.exception(
+                                        "Failed to build ai criterion from %s", tc["args"],
+                                    )
+                                    continue
+                                emitted_ai_criteria.append(crit)
+                                yield {
+                                    "type": "criterion",
+                                    "data": {
+                                        "criterion": crit,
+                                        "reasoning": tc["args"].get("reasoning", ""),
+                                        "source_tool": "ai",
+                                        "missing_input": "",
+                                    },
+                                }
+
+                            elif name in _STEP_TOOLS:
                                 yield {
                                     "type": "step",
-                                    "data": {
-                                        "tool": name,
-                                        "status": "running",
-                                    },
+                                    "data": {"tool": name, "status": "running"},
                                 }
 
         except Exception:
@@ -242,9 +432,8 @@ class DeepAgentProvider(AgentProvider):
             }
             return
 
-        result = self._validate_bounds(
-            self._extract_result(all_messages), city,
-        )
+        summary = _last_ai_text(all_messages)
+        result = _aggregate_ai_criteria_as_result(emitted_ai_criteria, summary)
         usage = _aggregate_token_usage(all_messages)
         yield {"type": "result", "data": result, "usage": usage}
 
@@ -283,151 +472,30 @@ class DeepAgentProvider(AgentProvider):
                 out[name] = entry
             return json.dumps(out)
 
-        def _report_zones(**_kwargs: Any) -> str:
-            return "Zone findings received."
+        def _emit_typed(**_kwargs: Any) -> str:
+            return "Criterion emitted."
 
-        def _report_pois(**_kwargs: Any) -> str:
-            return "POI findings received."
+        def _emit_ai(**_kwargs: Any) -> str:
+            return "AI criterion emitted."
 
-        report_zones = StructuredTool.from_function(
-            func=_report_zones,
-            name="report_zone_findings",
+        emit_typed = StructuredTool.from_function(
+            func=_emit_typed,
+            name="emit_typed_criterion",
             description=(
-                "Submit zone-based spatial findings. Call this to deliver your "
-                "research results as a list of scored geographic zones."
+                "Emit a pre-built typed criterion into the user's scoring list. "
+                "See the system prompt for the catalog of types and their params."
             ),
-            args_schema=ReportZonesArgs,
+            args_schema=EmitTypedCriterionArgs,
         )
 
-        report_pois = StructuredTool.from_function(
-            func=_report_pois,
-            name="report_poi_findings",
+        emit_ai = StructuredTool.from_function(
+            func=_emit_ai,
+            name="emit_ai_criterion",
             description=(
-                "Submit point-of-interest based findings for location-specific queries."
+                "Fallback: emit a custom AI criterion with inline zone or POI "
+                "research. Use only when no typed criterion covers the aspect."
             ),
-            args_schema=ReportPoisArgs,
+            args_schema=EmitAiCriterionArgs,
         )
 
-        return [lookup_neighborhoods, report_zones, report_pois]
-
-    # -- Result extraction -----------------------------------------------
-
-    def _extract_result(self, messages: list) -> ResearchResult:
-        """Scan agent messages for report tool calls and build a ResearchResult."""
-        last_ai_text = ""
-
-        for msg in reversed(messages):
-            if (
-                not last_ai_text
-                and getattr(msg, "type", None) == "ai"
-                and not getattr(msg, "tool_calls", None)
-                and isinstance(getattr(msg, "content", None), str)
-                and msg.content.strip()
-            ):
-                last_ai_text = msg.content.strip()
-
-            tool_calls = getattr(msg, "tool_calls", None)
-            if not tool_calls:
-                continue
-
-            for tc in tool_calls:
-                if tc["name"] == "report_zone_findings":
-                    return self._parse_zone_result(tc["args"], last_ai_text)
-                if tc["name"] == "report_poi_findings":
-                    return self._parse_poi_result(tc["args"], last_ai_text)
-
-        return ResearchResult(
-            strategy=ResearchStrategy.LLM_DIRECT,
-            summary=last_ai_text or "The agent did not produce structured findings.",
-            metric_label="AI Score",
-        )
-
-    @staticmethod
-    def _parse_zone_result(args: dict, fallback_summary: str) -> ResearchResult:
-        zones: list[ZoneScore] = []
-        for z in args.get("zones", []):
-            raw = z if isinstance(z, dict) else z.model_dump()
-            raw_score = float(raw.get("score", 5.0))
-            if raw_score < 0.0 or raw_score > 10.0:
-                logger.warning(
-                    "LLM returned out-of-range score %.1f for zone %r, clamping",
-                    raw_score, raw.get("name"),
-                )
-            score = min(10.0, max(0.0, raw_score))
-            zones.append(ZoneScore(
-                name=raw.get("name", "Unknown"),
-                center=(float(raw.get("lat", 0.0)), float(raw.get("lng", 0.0))),
-                radius_km=float(raw.get("radius_km", 3.0)),
-                score=score,
-                metric_value=float(raw.get("metric_value", score)),
-                metric_label=args.get("metric_label", "Score"),
-            ))
-
-        return ResearchResult(
-            strategy=ResearchStrategy.ZONE,
-            summary=args.get("summary", "") or fallback_summary,
-            metric_label=args.get("metric_label", "Score"),
-            zones=zones,
-        )
-
-    @staticmethod
-    def _validate_bounds(result: ResearchResult, city: CityConfig) -> ResearchResult:
-        """Filter out zones/POIs whose coordinates fall outside the city bounds."""
-        bounds = city.bounds
-        margin = 0.5
-        min_lat = bounds["min_lat"] - margin
-        max_lat = bounds["max_lat"] + margin
-        min_lng = bounds["min_lng"] - margin
-        max_lng = bounds["max_lng"] + margin
-
-        def _in_bounds(lat: float, lng: float) -> bool:
-            return min_lat <= lat <= max_lat and min_lng <= lng <= max_lng
-
-        if result.zones:
-            valid_zones = []
-            for z in result.zones:
-                if _in_bounds(z.center[0], z.center[1]):
-                    valid_zones.append(z)
-                else:
-                    logger.warning(
-                        "Dropping zone %r at (%.4f, %.4f) — outside %s bounds",
-                        z.name, z.center[0], z.center[1], city.name,
-                    )
-            if len(valid_zones) != len(result.zones):
-                result = result.model_copy(update={"zones": valid_zones})
-
-        if result.pois:
-            valid_pois = []
-            for p in result.pois:
-                if _in_bounds(p.lat, p.lng):
-                    valid_pois.append(p)
-                else:
-                    logger.warning(
-                        "Dropping POI %r at (%.4f, %.4f) — outside %s bounds",
-                        p.label, p.lat, p.lng, city.name,
-                    )
-            if len(valid_pois) != len(result.pois):
-                result = result.model_copy(update={"pois": valid_pois})
-
-        return result
-
-    @staticmethod
-    def _parse_poi_result(args: dict, fallback_summary: str) -> ResearchResult:
-        pois: list[PoiResult] = []
-        for p in args.get("pois", []):
-            raw = p if isinstance(p, dict) else p.model_dump()
-            pois.append(PoiResult(
-                lat=float(raw.get("lat", 0.0)),
-                lng=float(raw.get("lng", 0.0)),
-                weight=float(raw.get("weight", 1.0)),
-                label=raw.get("label", ""),
-            ))
-
-        return ResearchResult(
-            strategy=ResearchStrategy.POI,
-            summary=args.get("summary", "") or fallback_summary,
-            metric_label=args.get("metric_label", "POI Score"),
-            pois=pois,
-            poi_scoring_mode=args.get("scoring_mode", "density"),
-            poi_search_radius_m=float(args.get("search_radius_m", 1000.0)),
-        )
+        return [lookup_neighborhoods, emit_typed, emit_ai]
