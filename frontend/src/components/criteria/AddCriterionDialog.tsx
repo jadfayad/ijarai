@@ -207,7 +207,12 @@ const PLACEHOLDER_SUGGESTIONS = [
   "Close to nightlife but affordable",
 ];
 
-export function AddCriterionDialog() {
+interface AddCriterionDialogProps {
+  /** "default" = full-width dashed CTA (empty state). "compact" = small icon button (header). */
+  variant?: "default" | "compact";
+}
+
+export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogProps = {}) {
   const { criteria, addCriterion, resolveDefaultDest, setPendingFocus } = useCriteriaStore();
   const [open, setOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -235,8 +240,23 @@ export function AddCriterionDialog() {
   };
 
   useEffect(() => {
-    if (open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    if (variant === "compact") {
+      // Drop down from the icon button; align the menu's right edge with the
+      // button so it stays inside the sidebar.
+      const menuWidth = 280;
+      const spaceBelow = window.innerHeight - rect.bottom - 16;
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 8,
+        left: Math.max(8, rect.right - menuWidth),
+        width: menuWidth,
+        maxHeight: spaceBelow,
+        overflowY: "auto",
+      });
+    } else {
+      // Full-width empty-state button: drop menu upward.
       setMenuStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + 8,
@@ -246,7 +266,7 @@ export function AddCriterionDialog() {
         overflowY: "auto",
       });
     }
-  }, [open]);
+  }, [open, variant]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -296,15 +316,22 @@ export function AddCriterionDialog() {
     setPendingFocus(existingId);
   };
 
+  const triggerClass =
+    variant === "compact"
+      ? "inline-flex items-center justify-center rounded-md w-6 h-6 text-white/35 hover:text-white/80 hover:bg-white/[0.08] transition-all duration-200 shrink-0"
+      : "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/[0.1] text-white/30 hover:text-white/50 hover:border-white/[0.18] hover:bg-white/[0.03] transition-all duration-200 text-xs font-medium";
+
   return (
-    <div className="w-full">
+    <div className={variant === "compact" ? "inline-block" : "w-full"}>
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/[0.1] text-white/30 hover:text-white/50 hover:border-white/[0.18] hover:bg-white/[0.03] transition-all duration-200 text-xs font-medium"
+        aria-label="Add criterion"
+        title={variant === "compact" ? "Add criterion" : undefined}
+        className={triggerClass}
       >
-        <Plus size={14} />
-        Add criterion
+        <Plus size={variant === "compact" ? 14 : 14} />
+        {variant === "default" && "Add criterion"}
       </button>
 
       {open && createPortal(

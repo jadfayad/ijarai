@@ -355,7 +355,6 @@ interface CriteriaStore {
   selectedCellId: string | null;
   scoreThreshold: number;
   gridResolution: GridResolution;
-  wizardOpen: boolean;
   /** Criterion id that should auto-expand and focus its primary input on mount/update. */
   pendingFocusCriterionId: string | null;
 
@@ -371,7 +370,6 @@ interface CriteriaStore {
   setSelectedCellId: (cellId: string | null) => void;
   setScoreThreshold: (threshold: number) => void;
   setGridResolution: (resolution: GridResolution) => void;
-  setWizardOpen: (open: boolean) => void;
   setPendingFocus: (id: string | null) => void;
   generate: () => Promise<void>;
   cancelGeneration: () => void;
@@ -391,7 +389,6 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   selectedCellId: null,
   scoreThreshold: 0,
   gridResolution: "normal",
-  wizardOpen: false,
   pendingFocusCriterionId: null,
 
   loadCityConfig: async (slug?: string) => {
@@ -437,7 +434,6 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
   setScoreThreshold: (threshold) => set({ scoreThreshold: threshold }),
   setGridResolution: (resolution) => set({ gridResolution: resolution }),
-  setWizardOpen: (open) => set({ wizardOpen: open }),
 
   resolveDefaultDest: (icon: string) => {
     const { cityConfig } = get();

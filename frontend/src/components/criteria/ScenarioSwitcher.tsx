@@ -33,7 +33,14 @@ function useNow(intervalMs = 30_000): number {
   return now;
 }
 
-export function ScenarioSwitcher() {
+interface ScenarioSwitcherProps {
+  /** "default" = full-width card. "compact" = inline pill, for headers. */
+  variant?: "default" | "compact";
+}
+
+export function ScenarioSwitcher({
+  variant = "default",
+}: ScenarioSwitcherProps = {}) {
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const allScenarios = useScenarioStore((s) => s.scenarios);
   const activeId = useScenarioStore((s) => s.activeScenarioId);
@@ -144,16 +151,52 @@ export function ScenarioSwitcher() {
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setMenuPos({
-      position: "fixed",
-      top: rect.bottom + 6,
-      left: rect.left,
-      width: rect.width,
-    });
-  }, [open]);
+    if (variant === "compact") {
+      const menuWidth = 240;
+      setMenuPos({
+        position: "fixed",
+        top: rect.bottom + 6,
+        left: Math.max(8, rect.right - menuWidth),
+        width: menuWidth,
+      });
+    } else {
+      setMenuPos({
+        position: "fixed",
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [open, variant]);
 
-  return (
-    <div className="w-full">
+  const trigger =
+    variant === "compact" ? (
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Switch scenario"
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all duration-150 border ${
+          open
+            ? "bg-white/[0.08] border-white/[0.14] text-white"
+            : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:bg-white/[0.07] hover:border-white/[0.14] hover:text-white/90"
+        }`}
+      >
+        <Layers size={10} className="text-primary/70 shrink-0" />
+        <span className="truncate max-w-[120px]">
+          {active
+            ? active.name
+            : scenarios.length === 0
+              ? "No scenario"
+              : "Scenarios"}
+        </span>
+        <ChevronDown
+          size={10}
+          className={`text-white/35 shrink-0 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+    ) : (
       <button
         ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
@@ -190,6 +233,11 @@ export function ScenarioSwitcher() {
           }`}
         />
       </button>
+    );
+
+  return (
+    <div className={variant === "compact" ? "inline-block" : "w-full"}>
+      {trigger}
 
       {open &&
         createPortal(

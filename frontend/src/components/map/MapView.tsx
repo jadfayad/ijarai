@@ -37,7 +37,8 @@ import {
 } from "@/components/ui/select";
 import { CellPopup } from "./CellPopup";
 import { MapLegend } from "./MapLegend";
-import { SetupWizard } from "@/components/criteria/SetupWizard";
+import { FloatingChat } from "@/components/agent/FloatingChat";
+import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import {
   GRID_RESOLUTION_CONFIG,
   type AiParams,
@@ -108,8 +109,6 @@ export function MapView() {
     loading,
     generate,
     cancelGeneration,
-    wizardOpen,
-    setWizardOpen,
   } = useCriteriaStore();
 
   const cityView = useMemo(
@@ -124,7 +123,6 @@ export function MapView() {
   );
 
   const hasActiveCriteria = criteria.length > 0;
-  const showWizard = wizardOpen;
 
   const destinations = useMemo(
     () =>
@@ -522,6 +520,9 @@ export function MapView() {
         />
       )}
 
+      <FloatingChat />
+      <WelcomeChat />
+
       {scoreData && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 min-w-[340px] max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-[rgba(12,12,20,0.8)] backdrop-blur-2xl rounded-2xl px-6 py-4 shadow-2xl shadow-black/30 border border-white/[0.1]">
@@ -551,10 +552,6 @@ export function MapView() {
             />
           </div>
         </div>
-      )}
-
-      {showWizard && (
-        <SetupWizard onComplete={() => setWizardOpen(false)} />
       )}
 
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">

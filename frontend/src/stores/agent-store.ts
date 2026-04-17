@@ -57,10 +57,14 @@ interface AgentStore {
   currentPlan: AgentTodo[];
   currentStep: string | null;
   emittedThisTurn: EmittedCriterion[];
-  sidebarMode: "criteria" | "agent";
   abortController: AbortController | null;
+  /** Whether the floating chat card is expanded on the map. */
+  chatOpen: boolean;
+  /** User dismissed the centered welcome hero; suppresses it this session. */
+  heroDismissed: boolean;
 
-  setSidebarMode: (mode: "criteria" | "agent") => void;
+  setChatOpen: (open: boolean) => void;
+  dismissHero: () => void;
   sendMessage: (content: string) => void;
   stopAgent: () => void;
   addCriterionFromResult: (result: AgentResearchResponse, prompt: string) => void;
@@ -73,10 +77,12 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   currentPlan: [],
   currentStep: null,
   emittedThisTurn: [],
-  sidebarMode: "criteria",
   abortController: null,
+  chatOpen: false,
+  heroDismissed: false,
 
-  setSidebarMode: (mode) => set({ sidebarMode: mode }),
+  setChatOpen: (open) => set({ chatOpen: open }),
+  dismissHero: () => set({ heroDismissed: true }),
 
   sendMessage: async (content: string) => {
     const userMsg: AgentMessage = {
@@ -238,7 +244,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       messages: state.messages.map((m) =>
         m.researchResult === result ? { ...m, criterionAdded: true } : m
       ),
-      sidebarMode: "criteria",
     }));
   },
 
