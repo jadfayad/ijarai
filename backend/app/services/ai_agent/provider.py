@@ -42,7 +42,7 @@ class AgentProvider(ABC):
         ...
 
     async def run_stream(
-        self, prompt: str, city: CityConfig,
+        self, prompt: str, city: CityConfig, existing_criteria: list[dict] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Yield streaming events during agent execution.
 

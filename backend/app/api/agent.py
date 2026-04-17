@@ -76,17 +76,19 @@ async def agent_research(request: AgentResearchRequest):
 
 @router.post("/agent/research/stream")
 async def agent_research_stream(request: AgentResearchRequest):
+    has_existing = bool(request.existing_criteria)
     ck = _cache_key(request.city, request.prompt)
-    cached_events = _ai_stream_cache.get(ck)
-    if cached_events is not None:
-        async def cached_generator():
-            for event_type, payload_json in cached_events:
-                yield f"event: {event_type}\ndata: {payload_json}\n\n"
-        return StreamingResponse(
-            cached_generator(),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
-        )
+    if not has_existing:
+        cached_events = _ai_stream_cache.get(ck)
+        if cached_events is not None:
+            async def cached_generator():
+                for event_type, payload_json in cached_events:
+                    yield f"event: {event_type}\ndata: {payload_json}\n\n"
+            return StreamingResponse(
+                cached_generator(),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+            )
 
     try:
         async with asyncio.timeout(0):
@@ -100,7 +102,10 @@ async def agent_research_stream(request: AgentResearchRequest):
     async def event_generator():
         collected: list[tuple[str, str]] = []
         try:
-            async for event in provider.run_stream(request.prompt, city):
+            async for event in provider.run_stream(
+                request.prompt, city,
+                existing_criteria=request.existing_criteria or None,
+            ):
                 event_type = event["type"]
                 payload = event["data"]
 
@@ -117,7 +122,8 @@ async def agent_research_stream(request: AgentResearchRequest):
                 serialized = json.dumps(payload)
                 collected.append((event_type, serialized))
                 yield f"event: {event_type}\ndata: {serialized}\n\n"
-            _ai_stream_cache[ck] = collected
+            if not has_existing:
+                _ai_stream_cache[ck] = collected
         finally:
             _AGENT_SEMAPHORE.release()
 

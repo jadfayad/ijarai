@@ -115,6 +115,38 @@ class EmitAiCriterionArgs(BaseModel):
     label: str = Field(default="")
 
 
+class UpdateCriterionArgs(BaseModel):
+    """Update one or more fields on an existing criterion in the user's panel."""
+    criterion_id: str = Field(
+        description="The ID of the criterion to update, exactly as shown in the panel context.",
+    )
+    weight: float | None = Field(
+        default=None, ge=0, le=10,
+        description="New weight 0-10. Omit to leave unchanged.",
+    )
+    enabled: bool | None = Field(
+        default=None,
+        description="New enabled state. Omit to leave unchanged.",
+    )
+    label: str | None = Field(
+        default=None,
+        description="New display label. Omit to leave unchanged.",
+    )
+    params: dict | None = Field(
+        default=None,
+        description="Partial params to deep-merge into the criterion's existing params. Only supply keys you want to change.",
+    )
+    reasoning: str = Field(default="", description="One-line justification shown in the chat.")
+
+
+class DeleteCriterionArgs(BaseModel):
+    """Remove an existing criterion from the user's panel."""
+    criterion_id: str = Field(
+        description="The ID of the criterion to delete, exactly as shown in the panel context.",
+    )
+    reasoning: str = Field(default="", description="One-line justification shown in the chat.")
+
+
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
@@ -186,6 +218,16 @@ Fallback for aspects no typed criterion covers (e.g. "near vegan restaurants",
   - strategy="zone": supply ``zones`` (name, lat, lng, radius_km, score 0-10)
   - strategy="poi":  supply ``pois`` (lat, lng, weight 0-1, label)
 
+### update_criterion(criterion_id, weight?, enabled?, label?, params?, reasoning)
+Modify an existing criterion already in the user's panel. Use when the user asks
+to change a weight, toggle on/off, rename, or adjust params. Only supply the
+fields you want to change (null/omit = keep unchanged). ``params`` is
+deep-merged — only provide the keys that should change.
+
+### delete_criterion(criterion_id, reasoning)
+Remove a criterion. Use when the user says "remove", "delete", or "I don't care
+about X". Prefer this over disabling.
+
 ## Weight guidance (0-10)
 
 Tier A (deal-breakers): safety, commute, budget              → 7-9
@@ -200,6 +242,9 @@ Lower by -2 for softeners ("nice to have", "prefer", "a little").
 ## Workflow
 
 1. Call ``write_todos`` with one todo per aspect of the question.
+1b. Check the "Current criteria panel" at the top of the user message (if
+    present). If the user is asking to modify or remove existing criteria,
+    call ``update_criterion`` or ``delete_criterion`` instead of emitting new ones.
 2. For each aspect: if a typed criterion covers it, call
    ``emit_typed_criterion``. Otherwise ``lookup_neighborhoods`` + emit
    an ``emit_ai_criterion``.
@@ -213,6 +258,9 @@ Lower by -2 for softeners ("nice to have", "prefer", "a little").
   params. You MAY emit two commute criteria if the user has two destinations.
 - Do not pad with irrelevant criteria just to have more rows.
 - Always use lookup_neighborhoods' actual coordinates for AI zones.
+- Prefer ``update_criterion`` over emitting a duplicate for existing criteria.
+- Prefer ``delete_criterion`` over disabling when the user says "remove/delete".
+- Never invent criterion IDs — only use IDs from the panel context.
 """
 
 
@@ -246,6 +294,26 @@ def _last_ai_text(messages: list) -> str:
         ):
             return msg.content.strip()
     return ""
+
+
+def _format_criteria_context(existing_criteria: list[dict]) -> str:
+    """Format existing criteria into a compact LLM-readable context block."""
+    if not existing_criteria:
+        return ""
+    n = len(existing_criteria)
+    lines = [f"Current criteria panel ({n} criteri{'on' if n == 1 else 'a'}):"]
+    for c in existing_criteria:
+        params = c.get("params") or {}
+        param_str = ""
+        if params:
+            raw = json.dumps(params, separators=(",", ":"))
+            param_str = f" | params={raw[:120]}{'...' if len(raw) > 120 else ''}"
+        lines.append(
+            f"- [{c.get('id', '?')}] {c.get('label', '?')} | type={c.get('type', '?')}"
+            f" | weight={c.get('weight', '?')} | enabled={str(c.get('enabled', True)).lower()}"
+            f"{param_str}"
+        )
+    return "\n".join(lines)
 
 
 def _aggregate_ai_criteria_as_result(
@@ -322,10 +390,16 @@ class DeepAgentProvider(AgentProvider):
             system_prompt=_SYSTEM_PROMPT,
         )
 
-    async def run(self, prompt: str, city: CityConfig) -> ResearchResult:
+    async def run(
+        self, prompt: str, city: CityConfig, existing_criteria: list[dict] | None = None,
+    ) -> ResearchResult:
         """Non-streaming entry — aggregates emissions into one ResearchResult."""
         agent = self._create_agent(city)
-        user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
+        ctx = _format_criteria_context(existing_criteria or [])
+        if ctx:
+            user_message = f"City: {city.name} (slug: {city.slug})\n\n{ctx}\n\nUser message: {prompt}"
+        else:
+            user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
 
         try:
             result = await agent.ainvoke(
@@ -353,11 +427,15 @@ class DeepAgentProvider(AgentProvider):
         return _aggregate_ai_criteria_as_result(ai_crits, _last_ai_text(messages))
 
     async def run_stream(
-        self, prompt: str, city: CityConfig,
+        self, prompt: str, city: CityConfig, existing_criteria: list[dict] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream agent execution — yields plan, step, criterion, result events."""
         agent = self._create_agent(city)
-        user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
+        ctx = _format_criteria_context(existing_criteria or [])
+        if ctx:
+            user_message = f"City: {city.name} (slug: {city.slug})\n\n{ctx}\n\nUser message: {prompt}"
+        else:
+            user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
         all_messages: list = []
         emitted_ai_criteria: list[dict] = []
 
@@ -429,6 +507,35 @@ class DeepAgentProvider(AgentProvider):
                                     },
                                 }
 
+                            elif name == "update_criterion":
+                                cid = tc["args"].get("criterion_id", "")
+                                updates: dict[str, Any] = {}
+                                if tc["args"].get("weight") is not None:
+                                    updates["weight"] = float(tc["args"]["weight"])
+                                if tc["args"].get("enabled") is not None:
+                                    updates["enabled"] = bool(tc["args"]["enabled"])
+                                if tc["args"].get("label") is not None:
+                                    updates["label"] = str(tc["args"]["label"])
+                                if tc["args"].get("params") is not None:
+                                    updates["params"] = dict(tc["args"]["params"])
+                                yield {
+                                    "type": "criterion_updated",
+                                    "data": {
+                                        "criterion_id": cid,
+                                        "updates": updates,
+                                        "reasoning": tc["args"].get("reasoning", ""),
+                                    },
+                                }
+
+                            elif name == "delete_criterion":
+                                yield {
+                                    "type": "criterion_deleted",
+                                    "data": {
+                                        "criterion_id": tc["args"].get("criterion_id", ""),
+                                        "reasoning": tc["args"].get("reasoning", ""),
+                                    },
+                                }
+
                             elif name in _STEP_TOOLS:
                                 yield {
                                     "type": "step",
@@ -491,6 +598,12 @@ class DeepAgentProvider(AgentProvider):
         def _emit_ai(**_kwargs: Any) -> str:
             return "AI criterion emitted."
 
+        def _update_criterion(**_kwargs: Any) -> str:
+            return "Criterion updated."
+
+        def _delete_criterion(**_kwargs: Any) -> str:
+            return "Criterion deleted."
+
         emit_typed = StructuredTool.from_function(
             func=_emit_typed,
             name="emit_typed_criterion",
@@ -511,4 +624,21 @@ class DeepAgentProvider(AgentProvider):
             args_schema=EmitAiCriterionArgs,
         )
 
-        return [lookup_neighborhoods, emit_typed, emit_ai]
+        update_crit = StructuredTool.from_function(
+            func=_update_criterion,
+            name="update_criterion",
+            description=(
+                "Update one or more fields on an existing criterion in the user's panel. "
+                "Only supply the fields you want to change."
+            ),
+            args_schema=UpdateCriterionArgs,
+        )
+
+        delete_crit = StructuredTool.from_function(
+            func=_delete_criterion,
+            name="delete_criterion",
+            description="Remove an existing criterion from the user's panel.",
+            args_schema=DeleteCriterionArgs,
+        )
+
+        return [lookup_neighborhoods, emit_typed, emit_ai, update_crit, delete_crit]

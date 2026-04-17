@@ -7,6 +7,8 @@ import type {
   AgentResearchResponse,
   AgentTodo,
   EmittedCriterionEvent,
+  CriterionUpdatedEvent,
+  CriterionDeletedEvent,
   TokenUsage,
 } from "@/lib/types";
 
@@ -22,6 +24,26 @@ export interface EmittedCriterion {
   missingInput: string;
 }
 
+export interface UpdatedCriterion {
+  criterionId: string;
+  label: string;
+  icon: string;
+  updates: {
+    weight?: number;
+    enabled?: boolean;
+    label?: string;
+    params?: Record<string, unknown>;
+  };
+  reasoning: string;
+}
+
+export interface DeletedCriterion {
+  criterionId: string;
+  label: string;
+  icon: string;
+  reasoning: string;
+}
+
 export interface AgentMessage {
   id: string;
   role: "user" | "agent";
@@ -32,6 +54,10 @@ export interface AgentMessage {
   criterionAdded?: boolean;
   /** Criteria the agent emitted during this turn (auto-added to the panel). */
   emittedCriteria?: EmittedCriterion[];
+  /** Criteria the agent updated during this turn. */
+  updatedCriteria?: UpdatedCriterion[];
+  /** Criteria the agent deleted during this turn. */
+  deletedCriteria?: DeletedCriterion[];
   /** Snapshot of the agent's plan steps at completion, for transcript history. */
   plan?: AgentTodo[];
 }
@@ -61,6 +87,8 @@ export interface PerCityAgentState {
   currentPlan: AgentTodo[];
   currentStep: string | null;
   emittedThisTurn: EmittedCriterion[];
+  updatedThisTurn: UpdatedCriterion[];
+  deletedThisTurn: DeletedCriterion[];
   isThinking: boolean;
 }
 
@@ -71,6 +99,8 @@ export const EMPTY_CITY_AGENT_STATE: PerCityAgentState = {
   currentPlan: [],
   currentStep: null,
   emittedThisTurn: [],
+  updatedThisTurn: [],
+  deletedThisTurn: [],
   isThinking: false,
 };
 
@@ -82,6 +112,8 @@ function makeEmptyCtxState(): PerCityAgentState {
     currentPlan: [],
     currentStep: null,
     emittedThisTurn: [],
+    updatedThisTurn: [],
+    deletedThisTurn: [],
     isThinking: false,
   };
 }
@@ -198,6 +230,8 @@ export const useAgentStore = create<AgentStore>()(
                 currentPlan: [],
                 currentStep: null,
                 emittedThisTurn: [],
+                updatedThisTurn: [],
+                deletedThisTurn: [],
               },
             },
             abortController: controller,
@@ -205,10 +239,14 @@ export const useAgentStore = create<AgentStore>()(
         });
 
         try {
-          const { cityConfig } = useCriteriaStore.getState();
+          const { cityConfig, criteria } = useCriteriaStore.getState();
 
           await agentResearchStream(
-            { prompt: content, city: cityConfig.slug },
+            {
+              prompt: content,
+              city: cityConfig.slug,
+              existing_criteria: criteria.length > 0 ? criteria : undefined,
+            },
             (event) => {
               switch (event.type) {
                 case "plan":
@@ -254,24 +292,100 @@ export const useAgentStore = create<AgentStore>()(
                   break;
                 }
 
+                case "criterion_updated": {
+                  const { criterion_id, updates, reasoning } = event.data as CriterionUpdatedEvent;
+                  const criteriaState = useCriteriaStore.getState();
+                  const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
+                  if (existing && criteriaState.cityConfig.slug === turnCity) {
+                    const mergedUpdates = updates.params
+                      ? {
+                          ...updates,
+                          params: {
+                            ...(existing.params as Record<string, unknown>),
+                            ...updates.params,
+                          } as typeof existing.params,
+                        }
+                      : updates;
+                    criteriaState.updateCriterion(criterion_id, mergedUpdates as Parameters<typeof criteriaState.updateCriterion>[1]);
+                  }
+                  const op: UpdatedCriterion = {
+                    criterionId: criterion_id,
+                    label: existing?.label ?? criterion_id,
+                    icon: existing?.icon ?? "pencil",
+                    updates,
+                    reasoning,
+                  };
+                  set((state) => {
+                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
+                    return {
+                      byCtx: {
+                        ...state.byCtx,
+                        [key]: {
+                          ...prev,
+                          updatedThisTurn: [...prev.updatedThisTurn, op],
+                        },
+                      },
+                    };
+                  });
+                  break;
+                }
+
+                case "criterion_deleted": {
+                  const { criterion_id, reasoning } = event.data as CriterionDeletedEvent;
+                  const criteriaState = useCriteriaStore.getState();
+                  const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
+                  if (criteriaState.cityConfig.slug === turnCity) {
+                    criteriaState.removeCriterion(criterion_id);
+                  }
+                  const op: DeletedCriterion = {
+                    criterionId: criterion_id,
+                    label: existing?.label ?? criterion_id,
+                    icon: existing?.icon ?? "trash-2",
+                    reasoning,
+                  };
+                  set((state) => {
+                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
+                    return {
+                      byCtx: {
+                        ...state.byCtx,
+                        [key]: {
+                          ...prev,
+                          deletedThisTurn: [...prev.deletedThisTurn, op],
+                        },
+                      },
+                    };
+                  });
+                  break;
+                }
+
                 case "result": {
                   const result = event.data;
                   const slice = get().byCtx[key] ?? makeEmptyCtxState();
                   const planSnapshot = slice.currentPlan;
                   const emittedSnapshot = slice.emittedThisTurn;
+                  const updatedSnapshot = slice.updatedThisTurn;
+                  const deletedSnapshot = slice.deletedThisTurn;
                   const hasEmitted = emittedSnapshot.length > 0;
+                  const hasAnyOps =
+                    hasEmitted ||
+                    updatedSnapshot.length > 0 ||
+                    deletedSnapshot.length > 0;
                   const agentMsg: AgentMessage = {
                     id: `msg-${++messageCounter}`,
                     role: "agent",
-                    content: hasEmitted
+                    content: hasAnyOps
                       ? result.summary
                       : result.summary +
                         "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
                     timestamp: Date.now(),
-                    researchResult: hasEmitted ? undefined : result,
+                    researchResult: hasAnyOps ? undefined : result,
                     usage: result.usage,
                     plan: planSnapshot.length > 0 ? planSnapshot : undefined,
                     emittedCriteria: hasEmitted ? emittedSnapshot : undefined,
+                    updatedCriteria:
+                      updatedSnapshot.length > 0 ? updatedSnapshot : undefined,
+                    deletedCriteria:
+                      deletedSnapshot.length > 0 ? deletedSnapshot : undefined,
                   };
 
                   set((state) => {
@@ -286,6 +400,8 @@ export const useAgentStore = create<AgentStore>()(
                           currentPlan: [],
                           currentStep: null,
                           emittedThisTurn: [],
+                          updatedThisTurn: [],
+                          deletedThisTurn: [],
                         },
                       },
                       abortController: null,
@@ -314,6 +430,8 @@ export const useAgentStore = create<AgentStore>()(
                           currentPlan: [],
                           currentStep: null,
                           emittedThisTurn: [],
+                          updatedThisTurn: [],
+                          deletedThisTurn: [],
                         },
                       },
                       abortController: null,
@@ -334,6 +452,8 @@ export const useAgentStore = create<AgentStore>()(
                 currentPlan: [],
                 currentStep: null,
                 emittedThisTurn: [],
+                updatedThisTurn: [],
+                deletedThisTurn: [],
               }),
               abortController: null,
             }));
@@ -362,6 +482,8 @@ export const useAgentStore = create<AgentStore>()(
                   currentPlan: [],
                   currentStep: null,
                   emittedThisTurn: [],
+                  updatedThisTurn: [],
+                  deletedThisTurn: [],
                 },
               },
               abortController: null,
@@ -393,6 +515,8 @@ export const useAgentStore = create<AgentStore>()(
                 currentPlan: [],
                 currentStep: null,
                 emittedThisTurn: [],
+                updatedThisTurn: [],
+                deletedThisTurn: [],
               },
             },
             abortController: null,
@@ -435,6 +559,8 @@ export const useAgentStore = create<AgentStore>()(
             currentPlan: [],
             currentStep: null,
             emittedThisTurn: [],
+            updatedThisTurn: [],
+            deletedThisTurn: [],
           }),
           abortController: null,
         }));
@@ -470,6 +596,8 @@ export const useAgentStore = create<AgentStore>()(
               currentPlan: [],
               currentStep: null,
               emittedThisTurn: [],
+              updatedThisTurn: [],
+              deletedThisTurn: [],
               isThinking: false,
             },
           ]),

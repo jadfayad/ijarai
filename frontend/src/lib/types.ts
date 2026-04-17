@@ -151,6 +151,7 @@ export interface AiParams {
 export interface AgentResearchRequest {
   prompt: string;
   city: string;
+  existing_criteria?: CriterionConfig[];
 }
 
 export interface TokenUsage {
@@ -185,10 +186,28 @@ export interface EmittedCriterionEvent {
   missing_input: string;
 }
 
+export interface CriterionUpdatedEvent {
+  criterion_id: string;
+  updates: {
+    weight?: number;
+    enabled?: boolean;
+    label?: string;
+    params?: Record<string, unknown>;
+  };
+  reasoning: string;
+}
+
+export interface CriterionDeletedEvent {
+  criterion_id: string;
+  reasoning: string;
+}
+
 export type AgentStreamEvent =
   | { type: "plan"; data: { todos: AgentTodo[] } }
   | { type: "step"; data: { tool: string; status: string } }
   | { type: "criterion"; data: EmittedCriterionEvent }
+  | { type: "criterion_updated"; data: CriterionUpdatedEvent }
+  | { type: "criterion_deleted"; data: CriterionDeletedEvent }
   | { type: "result"; data: AgentResearchResponse }
   | { type: "error"; data: { message: string } };
 
@@ -253,7 +272,7 @@ export interface Scenario {
   criteria: CriterionConfig[];
   gridResolution: GridResolution;
   scoreThreshold: number;
-  scoreData: ScoreResponse;
+  scoreData: ScoreResponse | null;
 }
 
 export interface GeocodeResult {

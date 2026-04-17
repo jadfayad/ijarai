@@ -84,7 +84,7 @@ class StubAgentProvider(AgentProvider):
         return self._research(plan, city)
 
     async def run_stream(
-        self, prompt: str, city: CityConfig,
+        self, prompt: str, city: CityConfig, existing_criteria: list[dict] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Emit one criterion event wrapping the single stub result, then result."""
         result = await self.run(prompt, city)

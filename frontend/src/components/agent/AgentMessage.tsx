@@ -25,12 +25,16 @@ import {
   GraduationCap,
   Flame,
   Sparkles,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useAgentStore, EMPTY_CITY_AGENT_STATE } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import type {
   AgentMessage as AgentMessageType,
   EmittedCriterion,
+  UpdatedCriterion,
+  DeletedCriterion,
 } from "@/stores/agent-store";
 import type { TokenUsage, AgentTodo } from "@/lib/types";
 
@@ -164,16 +168,77 @@ function EmittedChip({ emitted }: { emitted: EmittedCriterion }) {
   );
 }
 
-function EmittedCriteriaList({ emitted }: { emitted: EmittedCriterion[] }) {
+function UpdatedChip({ updated }: { updated: UpdatedCriterion }) {
+  const stillPresent = useCriteriaStore((s) =>
+    s.criteria.some((c) => c.id === updated.criterionId),
+  );
+  const icon = EMITTED_ICON_MAP[updated.icon] ?? <Pencil size={10} />;
+  const changes: string[] = [];
+  if (updated.updates.weight !== undefined) changes.push(`w→${updated.updates.weight}`);
+  if (updated.updates.enabled !== undefined) changes.push(updated.updates.enabled ? "enabled" : "disabled");
+  if (updated.updates.label !== undefined) changes.push("renamed");
+  if (updated.updates.params !== undefined) changes.push("params");
+  const tone = !stillPresent
+    ? "text-white/35 bg-white/[0.04] border-white/[0.06] line-through decoration-white/20"
+    : "text-blue-300/90 bg-blue-500/10 border-blue-500/20";
+  const title = [updated.label, changes.join(", "), updated.reasoning]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
+      title={title}
+    >
+      <span className="shrink-0 opacity-80">{icon}</span>
+      <Pencil size={9} className="shrink-0 opacity-50" />
+      {updated.label}
+      {changes.length > 0 && (
+        <span className="opacity-60">({changes.join(", ")})</span>
+      )}
+    </span>
+  );
+}
+
+function DeletedChip({ deleted }: { deleted: DeletedCriterion }) {
+  const icon = EMITTED_ICON_MAP[deleted.icon] ?? <Trash2 size={10} />;
+  const title = [deleted.label, "removed", deleted.reasoning]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border text-white/35 bg-white/[0.04] border-white/[0.06]"
+      title={title}
+    >
+      <span className="shrink-0 opacity-50">{icon}</span>
+      <span className="line-through decoration-white/30">{deleted.label}</span>
+    </span>
+  );
+}
+
+function AgentOperationsChipList({
+  emitted,
+  updated,
+  deleted,
+}: {
+  emitted?: EmittedCriterion[];
+  updated?: UpdatedCriterion[];
+  deleted?: DeletedCriterion[];
+}) {
+  const parts: string[] = [];
+  if (emitted?.length) parts.push(`Added ${emitted.length}`);
+  if (updated?.length) parts.push(`Updated ${updated.length}`);
+  if (deleted?.length) parts.push(`Removed ${deleted.length}`);
+  const total =
+    (emitted?.length ?? 0) + (updated?.length ?? 0) + (deleted?.length ?? 0);
   return (
     <div className="mt-2 w-full">
       <div className="text-[10px] font-medium text-white/35 mb-1.5 px-0.5">
-        Added {emitted.length} criteri{emitted.length === 1 ? "on" : "a"} to your panel
+        {parts.join(" · ")} criteri{total === 1 ? "on" : "a"}
       </div>
       <div className="flex flex-wrap gap-1">
-        {emitted.map((e) => (
-          <EmittedChip key={e.criterionId} emitted={e} />
-        ))}
+        {emitted?.map((e) => <EmittedChip key={e.criterionId} emitted={e} />)}
+        {updated?.map((u) => <UpdatedChip key={u.criterionId} updated={u} />)}
+        {deleted?.map((d) => <DeletedChip key={d.criterionId} deleted={d} />)}
       </div>
     </div>
   );
@@ -198,7 +263,11 @@ function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
 export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
   const addCriterionFromResult = useAgentStore((s) => s.addCriterionFromResult);
   const isUser = message.role === "user";
-  const hasEmitted = !!message.emittedCriteria && message.emittedCriteria.length > 0;
+  const hasAnyOps = !!(
+    (message.emittedCriteria?.length ?? 0) +
+    (message.updatedCriteria?.length ?? 0) +
+    (message.deletedCriteria?.length ?? 0)
+  );
 
   return (
     <div
@@ -235,11 +304,15 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
           <CompletedPlan plan={message.plan} />
         )}
 
-        {!isUser && hasEmitted && (
-          <EmittedCriteriaList emitted={message.emittedCriteria!} />
+        {!isUser && hasAnyOps && (
+          <AgentOperationsChipList
+            emitted={message.emittedCriteria}
+            updated={message.updatedCriteria}
+            deleted={message.deletedCriteria}
+          />
         )}
 
-        {!isUser && !hasEmitted && message.researchResult && (
+        {!isUser && !hasAnyOps && message.researchResult && (
           message.criterionAdded ? (
             <div className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
               <Check size={13} />

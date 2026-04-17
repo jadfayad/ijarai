@@ -106,6 +106,7 @@ class ResearchResult(BaseModel):
 class AgentResearchRequest(BaseModel):
     prompt: str
     city: str = "dubai"
+    existing_criteria: list[dict] = Field(default_factory=list)
 
 
 class TokenUsage(BaseModel):
