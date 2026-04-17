@@ -28,7 +28,7 @@ import {
   Flame,
   Sparkles,
 } from "lucide-react";
-import { useAgentStore } from "@/stores/agent-store";
+import { useAgentStore, EMPTY_CITY_AGENT_STATE } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import type {
   AgentMessage as AgentMessageType,
@@ -130,77 +130,51 @@ function CompletedPlan({ plan }: { plan: AgentTodo[] }) {
   );
 }
 
-function EmittedCriterionRow({ emitted }: { emitted: EmittedCriterion }) {
-  const removeCriterion = useCriteriaStore((s) => s.removeCriterion);
+function EmittedChip({ emitted }: { emitted: EmittedCriterion }) {
   const stillPresent = useCriteriaStore((s) =>
     s.criteria.some((c) => c.id === emitted.criterionId),
   );
-
-  const icon = EMITTED_ICON_MAP[emitted.icon] ?? <Sparkles size={12} />;
+  const icon = EMITTED_ICON_MAP[emitted.icon] ?? <Sparkles size={10} />;
   const missingLabel = emitted.missingInput
     ? MISSING_INPUT_LABELS[emitted.missingInput] ?? `needs ${emitted.missingInput}`
     : "";
 
+  const tone = !stillPresent
+    ? "text-white/35 bg-white/[0.04] border-white/[0.06] line-through decoration-white/20"
+    : emitted.missingInput
+      ? "text-amber-300/90 bg-amber-500/10 border-amber-500/20"
+      : "text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20";
+
+  const title = [
+    emitted.label,
+    `w${emitted.weight.toFixed(0)}`,
+    missingLabel ? `(${missingLabel})` : null,
+    !stillPresent ? "(removed)" : null,
+    emitted.reasoning,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div
-      className={`flex items-start gap-2 px-2.5 py-2 rounded-lg border transition-all ${
-        stillPresent
-          ? "border-white/[0.06] bg-white/[0.03]"
-          : "border-white/[0.04] bg-transparent opacity-50"
-      }`}
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
+      title={title}
     >
-      <span className="shrink-0 mt-0.5 text-white/60">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[12px] font-medium text-white/85 truncate">
-            {emitted.label}
-          </span>
-          <span className="text-[10px] font-mono text-white/40 tabular-nums shrink-0">
-            w{emitted.weight.toFixed(0)}
-          </span>
-          {missingLabel && (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-[1px] shrink-0"
-              title="The agent emitted this disabled — fill in the missing input in the criteria panel"
-            >
-              <AlertCircle size={9} />
-              {missingLabel}
-            </span>
-          )}
-          {!stillPresent && (
-            <span className="text-[10px] text-white/30 shrink-0">removed</span>
-          )}
-        </div>
-        {emitted.reasoning && (
-          <p className="text-[11px] text-white/45 leading-snug mt-0.5 line-clamp-2">
-            {emitted.reasoning}
-          </p>
-        )}
-      </div>
-      {stillPresent && (
-        <button
-          type="button"
-          onClick={() => removeCriterion(emitted.criterionId)}
-          className="shrink-0 text-white/30 hover:text-white/70 transition-colors p-0.5 -mt-0.5 -mr-0.5 rounded"
-          aria-label={`Remove ${emitted.label} from criteria`}
-          title="Remove from criteria"
-        >
-          <X size={12} />
-        </button>
-      )}
-    </div>
+      <span className="shrink-0 opacity-80">{icon}</span>
+      {emitted.label}
+    </span>
   );
 }
 
 function EmittedCriteriaList({ emitted }: { emitted: EmittedCriterion[] }) {
   return (
-    <div className="mt-2 w-full space-y-1.5">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30 px-1">
+    <div className="mt-2 w-full">
+      <div className="text-[10px] font-medium text-white/35 mb-1.5 px-0.5">
         Added {emitted.length} criteri{emitted.length === 1 ? "on" : "a"} to your panel
       </div>
-      <div className="space-y-1">
+      <div className="flex flex-wrap gap-1">
         {emitted.map((e) => (
-          <EmittedCriterionRow key={e.criterionId} emitted={e} />
+          <EmittedChip key={e.criterionId} emitted={e} />
         ))}
       </div>
     </div>
@@ -224,7 +198,7 @@ function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
 }
 
 export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
-  const { addCriterionFromResult } = useAgentStore();
+  const addCriterionFromResult = useAgentStore((s) => s.addCriterionFromResult);
   const isUser = message.role === "user";
   const hasEmitted = !!message.emittedCriteria && message.emittedCriteria.length > 0;
 
@@ -277,7 +251,11 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
             <button
               onClick={() => {
                 const userMsg = findUserPromptBefore(message);
-                addCriterionFromResult(message.researchResult!, userMsg);
+                addCriterionFromResult(
+                  message.id,
+                  message.researchResult!,
+                  userMsg,
+                );
               }}
               className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
             >
@@ -297,7 +275,9 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
 }
 
 function findUserPromptBefore(agentMsg: AgentMessageType): string {
-  const { messages } = useAgentStore.getState();
+  const { byCity, currentCity } = useAgentStore.getState();
+  const slice = currentCity ? byCity[currentCity] : undefined;
+  const messages = (slice ?? EMPTY_CITY_AGENT_STATE).messages;
   const idx = messages.findIndex((m) => m.id === agentMsg.id);
   for (let i = idx - 1; i >= 0; i--) {
     if (messages[i].role === "user") return messages[i].content;

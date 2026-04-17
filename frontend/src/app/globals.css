@@ -172,9 +172,9 @@
 
 /* ── Agent plan progress animations ── */
 
-@keyframes plan-text-flow {
-  0% { background-position: 200% center; }
-  100% { background-position: -200% center; }
+@keyframes plan-text-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 @keyframes plan-glow-border {
@@ -211,22 +211,13 @@
   }
 }
 
+/* Active plan-step text. Uses a solid readable color + subtle opacity pulse.
+ * An earlier version used background-clip: text with a gradient, but when the
+ * gradient phase sat on its semi-transparent-white stops the text disappeared
+ * and the box read as a grey rectangle. */
 .plan-text-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(255, 255, 255, 0.55) 35%,
-    var(--color-primary) 45%,
-    oklch(0.82 0.16 300) 50%,
-    var(--color-primary) 55%,
-    rgba(255, 255, 255, 0.55) 65%,
-    rgba(255, 255, 255, 0.55) 100%
-  );
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: plan-text-flow 2.5s ease-in-out infinite;
+  color: rgb(232, 236, 255);
+  animation: plan-text-pulse 1.8s ease-in-out infinite;
 }
 
 .plan-glass {

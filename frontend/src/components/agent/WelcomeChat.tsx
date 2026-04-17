@@ -10,7 +10,7 @@ import {
   MessageSquare,
   X,
 } from "lucide-react";
-import { useAgentStore } from "@/stores/agent-store";
+import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { ScenarioSwitcher } from "@/components/criteria/ScenarioSwitcher";
 
@@ -56,8 +56,9 @@ const PERSONAS: Persona[] = [
  * hero dismounts and FloatingChat takes over (top-right).
  */
 export function WelcomeChat() {
-  const { messages, isThinking, sendMessage, heroDismissed, dismissHero } =
-    useAgentStore();
+  const { messages, isThinking, heroDismissed } = useCurrentCityAgentSlice();
+  const sendMessage = useAgentStore((s) => s.sendMessage);
+  const dismissHero = useAgentStore((s) => s.dismissHero);
   const criteria = useCriteriaStore((s) => s.criteria);
   const cityName = useCriteriaStore((s) => s.cityConfig.name);
   const [input, setInput] = useState("");

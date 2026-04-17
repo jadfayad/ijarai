@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { computeScores, cancelScoring, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
-import { useScenarioStore } from "./scenario-store";
+import { useScenarioStore, syncActiveScenarioToCriteria } from "./scenario-store";
 import type {
   CriterionConfig,
   CriterionOrigin,
@@ -392,11 +392,37 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   pendingFocusCriterionId: null,
 
   loadCityConfig: async (slug?: string) => {
+    // Reset all city-scoped transient state so the new city starts clean.
+    // gridResolution is a user preference, not city-scoped, so we keep it.
+    set({
+      criteria: [],
+      scoreData: null,
+      selectedCellId: null,
+      scoreThreshold: 0,
+      error: null,
+      pendingFocusCriterionId: null,
+    });
+
+    let config: CityConfig | null = null;
     try {
-      const config = await fetchCityConfig(slug);
+      config = await fetchCityConfig(slug);
       set({ cityConfig: config, cityLoaded: true });
     } catch {
       set({ cityLoaded: true });
+    }
+
+    const effectiveSlug = config?.slug ?? slug ?? get().cityConfig.slug;
+    const scenarioStore = useScenarioStore;
+    const runSync = () =>
+      syncActiveScenarioToCriteria(scenarioStore.getState(), effectiveSlug);
+
+    if (scenarioStore.persist.hasHydrated()) {
+      runSync();
+    } else {
+      const unsub = scenarioStore.persist.onFinishHydration(() => {
+        runSync();
+        unsub();
+      });
     }
   },
 

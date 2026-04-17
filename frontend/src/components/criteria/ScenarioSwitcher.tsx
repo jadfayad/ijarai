@@ -10,13 +10,8 @@ import {
   Layers,
   FileStack,
 } from "lucide-react";
-import {
-  useScenarioStore,
-  syncActiveScenarioToCriteria,
-} from "@/stores/scenario-store";
+import { useScenarioStore } from "@/stores/scenario-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
-
-let _initialSyncDone = false;
 
 /**
  * Returns a timestamp captured on mount and refreshed every 30 s. Using this
@@ -43,7 +38,9 @@ export function ScenarioSwitcher({
 }: ScenarioSwitcherProps = {}) {
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const allScenarios = useScenarioStore((s) => s.scenarios);
-  const activeId = useScenarioStore((s) => s.activeScenarioId);
+  const activeId = useScenarioStore(
+    (s) => s.activeScenarioIdByCity[citySlug] ?? null,
+  );
   const loadScenario = useScenarioStore((s) => s.loadScenario);
   const deleteScenario = useScenarioStore((s) => s.deleteScenario);
   const renameScenario = useScenarioStore((s) => s.renameScenario);
@@ -60,30 +57,6 @@ export function ScenarioSwitcher({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
-
-  // On first mount after page load, wait for persist hydration then sync the
-  // active scenario's criteria into the (non-persisted) criteria store.
-  // The module-level flag prevents re-syncing on remount (e.g. when the
-  // sidebar toggles between agent/criteria mode), which would overwrite
-  // criteria that were just added.
-  useEffect(() => {
-    if (_initialSyncDone) return;
-
-    const sync = () => {
-      syncActiveScenarioToCriteria(useScenarioStore.getState());
-      _initialSyncDone = true;
-    };
-
-    if (useScenarioStore.persist.hasHydrated()) {
-      sync();
-    } else {
-      const unsub = useScenarioStore.persist.onFinishHydration(() => {
-        sync();
-        unsub();
-      });
-      return unsub;
-    }
-  }, []);
 
   useEffect(() => {
     if (editingId && editRef.current) {

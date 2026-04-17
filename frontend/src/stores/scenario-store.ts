@@ -10,7 +10,8 @@ import type {
 
 interface ScenarioStore {
   scenarios: Scenario[];
-  activeScenarioId: string | null;
+  /** Active scenario id per city slug. A city with no entry has no active scenario. */
+  activeScenarioIdByCity: Record<string, string | null>;
 
   saveScenario: (snapshot: {
     city: string;
@@ -22,7 +23,7 @@ interface ScenarioStore {
   loadScenario: (id: string) => void;
   deleteScenario: (id: string) => void;
   renameScenario: (id: string, name: string) => void;
-  startNewScenario: () => void;
+  startNewScenario: (city?: string) => void;
   getScenariosByCity: (city: string) => Scenario[];
 }
 
@@ -38,12 +39,30 @@ function nextScenarioName(scenarios: Scenario[], city: string): string {
   return `Scenario ${n}`;
 }
 
-function syncActiveScenarioToCriteria(state: ScenarioStore) {
-  if (!state.activeScenarioId) return;
-  const scenario = state.scenarios.find(
-    (s) => s.id === state.activeScenarioId
-  );
-  if (!scenario) return;
+function resetCriteriaStore() {
+  const cs = useCriteriaStore.getState();
+  cs.setCriteria([]);
+  cs.setScoreData(null);
+  cs.setScoreThreshold(0);
+  cs.setSelectedCellId(null);
+}
+
+/**
+ * Sync the criteria store with whichever scenario is active for the given
+ * city. If no scenario is active for that city, reset the criteria store so
+ * the new city starts clean.
+ */
+function syncActiveScenarioToCriteria(state: ScenarioStore, city: string) {
+  const activeId = state.activeScenarioIdByCity[city] ?? null;
+  if (!activeId) {
+    resetCriteriaStore();
+    return;
+  }
+  const scenario = state.scenarios.find((s) => s.id === activeId);
+  if (!scenario || scenario.city !== city) {
+    resetCriteriaStore();
+    return;
+  }
   const cs = useCriteriaStore.getState();
   cs.setCriteria(structuredClone(scenario.criteria));
   cs.setGridResolution(scenario.gridResolution);
@@ -55,7 +74,7 @@ export const useScenarioStore = create<ScenarioStore>()(
   persist(
     (set, get) => ({
       scenarios: [],
-      activeScenarioId: null,
+      activeScenarioIdByCity: {},
 
       saveScenario: (snapshot) => {
         const id = generateId();
@@ -72,7 +91,10 @@ export const useScenarioStore = create<ScenarioStore>()(
         };
         set((state) => ({
           scenarios: [...state.scenarios, scenario],
-          activeScenarioId: id,
+          activeScenarioIdByCity: {
+            ...state.activeScenarioIdByCity,
+            [snapshot.city]: id,
+          },
         }));
         return id;
       },
@@ -81,21 +103,36 @@ export const useScenarioStore = create<ScenarioStore>()(
         const scenario = get().scenarios.find((s) => s.id === id);
         if (!scenario) return;
 
+        const currentCity = useCriteriaStore.getState().cityConfig.slug;
+
+        set((state) => ({
+          activeScenarioIdByCity: {
+            ...state.activeScenarioIdByCity,
+            [scenario.city]: id,
+          },
+        }));
+
+        // Only replay criteria into the store if the scenario matches the
+        // currently viewed city — prevents cross-city criteria bleed if this
+        // is called from an unexpected context.
+        if (scenario.city !== currentCity) return;
+
         const cs = useCriteriaStore.getState();
         cs.setCriteria(structuredClone(scenario.criteria));
         cs.setGridResolution(scenario.gridResolution);
         cs.setScoreThreshold(scenario.scoreThreshold);
         cs.setScoreData(scenario.scoreData);
-
-        set({ activeScenarioId: id });
       },
 
       deleteScenario: (id) => {
         set((state) => {
+          const scenario = state.scenarios.find((s) => s.id === id);
           const filtered = state.scenarios.filter((s) => s.id !== id);
-          const newActive =
-            state.activeScenarioId === id ? null : state.activeScenarioId;
-          return { scenarios: filtered, activeScenarioId: newActive };
+          const nextActive = { ...state.activeScenarioIdByCity };
+          if (scenario && nextActive[scenario.city] === id) {
+            nextActive[scenario.city] = null;
+          }
+          return { scenarios: filtered, activeScenarioIdByCity: nextActive };
         });
       },
 
@@ -107,12 +144,18 @@ export const useScenarioStore = create<ScenarioStore>()(
         }));
       },
 
-      startNewScenario: () => {
+      startNewScenario: (city) => {
+        const targetCity = city ?? useCriteriaStore.getState().cityConfig.slug;
         const cs = useCriteriaStore.getState();
         cs.setCriteria([]);
         cs.setScoreData(null);
         cs.setScoreThreshold(0);
-        set({ activeScenarioId: null });
+        set((state) => ({
+          activeScenarioIdByCity: {
+            ...state.activeScenarioIdByCity,
+            [targetCity]: null,
+          },
+        }));
       },
 
       getScenariosByCity: (city) => {
@@ -121,7 +164,21 @@ export const useScenarioStore = create<ScenarioStore>()(
     }),
     {
       name: "ijar-scenarios",
-      version: 1,
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        if (fromVersion < 2) {
+          const old = (persisted ?? {}) as {
+            scenarios?: Scenario[];
+            activeScenarioId?: string | null;
+          };
+          const scenarios = old.scenarios ?? [];
+          const activeScenarioIdByCity: Record<string, string | null> = {};
+          const active = scenarios.find((s) => s.id === old.activeScenarioId);
+          if (active) activeScenarioIdByCity[active.city] = active.id;
+          return { scenarios, activeScenarioIdByCity };
+        }
+        return persisted as ScenarioStore;
+      },
     }
   )
 );

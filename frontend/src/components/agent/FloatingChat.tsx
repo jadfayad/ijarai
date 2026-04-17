@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useAgentStore } from "@/stores/agent-store";
+import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { AgentMessageBubble } from "./AgentMessage";
 import { AgentPlanProgress } from "./AgentPlanProgress";
 import { toast } from "@/components/ui/toast";
@@ -38,16 +38,12 @@ function ThinkingIndicator() {
  * Collapses to a small pill when idle; auto-expands on new turns.
  */
 export function FloatingChat() {
-  const {
-    messages,
-    isThinking,
-    currentPlan,
-    chatOpen,
-    setChatOpen,
-    sendMessage,
-    stopAgent,
-    clearConversation,
-  } = useAgentStore();
+  const { messages, isThinking, currentPlan, chatOpen } =
+    useCurrentCityAgentSlice();
+  const setChatOpen = useAgentStore((s) => s.setChatOpen);
+  const sendMessage = useAgentStore((s) => s.sendMessage);
+  const stopAgent = useAgentStore((s) => s.stopAgent);
+  const clearConversation = useAgentStore((s) => s.clearConversation);
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -102,13 +98,27 @@ export function FloatingChat() {
   };
 
   const handleClear = () => {
-    const snapshot = useAgentStore.getState().messages;
+    const { byCity, currentCity } = useAgentStore.getState();
+    if (!currentCity) return;
+    const snapshot = byCity[currentCity]?.messages ?? [];
     if (snapshot.length === 0) return;
     clearConversation();
     toast("Conversation cleared", {
       action: {
         label: "Undo",
-        onClick: () => useAgentStore.setState({ messages: snapshot }),
+        onClick: () => {
+          const state = useAgentStore.getState();
+          if (!state.currentCity) return;
+          const city = state.currentCity;
+          const prev = state.byCity[city];
+          if (!prev) return;
+          useAgentStore.setState({
+            byCity: {
+              ...state.byCity,
+              [city]: { ...prev, messages: snapshot },
+            },
+          });
+        },
       },
     });
   };

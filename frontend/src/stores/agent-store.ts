@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { agentResearchStream } from "@/lib/api";
 import { useCriteriaStore, createAiCriterion } from "./criteria-store";
 import type {
@@ -51,212 +52,423 @@ function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
 
 let messageCounter = 0;
 
-interface AgentStore {
+export interface PerCityAgentState {
   messages: AgentMessage[];
-  isThinking: boolean;
+  chatOpen: boolean;
+  heroDismissed: boolean;
+  // Transient — not persisted:
   currentPlan: AgentTodo[];
   currentStep: string | null;
   emittedThisTurn: EmittedCriterion[];
-  abortController: AbortController | null;
-  /** Whether the floating chat card is expanded on the map. */
-  chatOpen: boolean;
-  /** User dismissed the centered welcome hero; suppresses it this session. */
-  heroDismissed: boolean;
+  isThinking: boolean;
+}
 
+export const EMPTY_CITY_AGENT_STATE: PerCityAgentState = {
+  messages: [],
+  chatOpen: false,
+  heroDismissed: false,
+  currentPlan: [],
+  currentStep: null,
+  emittedThisTurn: [],
+  isThinking: false,
+};
+
+function makeEmptyCityState(): PerCityAgentState {
+  return {
+    messages: [],
+    chatOpen: false,
+    heroDismissed: false,
+    currentPlan: [],
+    currentStep: null,
+    emittedThisTurn: [],
+    isThinking: false,
+  };
+}
+
+interface AgentStore {
+  byCity: Record<string, PerCityAgentState>;
+  currentCity: string | null;
+  /** One in-flight stream at a time across the whole app. */
+  abortController: AbortController | null;
+
+  setCurrentCity: (city: string) => void;
   setChatOpen: (open: boolean) => void;
   dismissHero: () => void;
   sendMessage: (content: string) => void;
   stopAgent: () => void;
-  addCriterionFromResult: (result: AgentResearchResponse, prompt: string) => void;
+  addCriterionFromResult: (
+    messageId: string,
+    result: AgentResearchResponse,
+    prompt: string,
+  ) => void;
   clearConversation: () => void;
 }
 
-export const useAgentStore = create<AgentStore>((set, get) => ({
-  messages: [],
-  isThinking: false,
-  currentPlan: [],
-  currentStep: null,
-  emittedThisTurn: [],
-  abortController: null,
-  chatOpen: false,
-  heroDismissed: false,
+function ensureCity(
+  byCity: Record<string, PerCityAgentState>,
+  city: string,
+): Record<string, PerCityAgentState> {
+  if (byCity[city]) return byCity;
+  return { ...byCity, [city]: makeEmptyCityState() };
+}
 
-  setChatOpen: (open) => set({ chatOpen: open }),
-  dismissHero: () => set({ heroDismissed: true }),
+function updateCitySlice(
+  byCity: Record<string, PerCityAgentState>,
+  city: string,
+  patch: Partial<PerCityAgentState>,
+): Record<string, PerCityAgentState> {
+  const prev = byCity[city] ?? makeEmptyCityState();
+  return { ...byCity, [city]: { ...prev, ...patch } };
+}
 
-  sendMessage: async (content: string) => {
-    const userMsg: AgentMessage = {
-      id: `msg-${++messageCounter}`,
-      role: "user",
-      content,
-      timestamp: Date.now(),
-    };
+export const useAgentStore = create<AgentStore>()(
+  persist(
+    (set, get) => ({
+      byCity: {},
+      currentCity: null,
+      abortController: null,
 
-    const controller = new AbortController();
+      setCurrentCity: (city) => {
+        set((state) => ({
+          currentCity: city,
+          byCity: ensureCity(state.byCity, city),
+        }));
+      },
 
-    set((state) => ({
-      messages: [...state.messages, userMsg],
-      isThinking: true,
-      currentPlan: [],
-      currentStep: null,
-      emittedThisTurn: [],
-      abortController: controller,
-    }));
+      setChatOpen: (open) => {
+        const city = get().currentCity;
+        if (!city) return;
+        set((state) => ({
+          byCity: updateCitySlice(state.byCity, city, { chatOpen: open }),
+        }));
+      },
 
-    try {
-      const { cityConfig } = useCriteriaStore.getState();
+      dismissHero: () => {
+        const city = get().currentCity;
+        if (!city) return;
+        set((state) => ({
+          byCity: updateCitySlice(state.byCity, city, { heroDismissed: true }),
+        }));
+      },
 
-      await agentResearchStream(
-        { prompt: content, city: cityConfig.slug },
-        (event) => {
-          switch (event.type) {
-            case "plan":
-              set({ currentPlan: event.data.todos });
-              break;
+      sendMessage: async (content: string) => {
+        const turnCity = get().currentCity;
+        if (!turnCity) return;
 
-            case "step":
-              set({ currentStep: event.data.tool });
-              break;
+        const userMsg: AgentMessage = {
+          id: `msg-${++messageCounter}`,
+          role: "user",
+          content,
+          timestamp: Date.now(),
+        };
 
-            case "criterion": {
-              const emitted = emittedFromEvent(event.data);
-              useCriteriaStore
-                .getState()
-                .addCriterion(event.data.criterion);
-              set((state) => ({
-                emittedThisTurn: [...state.emittedThisTurn, emitted],
-              }));
-              break;
-            }
+        const controller = new AbortController();
 
-            case "result": {
-              const result = event.data;
-              const planSnapshot = get().currentPlan;
-              const emittedSnapshot = get().emittedThisTurn;
-              const hasEmitted = emittedSnapshot.length > 0;
-              const agentMsg: AgentMessage = {
-                id: `msg-${++messageCounter}`,
-                role: "agent",
-                content: hasEmitted
-                  ? result.summary
-                  : result.summary +
-                    "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
-                timestamp: Date.now(),
-                researchResult: hasEmitted ? undefined : result,
-                usage: result.usage,
-                plan: planSnapshot.length > 0 ? planSnapshot : undefined,
-                emittedCriteria: hasEmitted ? emittedSnapshot : undefined,
-              };
-
-              set((state) => ({
-                messages: [...state.messages, agentMsg],
-                isThinking: false,
+        set((state) => {
+          const prev = state.byCity[turnCity] ?? makeEmptyCityState();
+          return {
+            byCity: {
+              ...state.byCity,
+              [turnCity]: {
+                ...prev,
+                messages: [...prev.messages, userMsg],
+                isThinking: true,
                 currentPlan: [],
                 currentStep: null,
                 emittedThisTurn: [],
-                abortController: null,
-              }));
-              break;
-            }
-
-            case "error": {
-              const errorMsg: AgentMessage = {
-                id: `msg-${++messageCounter}`,
-                role: "agent",
-                content: `Sorry, I encountered an error: ${event.data.message}. Please try again.`,
-                timestamp: Date.now(),
-              };
-
-              set((state) => ({
-                messages: [...state.messages, errorMsg],
-                isThinking: false,
-                currentPlan: [],
-                currentStep: null,
-                emittedThisTurn: [],
-                abortController: null,
-              }));
-              break;
-            }
-          }
-        },
-        controller.signal,
-      );
-
-      // If stream ended without a result/error event, clear thinking state
-      if (get().isThinking) {
-        set({
-          isThinking: false,
-          currentPlan: [],
-          currentStep: null,
-          emittedThisTurn: [],
-          abortController: null,
+              },
+            },
+            abortController: controller,
+          };
         });
-      }
-    } catch (err) {
-      // Silent on user-initiated abort — stopAgent already wrote the "Stopped." message
-      if (err instanceof DOMException && err.name === "AbortError") {
-        return;
-      }
 
-      const errorMsg: AgentMessage = {
-        id: `msg-${++messageCounter}`,
-        role: "agent",
-        content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
-        timestamp: Date.now(),
-      };
+        try {
+          const { cityConfig } = useCriteriaStore.getState();
 
-      set((state) => ({
-        messages: [...state.messages, errorMsg],
-        isThinking: false,
-        currentPlan: [],
-        currentStep: null,
-        emittedThisTurn: [],
-        abortController: null,
-      }));
+          await agentResearchStream(
+            { prompt: content, city: cityConfig.slug },
+            (event) => {
+              switch (event.type) {
+                case "plan":
+                  set((state) => ({
+                    byCity: updateCitySlice(state.byCity, turnCity, {
+                      currentPlan: event.data.todos,
+                    }),
+                  }));
+                  break;
+
+                case "step":
+                  set((state) => ({
+                    byCity: updateCitySlice(state.byCity, turnCity, {
+                      currentStep: event.data.tool,
+                    }),
+                  }));
+                  break;
+
+                case "criterion": {
+                  const emitted = emittedFromEvent(event.data);
+                  // Only mutate the criteria panel when the originating city
+                  // is still the one being viewed — prevents cross-city leak
+                  // if the user navigated away mid-turn.
+                  if (
+                    useCriteriaStore.getState().cityConfig.slug === turnCity
+                  ) {
+                    useCriteriaStore
+                      .getState()
+                      .addCriterion(event.data.criterion);
+                  }
+                  set((state) => {
+                    const prev =
+                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    return {
+                      byCity: {
+                        ...state.byCity,
+                        [turnCity]: {
+                          ...prev,
+                          emittedThisTurn: [...prev.emittedThisTurn, emitted],
+                        },
+                      },
+                    };
+                  });
+                  break;
+                }
+
+                case "result": {
+                  const result = event.data;
+                  const slice =
+                    get().byCity[turnCity] ?? makeEmptyCityState();
+                  const planSnapshot = slice.currentPlan;
+                  const emittedSnapshot = slice.emittedThisTurn;
+                  const hasEmitted = emittedSnapshot.length > 0;
+                  const agentMsg: AgentMessage = {
+                    id: `msg-${++messageCounter}`,
+                    role: "agent",
+                    content: hasEmitted
+                      ? result.summary
+                      : result.summary +
+                        "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
+                    timestamp: Date.now(),
+                    researchResult: hasEmitted ? undefined : result,
+                    usage: result.usage,
+                    plan: planSnapshot.length > 0 ? planSnapshot : undefined,
+                    emittedCriteria: hasEmitted ? emittedSnapshot : undefined,
+                  };
+
+                  set((state) => {
+                    const prev =
+                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    return {
+                      byCity: {
+                        ...state.byCity,
+                        [turnCity]: {
+                          ...prev,
+                          messages: [...prev.messages, agentMsg],
+                          isThinking: false,
+                          currentPlan: [],
+                          currentStep: null,
+                          emittedThisTurn: [],
+                        },
+                      },
+                      abortController: null,
+                    };
+                  });
+                  break;
+                }
+
+                case "error": {
+                  const errorMsg: AgentMessage = {
+                    id: `msg-${++messageCounter}`,
+                    role: "agent",
+                    content: `Sorry, I encountered an error: ${event.data.message}. Please try again.`,
+                    timestamp: Date.now(),
+                  };
+
+                  set((state) => {
+                    const prev =
+                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    return {
+                      byCity: {
+                        ...state.byCity,
+                        [turnCity]: {
+                          ...prev,
+                          messages: [...prev.messages, errorMsg],
+                          isThinking: false,
+                          currentPlan: [],
+                          currentStep: null,
+                          emittedThisTurn: [],
+                        },
+                      },
+                      abortController: null,
+                    };
+                  });
+                  break;
+                }
+              }
+            },
+            controller.signal,
+          );
+
+          // If the stream ended without a result/error event, clear thinking state for this city.
+          if (get().byCity[turnCity]?.isThinking) {
+            set((state) => ({
+              byCity: updateCitySlice(state.byCity, turnCity, {
+                isThinking: false,
+                currentPlan: [],
+                currentStep: null,
+                emittedThisTurn: [],
+              }),
+              abortController: null,
+            }));
+          }
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return;
+          }
+
+          const errorMsg: AgentMessage = {
+            id: `msg-${++messageCounter}`,
+            role: "agent",
+            content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
+            timestamp: Date.now(),
+          };
+
+          set((state) => {
+            const prev = state.byCity[turnCity] ?? makeEmptyCityState();
+            return {
+              byCity: {
+                ...state.byCity,
+                [turnCity]: {
+                  ...prev,
+                  messages: [...prev.messages, errorMsg],
+                  isThinking: false,
+                  currentPlan: [],
+                  currentStep: null,
+                  emittedThisTurn: [],
+                },
+              },
+              abortController: null,
+            };
+          });
+        }
+      },
+
+      stopAgent: () => {
+        const { abortController, currentCity } = get();
+        if (!abortController || !currentCity) return;
+        abortController.abort();
+        const stoppedMsg: AgentMessage = {
+          id: `msg-${++messageCounter}`,
+          role: "agent",
+          content: "Stopped.",
+          timestamp: Date.now(),
+        };
+        set((state) => {
+          const prev = state.byCity[currentCity] ?? makeEmptyCityState();
+          return {
+            byCity: {
+              ...state.byCity,
+              [currentCity]: {
+                ...prev,
+                messages: [...prev.messages, stoppedMsg],
+                isThinking: false,
+                currentPlan: [],
+                currentStep: null,
+                emittedThisTurn: [],
+              },
+            },
+            abortController: null,
+          };
+        });
+      },
+
+      addCriterionFromResult: (messageId, result, prompt) => {
+        const city = get().currentCity;
+        if (!city) return;
+        const criterion = createAiCriterion(prompt, result);
+        useCriteriaStore.getState().addCriterion(criterion);
+
+        set((state) => {
+          const prev = state.byCity[city];
+          if (!prev) return state;
+          return {
+            byCity: {
+              ...state.byCity,
+              [city]: {
+                ...prev,
+                messages: prev.messages.map((m) =>
+                  m.id === messageId ? { ...m, criterionAdded: true } : m,
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      clearConversation: () => {
+        const { abortController, currentCity } = get();
+        if (abortController) abortController.abort();
+        if (!currentCity) return;
+        set((state) => ({
+          byCity: updateCitySlice(state.byCity, currentCity, {
+            messages: [],
+            isThinking: false,
+            currentPlan: [],
+            currentStep: null,
+            emittedThisTurn: [],
+          }),
+          abortController: null,
+        }));
+      },
+    }),
+    {
+      name: "ijar-agent",
+      version: 1,
+      // Persist only durable per-city fields (messages + UI flags). Strip
+      // transient state (currentPlan, currentStep, emittedThisTurn, isThinking)
+      // and runtime-only state (currentCity, abortController).
+      partialize: (state) => ({
+        byCity: Object.fromEntries(
+          Object.entries(state.byCity).map(([city, slice]) => [
+            city,
+            {
+              messages: slice.messages,
+              chatOpen: slice.chatOpen,
+              heroDismissed: slice.heroDismissed,
+              // Fill transient fields with empty defaults so the serialised
+              // shape matches PerCityAgentState on rehydrate.
+              currentPlan: [],
+              currentStep: null,
+              emittedThisTurn: [],
+              isThinking: false,
+            },
+          ]),
+        ),
+      }) as Partial<AgentStore>,
+    },
+  ),
+);
+
+/**
+ * Returns the current city's agent slice, or an empty slice if no city is
+ * set or the city has no slice yet. Components subscribe to this to render
+ * only the current city's chat/plan/hero state.
+ */
+export function useCurrentCityAgentSlice(): PerCityAgentState {
+  return useAgentStore((s) => {
+    if (!s.currentCity) return EMPTY_CITY_AGENT_STATE;
+    return s.byCity[s.currentCity] ?? EMPTY_CITY_AGENT_STATE;
+  });
+}
+
+// Keep agent store's currentCity mirrored to criteria-store cityConfig.slug.
+// Runs once at module load in the browser.
+if (typeof window !== "undefined") {
+  const initialSlug = useCriteriaStore.getState().cityConfig.slug;
+  useAgentStore.getState().setCurrentCity(initialSlug);
+
+  useCriteriaStore.subscribe((state, prev) => {
+    if (state.cityConfig.slug !== prev.cityConfig.slug) {
+      useAgentStore.getState().setCurrentCity(state.cityConfig.slug);
     }
-  },
-
-  stopAgent: () => {
-    const { abortController } = get();
-    if (!abortController) return;
-    abortController.abort();
-    const stoppedMsg: AgentMessage = {
-      id: `msg-${++messageCounter}`,
-      role: "agent",
-      content: "Stopped.",
-      timestamp: Date.now(),
-    };
-    set((state) => ({
-      messages: [...state.messages, stoppedMsg],
-      isThinking: false,
-      currentPlan: [],
-      currentStep: null,
-      emittedThisTurn: [],
-      abortController: null,
-    }));
-  },
-
-  addCriterionFromResult: (result: AgentResearchResponse, prompt: string) => {
-    const criterion = createAiCriterion(prompt, result);
-    useCriteriaStore.getState().addCriterion(criterion);
-
-    set((state) => ({
-      messages: state.messages.map((m) =>
-        m.researchResult === result ? { ...m, criterionAdded: true } : m
-      ),
-    }));
-  },
-
-  clearConversation: () => {
-    const { abortController } = get();
-    if (abortController) abortController.abort();
-    set({
-      messages: [],
-      isThinking: false,
-      currentPlan: [],
-      currentStep: null,
-      emittedThisTurn: [],
-      abortController: null,
-    });
-  },
-}));
+  });
+}
