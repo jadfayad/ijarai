@@ -29,6 +29,7 @@ import {
   TrainFront,
   Hospital,
   Flame,
+  Home,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import {
@@ -49,6 +50,7 @@ import {
   createHealthcareCriterion,
   createSchoolsCriterion,
   createHazardCriterion,
+  createApartmentCriterion,
 } from "@/stores/criteria-store";
 import { COMMUTE_PRESETS } from "@/lib/types";
 import type { CommutePreset } from "@/lib/types";
@@ -62,6 +64,16 @@ const COMMUTE_ICONS: Record<string, React.ReactNode> = {
   dumbbell: <Dumbbell size={14} />,
   "map-pin": <MapPin size={14} />,
 };
+
+const APARTMENT_CRITERION = {
+  id: "apartment",
+  type: "apartment",
+  label: "Apartment Profile",
+  icon: <Home size={14} />,
+  iconBg: "bg-violet-500/10",
+  iconText: "text-violet-400",
+  create: () => createApartmentCriterion(),
+} as const;
 
 const SINGLETON_CRITERIA = [
   {
@@ -408,6 +420,38 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
           ) : (
             /* ── Criteria menu view ── */
             <>
+              <div className="p-3">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
+                  Apartment
+                </div>
+                {(() => {
+                  const existing = criteria.find((c) => c.id === APARTMENT_CRITERION.id) ?? null;
+                  return existing ? (
+                    <button
+                      onClick={() => handleEditExisting(existing.id)}
+                      className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg text-white/30 hover:bg-white/[0.04] hover:text-white/50 transition-all duration-150"
+                    >
+                      <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} opacity-50 p-1.5 rounded-md`}>
+                        {APARTMENT_CRITERION.icon}
+                      </span>
+                      <span className="flex-1 text-left">{APARTMENT_CRITERION.label}</span>
+                      <span className="text-[10px] text-white/25 italic">Added · Edit</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { addCriterion(APARTMENT_CRITERION.create()); setOpen(false); }}
+                      className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
+                    >
+                      <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} p-1.5 rounded-md`}>
+                        {APARTMENT_CRITERION.icon}
+                      </span>
+                      {APARTMENT_CRITERION.label}
+                    </button>
+                  );
+                })()}
+              </div>
+
+              <div className="h-px bg-white/[0.06] mx-3" />
               <div className="p-3">
                 <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
                   Commute

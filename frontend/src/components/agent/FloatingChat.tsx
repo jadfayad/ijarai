@@ -7,11 +7,13 @@ import {
   Send,
   Sparkles,
   Square,
+  SquarePen,
   Trash2,
   X,
 } from "lucide-react";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { useScenarioStore } from "@/stores/scenario-store";
 import { AgentMessageBubble } from "./AgentMessage";
 import { AgentPlanProgress } from "./AgentPlanProgress";
 import { toast } from "@/components/ui/toast";
@@ -48,6 +50,13 @@ export function FloatingChat() {
   // Heatmap generation locks the chat too — don't let the user start a new
   // agent turn while the scoring is in flight.
   const heatmapLoading = useCriteriaStore((s) => s.loading);
+  const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
+  const startNewScenario = useScenarioStore((s) => s.startNewScenario);
+  const activeScenarioName = useScenarioStore((s) => {
+    const id = s.activeScenarioIdByCity[citySlug] ?? null;
+    if (!id) return null;
+    return s.scenarios.find((sc) => sc.id === id)?.name ?? null;
+  });
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -102,9 +111,10 @@ export function FloatingChat() {
   };
 
   const handleClear = () => {
-    const { byCity, currentCity } = useAgentStore.getState();
+    const { byCtx, currentCity, currentScenarioId } = useAgentStore.getState();
     if (!currentCity) return;
-    const snapshot = byCity[currentCity]?.messages ?? [];
+    const key = `${currentCity}:${currentScenarioId ?? ""}`;
+    const snapshot = byCtx[key]?.messages ?? [];
     if (snapshot.length === 0) return;
     clearConversation();
     toast("Conversation cleared", {
@@ -113,13 +123,13 @@ export function FloatingChat() {
         onClick: () => {
           const state = useAgentStore.getState();
           if (!state.currentCity) return;
-          const city = state.currentCity;
-          const prev = state.byCity[city];
+          const ctxKey = `${state.currentCity}:${state.currentScenarioId ?? ""}`;
+          const prev = state.byCtx[ctxKey];
           if (!prev) return;
           useAgentStore.setState({
-            byCity: {
-              ...state.byCity,
-              [city]: { ...prev, messages: snapshot },
+            byCtx: {
+              ...state.byCtx,
+              [ctxKey]: { ...prev, messages: snapshot },
             },
           });
         },
@@ -173,14 +183,21 @@ export function FloatingChat() {
               <div className="text-[13px] font-semibold text-white tracking-tight leading-none">
                 Assistant
               </div>
-              {hasMessages && (
-                <div className="text-[10px] text-white/30 tabular-nums mt-0.5">
-                  {messages.length} message{messages.length === 1 ? "" : "s"}
-                </div>
-              )}
+              <div className="text-[10px] tabular-nums mt-0.5 text-white/30">
+                {activeScenarioName ?? "New scenario"}
+                {hasMessages && ` · ${messages.length}`}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => startNewScenario()}
+              aria-label="New scenario"
+              title="New scenario"
+              className="text-white/30 hover:text-primary/80 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
+            >
+              <SquarePen size={13} />
+            </button>
             {hasMessages && (
               <button
                 onClick={handleClear}

@@ -39,6 +39,7 @@ _TYPE_META: dict[str, dict[str, str]] = {
     "schools":        {"label": "Schools",            "icon": "graduation-cap",  "description": "School quality in the area"},
     "hazard":         {"label": "Hazard Safety",      "icon": "flame",           "description": "Avoid flood and wildfire risk zones"},
     "ai":             {"label": "AI Preference",      "icon": "sparkles",        "description": "Custom AI-researched preference"},
+    "apartment":      {"label": "Apartment Profile",  "icon": "home",            "description": "Size, bedrooms, and furnishing requirements"},
 }
 
 TYPED_CATALOG: tuple[str, ...] = (
@@ -82,7 +83,7 @@ def build_typed_criterion(
     can fill it in.
     """
     type_ = args.get("type")
-    if type_ not in _TYPE_META or type_ == "ai":
+    if type_ not in _TYPE_META or type_ in ("ai",):
         raise ValueError(f"unknown typed criterion {type_!r}")
 
     weight = _clamp(float(args.get("weight", 5.0)), 0.0, 10.0)
@@ -149,6 +150,19 @@ def build_typed_criterion(
         hz_in = params_in.get("hazards")
         hz = [h for h in (hz_in or []) if h in ("flood", "wildfire")] or ["flood"]
         params_out = {"hazards": hz}
+    elif type_ == "apartment":
+        furnished = params_in.get("furnished", "any")
+        if furnished not in ("furnished", "unfurnished", "any"):
+            furnished = "any"
+        params_out = {
+            "min_surface_m2": params_in.get("min_surface_m2"),
+            "max_surface_m2": params_in.get("max_surface_m2"),
+            "min_bedrooms": params_in.get("min_bedrooms"),
+            "max_bedrooms": params_in.get("max_bedrooms"),
+            "furnished": furnished,
+            "parking": params_in.get("parking"),
+            "outdoor_space": params_in.get("outdoor_space"),
+        }
     else:
         # Defensive — should be unreachable given the type check above.
         raise ValueError(f"unhandled typed criterion {type_!r}")

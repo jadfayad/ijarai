@@ -54,7 +54,7 @@ class EmitTypedCriterionArgs(BaseModel):
         "commute", "amenities", "budget", "neighborhood",
         "safety", "walkability", "green_spaces", "community",
         "infrastructure", "aesthetics", "desirability", "noise",
-        "transit", "healthcare", "schools", "hazard",
+        "transit", "healthcare", "schools", "hazard", "apartment",
     ] = Field(
         description="Criterion type. Must be one of the built-in catalog.",
     )
@@ -166,6 +166,19 @@ If the user mentioned the required input (an address/landmark for commute,
 a dollar amount for budget), include it. If not, **still emit the criterion**
 with empty params — the app will mark it disabled and ask the user to fill
 in the missing input. Do not invent values.
+
+Apartment profile (does NOT affect the heatmap — stored as search context):
+  apartment  params = {
+               "min_surface_m2": N or null,
+               "max_surface_m2": N or null,
+               "min_bedrooms": N or null,   // 0 = studio
+               "max_bedrooms": N or null,
+               "furnished": "furnished" | "unfurnished" | "any",
+               "parking": true | false | null,
+               "outdoor_space": true | false | null
+             }
+  Emit this whenever the user mentions apartment size, number of rooms,
+  furnishing preference, parking, or outdoor space requirements.
 
 ### emit_ai_criterion(prompt, strategy, zones|pois, metric_label, weight, reasoning)
 Fallback for aspects no typed criterion covers (e.g. "near vegan restaurants",

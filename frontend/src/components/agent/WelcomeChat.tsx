@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
-import { ScenarioSwitcher } from "@/components/criteria/ScenarioSwitcher";
 import { useAppReady } from "@/lib/use-app-ready";
 
 interface Persona {
@@ -139,9 +138,8 @@ export function WelcomeChat() {
         aria-label="Start your search"
       >
         <div className="relative rounded-3xl border border-white/[0.1] bg-gradient-to-b from-[rgba(24,24,40,0.95)] to-[rgba(14,14,24,0.97)] backdrop-blur-2xl shadow-2xl shadow-black/60 overflow-hidden">
-          {/* Top bar: scenario pill on the left, dismiss on the right */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-3">
-            <ScenarioSwitcher variant="compact" />
+          {/* Dismiss button */}
+          <div className="flex items-center justify-end px-5 pt-4 pb-3">
             <button
               onClick={dismissHero}
               aria-label="Skip welcome"

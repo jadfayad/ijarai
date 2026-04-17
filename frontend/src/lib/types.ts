@@ -39,7 +39,8 @@ export type CriterionType =
   | "healthcare"
   | "schools"
   | "hazard"
-  | "ai";
+  | "ai"
+  | "apartment";
 
 export type TransitMode = "train" | "bus";
 
@@ -106,6 +107,18 @@ export interface SchoolQualityParams {
 
 export interface HazardParams {
   hazards: HazardType[];
+}
+
+export type FurnishedPreference = "furnished" | "unfurnished" | "any";
+
+export interface ApartmentParams {
+  min_surface_m2?: number | null;
+  max_surface_m2?: number | null;
+  min_bedrooms?: number | null;
+  max_bedrooms?: number | null;
+  furnished: FurnishedPreference;
+  parking?: boolean | null;
+  outdoor_space?: boolean | null;
 }
 
 export interface AiZoneScore {
@@ -197,6 +210,7 @@ export interface CriterionConfig {
     | SchoolQualityParams
     | HazardParams
     | AiParams
+    | ApartmentParams
     | Record<string, never>;
   icon: string;
   origin?: CriterionOrigin;

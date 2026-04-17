@@ -14,6 +14,7 @@ from app.city_config import CityConfig
 from app.models.schemas import (
     AiCriterion,
     AmenitiesCriterion,
+    ApartmentCriterion,
     BudgetCriterion,
     CommuteCriterion,
     CriterionRequest,

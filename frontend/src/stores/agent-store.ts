@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { agentResearchStream } from "@/lib/api";
 import { useCriteriaStore, createAiCriterion } from "./criteria-store";
+import { useScenarioStore } from "./scenario-store";
 import type {
   AgentResearchResponse,
   AgentTodo,
@@ -73,7 +74,7 @@ export const EMPTY_CITY_AGENT_STATE: PerCityAgentState = {
   isThinking: false,
 };
 
-function makeEmptyCityState(): PerCityAgentState {
+function makeEmptyCtxState(): PerCityAgentState {
   return {
     messages: [],
     chatOpen: false,
@@ -85,13 +86,41 @@ function makeEmptyCityState(): PerCityAgentState {
   };
 }
 
+/** Composite key: city + scenario (or empty string when no scenario is active). */
+function ctxKey(city: string, scenarioId: string | null): string {
+  return `${city}:${scenarioId ?? ""}`;
+}
+
+function ensureCtx(
+  byCtx: Record<string, PerCityAgentState>,
+  city: string,
+  scenarioId: string | null,
+): Record<string, PerCityAgentState> {
+  const key = ctxKey(city, scenarioId);
+  if (byCtx[key]) return byCtx;
+  return { ...byCtx, [key]: makeEmptyCtxState() };
+}
+
+function updateCtxSlice(
+  byCtx: Record<string, PerCityAgentState>,
+  city: string,
+  scenarioId: string | null,
+  patch: Partial<PerCityAgentState>,
+): Record<string, PerCityAgentState> {
+  const key = ctxKey(city, scenarioId);
+  const prev = byCtx[key] ?? makeEmptyCtxState();
+  return { ...byCtx, [key]: { ...prev, ...patch } };
+}
+
 interface AgentStore {
-  byCity: Record<string, PerCityAgentState>;
+  byCtx: Record<string, PerCityAgentState>;
   currentCity: string | null;
+  currentScenarioId: string | null;
   /** One in-flight stream at a time across the whole app. */
   abortController: AbortController | null;
 
   setCurrentCity: (city: string) => void;
+  setCurrentScenario: (city: string, scenarioId: string | null) => void;
   setChatOpen: (open: boolean) => void;
   dismissHero: () => void;
   sendMessage: (content: string) => void;
@@ -104,55 +133,47 @@ interface AgentStore {
   clearConversation: () => void;
 }
 
-function ensureCity(
-  byCity: Record<string, PerCityAgentState>,
-  city: string,
-): Record<string, PerCityAgentState> {
-  if (byCity[city]) return byCity;
-  return { ...byCity, [city]: makeEmptyCityState() };
-}
-
-function updateCitySlice(
-  byCity: Record<string, PerCityAgentState>,
-  city: string,
-  patch: Partial<PerCityAgentState>,
-): Record<string, PerCityAgentState> {
-  const prev = byCity[city] ?? makeEmptyCityState();
-  return { ...byCity, [city]: { ...prev, ...patch } };
-}
-
 export const useAgentStore = create<AgentStore>()(
   persist(
     (set, get) => ({
-      byCity: {},
+      byCtx: {},
       currentCity: null,
+      currentScenarioId: null,
       abortController: null,
 
       setCurrentCity: (city) => {
         set((state) => ({
           currentCity: city,
-          byCity: ensureCity(state.byCity, city),
+          byCtx: ensureCtx(state.byCtx, city, state.currentScenarioId),
+        }));
+      },
+
+      setCurrentScenario: (city, scenarioId) => {
+        set((state) => ({
+          currentCity: city,
+          currentScenarioId: scenarioId,
+          byCtx: ensureCtx(state.byCtx, city, scenarioId),
         }));
       },
 
       setChatOpen: (open) => {
-        const city = get().currentCity;
-        if (!city) return;
+        const { currentCity, currentScenarioId } = get();
+        if (!currentCity) return;
         set((state) => ({
-          byCity: updateCitySlice(state.byCity, city, { chatOpen: open }),
+          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, { chatOpen: open }),
         }));
       },
 
       dismissHero: () => {
-        const city = get().currentCity;
-        if (!city) return;
+        const { currentCity, currentScenarioId } = get();
+        if (!currentCity) return;
         set((state) => ({
-          byCity: updateCitySlice(state.byCity, city, { heroDismissed: true }),
+          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, { heroDismissed: true }),
         }));
       },
 
       sendMessage: async (content: string) => {
-        const turnCity = get().currentCity;
+        const { currentCity: turnCity, currentScenarioId: turnScenarioId } = get();
         if (!turnCity) return;
 
         const userMsg: AgentMessage = {
@@ -163,13 +184,14 @@ export const useAgentStore = create<AgentStore>()(
         };
 
         const controller = new AbortController();
+        const key = ctxKey(turnCity, turnScenarioId);
 
         set((state) => {
-          const prev = state.byCity[turnCity] ?? makeEmptyCityState();
+          const prev = state.byCtx[key] ?? makeEmptyCtxState();
           return {
-            byCity: {
-              ...state.byCity,
-              [turnCity]: {
+            byCtx: {
+              ...state.byCtx,
+              [key]: {
                 ...prev,
                 messages: [...prev.messages, userMsg],
                 isThinking: true,
@@ -191,7 +213,7 @@ export const useAgentStore = create<AgentStore>()(
               switch (event.type) {
                 case "plan":
                   set((state) => ({
-                    byCity: updateCitySlice(state.byCity, turnCity, {
+                    byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
                       currentPlan: event.data.todos,
                     }),
                   }));
@@ -199,7 +221,7 @@ export const useAgentStore = create<AgentStore>()(
 
                 case "step":
                   set((state) => ({
-                    byCity: updateCitySlice(state.byCity, turnCity, {
+                    byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
                       currentStep: event.data.tool,
                     }),
                   }));
@@ -218,12 +240,11 @@ export const useAgentStore = create<AgentStore>()(
                       .addCriterion(event.data.criterion);
                   }
                   set((state) => {
-                    const prev =
-                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
                     return {
-                      byCity: {
-                        ...state.byCity,
-                        [turnCity]: {
+                      byCtx: {
+                        ...state.byCtx,
+                        [key]: {
                           ...prev,
                           emittedThisTurn: [...prev.emittedThisTurn, emitted],
                         },
@@ -235,8 +256,7 @@ export const useAgentStore = create<AgentStore>()(
 
                 case "result": {
                   const result = event.data;
-                  const slice =
-                    get().byCity[turnCity] ?? makeEmptyCityState();
+                  const slice = get().byCtx[key] ?? makeEmptyCtxState();
                   const planSnapshot = slice.currentPlan;
                   const emittedSnapshot = slice.emittedThisTurn;
                   const hasEmitted = emittedSnapshot.length > 0;
@@ -255,12 +275,11 @@ export const useAgentStore = create<AgentStore>()(
                   };
 
                   set((state) => {
-                    const prev =
-                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
                     return {
-                      byCity: {
-                        ...state.byCity,
-                        [turnCity]: {
+                      byCtx: {
+                        ...state.byCtx,
+                        [key]: {
                           ...prev,
                           messages: [...prev.messages, agentMsg],
                           isThinking: false,
@@ -284,12 +303,11 @@ export const useAgentStore = create<AgentStore>()(
                   };
 
                   set((state) => {
-                    const prev =
-                      state.byCity[turnCity] ?? makeEmptyCityState();
+                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
                     return {
-                      byCity: {
-                        ...state.byCity,
-                        [turnCity]: {
+                      byCtx: {
+                        ...state.byCtx,
+                        [key]: {
                           ...prev,
                           messages: [...prev.messages, errorMsg],
                           isThinking: false,
@@ -308,10 +326,10 @@ export const useAgentStore = create<AgentStore>()(
             controller.signal,
           );
 
-          // If the stream ended without a result/error event, clear thinking state for this city.
-          if (get().byCity[turnCity]?.isThinking) {
+          // If the stream ended without a result/error event, clear thinking state.
+          if (get().byCtx[key]?.isThinking) {
             set((state) => ({
-              byCity: updateCitySlice(state.byCity, turnCity, {
+              byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
                 isThinking: false,
                 currentPlan: [],
                 currentStep: null,
@@ -333,11 +351,11 @@ export const useAgentStore = create<AgentStore>()(
           };
 
           set((state) => {
-            const prev = state.byCity[turnCity] ?? makeEmptyCityState();
+            const prev = state.byCtx[key] ?? makeEmptyCtxState();
             return {
-              byCity: {
-                ...state.byCity,
-                [turnCity]: {
+              byCtx: {
+                ...state.byCtx,
+                [key]: {
                   ...prev,
                   messages: [...prev.messages, errorMsg],
                   isThinking: false,
@@ -353,7 +371,7 @@ export const useAgentStore = create<AgentStore>()(
       },
 
       stopAgent: () => {
-        const { abortController, currentCity } = get();
+        const { abortController, currentCity, currentScenarioId } = get();
         if (!abortController || !currentCity) return;
         abortController.abort();
         const stoppedMsg: AgentMessage = {
@@ -363,11 +381,12 @@ export const useAgentStore = create<AgentStore>()(
           timestamp: Date.now(),
         };
         set((state) => {
-          const prev = state.byCity[currentCity] ?? makeEmptyCityState();
+          const key = ctxKey(currentCity, currentScenarioId);
+          const prev = state.byCtx[key] ?? makeEmptyCtxState();
           return {
-            byCity: {
-              ...state.byCity,
-              [currentCity]: {
+            byCtx: {
+              ...state.byCtx,
+              [key]: {
                 ...prev,
                 messages: [...prev.messages, stoppedMsg],
                 isThinking: false,
@@ -382,18 +401,19 @@ export const useAgentStore = create<AgentStore>()(
       },
 
       addCriterionFromResult: (messageId, result, prompt) => {
-        const city = get().currentCity;
-        if (!city) return;
+        const { currentCity, currentScenarioId } = get();
+        if (!currentCity) return;
         const criterion = createAiCriterion(prompt, result);
         useCriteriaStore.getState().addCriterion(criterion);
 
         set((state) => {
-          const prev = state.byCity[city];
+          const key = ctxKey(currentCity, currentScenarioId);
+          const prev = state.byCtx[key];
           if (!prev) return state;
           return {
-            byCity: {
-              ...state.byCity,
-              [city]: {
+            byCtx: {
+              ...state.byCtx,
+              [key]: {
                 ...prev,
                 messages: prev.messages.map((m) =>
                   m.id === messageId ? { ...m, criterionAdded: true } : m,
@@ -405,11 +425,11 @@ export const useAgentStore = create<AgentStore>()(
       },
 
       clearConversation: () => {
-        const { abortController, currentCity } = get();
+        const { abortController, currentCity, currentScenarioId } = get();
         if (abortController) abortController.abort();
         if (!currentCity) return;
         set((state) => ({
-          byCity: updateCitySlice(state.byCity, currentCity, {
+          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, {
             messages: [],
             isThinking: false,
             currentPlan: [],
@@ -422,20 +442,31 @@ export const useAgentStore = create<AgentStore>()(
     }),
     {
       name: "ijar-agent",
-      version: 1,
-      // Persist only durable per-city fields (messages + UI flags). Strip
-      // transient state (currentPlan, currentStep, emittedThisTurn, isThinking)
-      // and runtime-only state (currentCity, abortController).
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        if (fromVersion < 2) {
+          // v1 stored byCity keyed by city slug; migrate to byCtx keyed by "${city}:"
+          const old = (persisted ?? {}) as {
+            byCity?: Record<string, PerCityAgentState>;
+          };
+          const byCtx: Record<string, PerCityAgentState> = {};
+          for (const [city, slice] of Object.entries(old.byCity ?? {})) {
+            byCtx[`${city}:`] = slice;
+          }
+          return { byCtx, currentScenarioId: null };
+        }
+        return persisted as AgentStore;
+      },
+      // Persist only durable per-context fields. Strip transient state and
+      // runtime-only fields (currentCity, currentScenarioId, abortController).
       partialize: (state) => ({
-        byCity: Object.fromEntries(
-          Object.entries(state.byCity).map(([city, slice]) => [
-            city,
+        byCtx: Object.fromEntries(
+          Object.entries(state.byCtx).map(([key, slice]) => [
+            key,
             {
               messages: slice.messages,
               chatOpen: slice.chatOpen,
               heroDismissed: slice.heroDismissed,
-              // Fill transient fields with empty defaults so the serialised
-              // shape matches PerCityAgentState on rehydrate.
               currentPlan: [],
               currentStep: null,
               emittedThisTurn: [],
@@ -449,26 +480,54 @@ export const useAgentStore = create<AgentStore>()(
 );
 
 /**
- * Returns the current city's agent slice, or an empty slice if no city is
- * set or the city has no slice yet. Components subscribe to this to render
- * only the current city's chat/plan/hero state.
+ * Returns the current context's agent slice, or an empty slice if no city/scenario
+ * is set. Components subscribe to this to render only the active chat/plan/hero state.
  */
 export function useCurrentCityAgentSlice(): PerCityAgentState {
   return useAgentStore((s) => {
     if (!s.currentCity) return EMPTY_CITY_AGENT_STATE;
-    return s.byCity[s.currentCity] ?? EMPTY_CITY_AGENT_STATE;
+    const key = ctxKey(s.currentCity, s.currentScenarioId);
+    return s.byCtx[key] ?? EMPTY_CITY_AGENT_STATE;
   });
 }
 
-// Keep agent store's currentCity mirrored to criteria-store cityConfig.slug.
+// Keep agent store context mirrored to criteria-store city + scenario-store active scenario.
 // Runs once at module load in the browser.
 if (typeof window !== "undefined") {
+  // Initialize with current city + its active scenario.
   const initialSlug = useCriteriaStore.getState().cityConfig.slug;
-  useAgentStore.getState().setCurrentCity(initialSlug);
+  const initialScenarioId =
+    useScenarioStore.getState().activeScenarioIdByCity[initialSlug] ?? null;
+  useAgentStore.getState().setCurrentScenario(initialSlug, initialScenarioId);
 
+  // Mirror city changes.
   useCriteriaStore.subscribe((state, prev) => {
     if (state.cityConfig.slug !== prev.cityConfig.slug) {
-      useAgentStore.getState().setCurrentCity(state.cityConfig.slug);
+      const newCity = state.cityConfig.slug;
+      const activeId =
+        useScenarioStore.getState().activeScenarioIdByCity[newCity] ?? null;
+      useAgentStore.getState().setCurrentScenario(newCity, activeId);
+    }
+  });
+
+  // Mirror active-scenario changes within the current city.
+  useScenarioStore.subscribe((state, prev) => {
+    const city = useAgentStore.getState().currentCity;
+    if (!city) return;
+    const newActiveId = state.activeScenarioIdByCity[city] ?? null;
+    const prevActiveId = prev.activeScenarioIdByCity[city] ?? null;
+    if (newActiveId === prevActiveId) return;
+
+    if (newActiveId === null) {
+      // "New scenario" — always start with a blank chat so the new session feels fresh.
+      useAgentStore.setState((s) => ({
+        ...s,
+        currentCity: city,
+        currentScenarioId: null,
+        byCtx: { ...s.byCtx, [`${city}:`]: makeEmptyCtxState() },
+      }));
+    } else {
+      useAgentStore.getState().setCurrentScenario(city, newActiveId);
     }
   });
 }

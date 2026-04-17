@@ -28,6 +28,7 @@ import {
   Hospital,
   Flame,
   Wand2,
+  Home,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ import type {
   SchoolQualityParams,
   HazardParams,
   AiParams,
+  ApartmentParams,
 } from "@/lib/types";
 import { CommuteConfig } from "./CommuteConfig";
 import { AmenityConfig } from "./AmenityConfig";
@@ -61,6 +63,7 @@ import { TransitConfig } from "./TransitConfig";
 import { HealthcareConfig } from "./HealthcareConfig";
 import { SchoolsConfig } from "./SchoolsConfig";
 import { HazardConfig } from "./HazardConfig";
+import { ApartmentConfig } from "./ApartmentConfig";
 
 const ICON_CONFIG: Record<
   string,
@@ -198,6 +201,12 @@ const ICON_CONFIG: Record<
     text: "text-amber-400",
     activeBg: "bg-amber-500/20",
   },
+  home: {
+    icon: <Home size={15} />,
+    bg: "bg-violet-500/10",
+    text: "text-violet-400",
+    activeBg: "bg-violet-500/20",
+  },
 };
 
 const DEFAULT_ICON_CONFIG = {
@@ -258,6 +267,25 @@ function getSummary(criterion: CriterionConfig, currencySymbol: string): string 
     const p = criterion.params as AiParams;
     const strategy = p.strategy === "zone" ? "Zone scoring" : "POI scoring";
     return p.metric_label ? `${strategy} · ${p.metric_label}` : strategy;
+  }
+  if (criterion.type === "apartment") {
+    const p = criterion.params as ApartmentParams;
+    const parts: string[] = [];
+    if (p.min_bedrooms != null || p.max_bedrooms != null) {
+      if (p.min_bedrooms === 0) parts.push("Studio+");
+      else if (p.min_bedrooms != null) parts.push(`${p.min_bedrooms}+ bed`);
+    }
+    if (p.min_surface_m2 != null || p.max_surface_m2 != null) {
+      const min = p.min_surface_m2 != null ? `${p.min_surface_m2}` : "";
+      const max = p.max_surface_m2 != null ? `${p.max_surface_m2}` : "";
+      if (min && max) parts.push(`${min}–${max} m²`);
+      else if (min) parts.push(`≥${min} m²`);
+      else if (max) parts.push(`≤${max} m²`);
+    }
+    if (p.furnished && p.furnished !== "any") {
+      parts.push(p.furnished.charAt(0).toUpperCase() + p.furnished.slice(1));
+    }
+    return parts.length > 0 ? parts.join(" · ") : "Any apartment";
   }
   return "";
 }
@@ -334,7 +362,7 @@ export function CriterionCard({ criterion }: Props) {
   return (
     <div
       ref={cardRef}
-      className={`rounded-xl border bg-white/[0.06] transition-all duration-250 ${
+      className={`criterion-card-enter rounded-xl border bg-white/[0.06] transition-all duration-250 ${
         expanded
           ? "border-white/[0.16]"
           : "border-white/[0.1] hover:border-white/[0.16]"
@@ -474,6 +502,9 @@ export function CriterionCard({ criterion }: Props) {
                     {criterion.description}
                   </p>
                 </div>
+              )}
+              {criterion.type === "apartment" && (
+                <ApartmentConfig criterion={criterion} />
               )}
             </div>
           </div>

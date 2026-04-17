@@ -280,6 +280,22 @@ export function createHazardCriterion(
   };
 }
 
+export function createApartmentCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
+  return {
+    id: "apartment",
+    type: "apartment",
+    label: "Apartment Profile",
+    description: "Size, bedrooms, and furnishing requirements",
+    weight: 5,
+    enabled: true,
+    params: { furnished: "any" },
+    icon: "home",
+    origin,
+  };
+}
+
 export function createAiCriterion(
   userPrompt: string,
   researchResult?: AgentResearchResponse,
@@ -488,7 +504,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
 
     try {
       const activeCriteria = criteria
-        .filter((c) => c.enabled && c.weight > 0)
+        .filter((c) => c.enabled && c.weight > 0 && c.type !== "apartment")
         .map((c) => ({
           type: c.type,
           weight: c.weight,

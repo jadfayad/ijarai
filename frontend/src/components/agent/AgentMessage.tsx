@@ -273,8 +273,9 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
 }
 
 function findUserPromptBefore(agentMsg: AgentMessageType): string {
-  const { byCity, currentCity } = useAgentStore.getState();
-  const slice = currentCity ? byCity[currentCity] : undefined;
+  const { byCtx, currentCity, currentScenarioId } = useAgentStore.getState();
+  const key = currentCity ? `${currentCity}:${currentScenarioId ?? ""}` : null;
+  const slice = key ? byCtx[key] : undefined;
   const messages = (slice ?? EMPTY_CITY_AGENT_STATE).messages;
   const idx = messages.findIndex((m) => m.id === agentMsg.id);
   for (let i = idx - 1; i >= 0; i--) {

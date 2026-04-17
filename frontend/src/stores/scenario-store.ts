@@ -189,6 +189,22 @@ export const useScenarioStore = create<ScenarioStore>()(
 
         const currentCity = useCriteriaStore.getState().cityConfig.slug;
 
+        // Save live criteria back to the currently active scenario before switching,
+        // so unsaved edits are preserved when the user returns to it.
+        if (scenario.city === currentCity) {
+          const prevActiveId = get().activeScenarioIdByCity[currentCity] ?? null;
+          if (prevActiveId && prevActiveId !== id) {
+            const liveCriteria = useCriteriaStore.getState().criteria;
+            set((state) => ({
+              scenarios: state.scenarios.map((sc) =>
+                sc.id === prevActiveId
+                  ? { ...sc, criteria: structuredClone(liveCriteria) }
+                  : sc,
+              ),
+            }));
+          }
+        }
+
         set((state) => ({
           activeScenarioIdByCity: {
             ...state.activeScenarioIdByCity,

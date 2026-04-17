@@ -52,6 +52,16 @@ class BudgetParams(BaseModel):
     include_utilities: bool = False
 
 
+class ApartmentParams(BaseModel):
+    min_surface_m2: float | None = None
+    max_surface_m2: float | None = None
+    min_bedrooms: int | None = None
+    max_bedrooms: int | None = None
+    furnished: Literal["furnished", "unfurnished", "any"] = "any"
+    parking: bool | None = None
+    outdoor_space: bool | None = None
+
+
 class AiCriterionParams(BaseModel):
     prompt: str = ""
     strategy: str = "zone"
@@ -160,6 +170,11 @@ class AiCriterion(_CriterionBase):
     params: AiCriterionParams = Field(default_factory=AiCriterionParams)
 
 
+class ApartmentCriterion(_CriterionBase):
+    type: Literal["apartment"] = "apartment"
+    params: ApartmentParams = Field(default_factory=ApartmentParams)
+
+
 CriterionRequest = Annotated[
     Union[
         CommuteCriterion,
@@ -179,6 +194,7 @@ CriterionRequest = Annotated[
         SchoolQualityCriterion,
         HazardCriterion,
         AiCriterion,
+        ApartmentCriterion,
     ],
     Field(discriminator="type"),
 ]
