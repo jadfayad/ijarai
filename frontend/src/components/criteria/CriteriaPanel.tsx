@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, ChevronLeft, Zap, SlidersHorizontal } from "lucide-react";
+import {
+  Menu,
+  ChevronLeft,
+  Zap,
+  SlidersHorizontal,
+  Loader2,
+} from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { healthCheck } from "@/lib/api";
 import {
@@ -14,7 +20,7 @@ import { AddCriterionDialog } from "./AddCriterionDialog";
 import { ScenarioSwitcher } from "./ScenarioSwitcher";
 
 export function CriteriaPanel() {
-  const { criteria, error, scoreData } = useCriteriaStore();
+  const { criteria, error, scoreData, loading } = useCriteriaStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
 
@@ -101,8 +107,13 @@ export function CriteriaPanel() {
 
         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable body — gets locked + dimmed while the heatmap is generating */}
+        <div
+          className={`flex-1 overflow-y-auto relative transition-opacity duration-200 ${
+            loading ? "opacity-50 pointer-events-none select-none" : ""
+          }`}
+          aria-busy={loading}
+        >
           <div className="px-4 pt-3 pb-4 space-y-2.5">
             {backendOk === false && (
               <div className="text-xs text-red-300 bg-red-500/10 backdrop-blur-sm rounded-xl p-3 border border-red-500/20 flex items-start gap-2">
@@ -150,6 +161,18 @@ export function CriteriaPanel() {
             )}
           </div>
         </div>
+
+        {/* Generating-heatmap overlay label — shows while loading so the user
+            understands why the panel is frozen. Cancel happens from the map
+            chrome's square button. */}
+        {loading && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center gap-2.5 rounded-xl border border-white/[0.12] bg-[rgba(18,18,30,0.9)] backdrop-blur-xl px-4 py-2.5 shadow-2xl shadow-black/40 animate-in fade-in zoom-in-95 duration-200">
+            <Loader2 size={14} className="text-primary animate-spin" />
+            <span className="text-[12px] font-medium text-white/80">
+              Generating heatmap…
+            </span>
+          </div>
+        )}
 
         {/* Footer */}
         {(error || scoreData) && (

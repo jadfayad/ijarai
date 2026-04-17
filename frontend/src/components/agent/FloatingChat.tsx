@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
+import { useCriteriaStore } from "@/stores/criteria-store";
 import { AgentMessageBubble } from "./AgentMessage";
 import { AgentPlanProgress } from "./AgentPlanProgress";
 import { toast } from "@/components/ui/toast";
@@ -44,6 +45,9 @@ export function FloatingChat() {
   const sendMessage = useAgentStore((s) => s.sendMessage);
   const stopAgent = useAgentStore((s) => s.stopAgent);
   const clearConversation = useAgentStore((s) => s.clearConversation);
+  // Heatmap generation locks the chat too — don't let the user start a new
+  // agent turn while the scoring is in flight.
+  const heatmapLoading = useCriteriaStore((s) => s.loading);
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -77,7 +81,7 @@ export function FloatingChat() {
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed || isThinking) return;
+    if (!trimmed || isThinking || heatmapLoading) return;
     sendMessage(trimmed);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -242,20 +246,28 @@ export function FloatingChat() {
         {/* Input */}
         <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
         <div className="p-3">
-          <div className="flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-colors">
+          <div
+            className={`flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-all ${
+              heatmapLoading ? "opacity-50 pointer-events-none" : ""
+            }`}
+            aria-busy={heatmapLoading}
+          >
             <textarea
               ref={textareaRef}
               value={input}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               placeholder={
-                hasMessages
-                  ? "Ask a follow-up…"
-                  : "Ask about areas, budgets, commutes…"
+                heatmapLoading
+                  ? "Generating heatmap…"
+                  : hasMessages
+                    ? "Ask a follow-up…"
+                    : "Ask about areas, budgets, commutes…"
               }
               rows={1}
+              disabled={heatmapLoading}
               aria-label="Message the AI assistant"
-              className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5"
+              className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5 disabled:cursor-not-allowed"
             />
             {isThinking ? (
               <button
@@ -269,7 +281,7 @@ export function FloatingChat() {
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!input.trim()}
+                disabled={!input.trim() || heatmapLoading}
                 aria-label="Send message"
                 className="p-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-30 disabled:hover:bg-primary/20 transition-all shrink-0"
               >

@@ -13,6 +13,7 @@ import {
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { ScenarioSwitcher } from "@/components/criteria/ScenarioSwitcher";
+import { useAppReady } from "@/lib/use-app-ready";
 
 interface Persona {
   id: string;
@@ -61,10 +62,15 @@ export function WelcomeChat() {
   const dismissHero = useAgentStore((s) => s.dismissHero);
   const criteria = useCriteriaStore((s) => s.criteria);
   const cityName = useCriteriaStore((s) => s.cityConfig.name);
+  // Wait for persist hydration + city config before deciding whether to show
+  // the hero. Otherwise it briefly renders during refresh before the stores
+  // rehydrate.
+  const ready = useAppReady();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const visible =
+    ready &&
     messages.length === 0 &&
     !isThinking &&
     criteria.length === 0 &&

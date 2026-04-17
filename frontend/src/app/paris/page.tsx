@@ -3,10 +3,13 @@
 import { useEffect } from "react";
 import { CriteriaPanel } from "@/components/criteria/CriteriaPanel";
 import { MapView } from "@/components/map/MapView";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { useAppReady } from "@/lib/use-app-ready";
 
 export default function ParisPage() {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
+  const ready = useAppReady();
 
   useEffect(() => {
     loadCityConfig("paris");
@@ -17,7 +20,8 @@ export default function ParisPage() {
       <div className="absolute inset-0">
         <MapView />
       </div>
-      <CriteriaPanel />
+      {ready && <CriteriaPanel />}
+      <LoadingScreen visible={!ready} />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { StateStorage } from "zustand/middleware";
 import { useCriteriaStore } from "./criteria-store";
 import type {
   Scenario,
@@ -30,6 +31,66 @@ interface ScenarioStore {
 function generateId(): string {
   return `sc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+function isQuotaError(err: unknown): boolean {
+  if (!(err instanceof DOMException)) return false;
+  return (
+    err.name === "QuotaExceededError" ||
+    err.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    err.code === 22 ||
+    err.code === 1014
+  );
+}
+
+// On quota exhaustion, drop oldest scenarios until the blob fits. This keeps
+// the app alive if a user racks up many large heatmaps; the most-recent
+// scenarios survive, older ones are evicted.
+const quotaSafeStorage: StateStorage = {
+  getItem: (name) => {
+    if (typeof localStorage === "undefined") return null;
+    return localStorage.getItem(name);
+  },
+  setItem: (name, value) => {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(name, value);
+      return;
+    } catch (err) {
+      if (!isQuotaError(err)) throw err;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        state?: { scenarios?: Scenario[] };
+      };
+      const scenarios = parsed?.state?.scenarios;
+      if (!Array.isArray(scenarios) || scenarios.length === 0) {
+        localStorage.removeItem(name);
+        return;
+      }
+      scenarios.sort((a, b) => b.createdAt - a.createdAt);
+      while (scenarios.length > 0) {
+        scenarios.pop();
+        try {
+          localStorage.setItem(name, JSON.stringify(parsed));
+          return;
+        } catch (retryErr) {
+          if (!isQuotaError(retryErr)) throw retryErr;
+        }
+      }
+      localStorage.removeItem(name);
+    } catch {
+      try {
+        localStorage.removeItem(name);
+      } catch {
+        // give up
+      }
+    }
+  },
+  removeItem: (name) => {
+    if (typeof localStorage === "undefined") return;
+    localStorage.removeItem(name);
+  },
+};
 
 function nextScenarioName(scenarios: Scenario[], city: string): string {
   const cityScenarios = scenarios.filter((s) => s.city === city);
@@ -77,8 +138,31 @@ export const useScenarioStore = create<ScenarioStore>()(
       activeScenarioIdByCity: {},
 
       saveScenario: (snapshot) => {
+        const state = get();
+        const activeId = state.activeScenarioIdByCity[snapshot.city] ?? null;
+        const existing = activeId
+          ? state.scenarios.find((s) => s.id === activeId)
+          : undefined;
+
+        if (existing && existing.city === snapshot.city) {
+          set((s) => ({
+            scenarios: s.scenarios.map((sc) =>
+              sc.id === existing.id
+                ? {
+                    ...sc,
+                    criteria: structuredClone(snapshot.criteria),
+                    gridResolution: snapshot.gridResolution,
+                    scoreThreshold: snapshot.scoreThreshold,
+                    scoreData: snapshot.scoreData,
+                  }
+                : sc,
+            ),
+          }));
+          return existing.id;
+        }
+
         const id = generateId();
-        const name = nextScenarioName(get().scenarios, snapshot.city);
+        const name = nextScenarioName(state.scenarios, snapshot.city);
         const scenario: Scenario = {
           id,
           name,
@@ -89,10 +173,10 @@ export const useScenarioStore = create<ScenarioStore>()(
           scoreThreshold: snapshot.scoreThreshold,
           scoreData: snapshot.scoreData,
         };
-        set((state) => ({
-          scenarios: [...state.scenarios, scenario],
+        set((s) => ({
+          scenarios: [...s.scenarios, scenario],
           activeScenarioIdByCity: {
-            ...state.activeScenarioIdByCity,
+            ...s.activeScenarioIdByCity,
             [snapshot.city]: id,
           },
         }));
@@ -165,6 +249,7 @@ export const useScenarioStore = create<ScenarioStore>()(
     {
       name: "ijar-scenarios",
       version: 2,
+      storage: createJSONStorage(() => quotaSafeStorage),
       migrate: (persisted, fromVersion) => {
         if (fromVersion < 2) {
           const old = (persisted ?? {}) as {

@@ -8,8 +8,6 @@ import {
   Check,
   ChevronDown,
   CheckCircle2,
-  X,
-  AlertCircle,
   Briefcase,
   Trees,
   Wallet,
