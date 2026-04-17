@@ -6,6 +6,7 @@ import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
+import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
 
 luma.registerAdapters([webgl2Adapter]);
 import {
@@ -37,7 +38,14 @@ import {
 import { CellPopup } from "./CellPopup";
 import { MapLegend } from "./MapLegend";
 import { SetupWizard } from "@/components/criteria/SetupWizard";
-import { GRID_RESOLUTION_CONFIG, type CommuteParams, type GridResolution } from "@/lib/types";
+import {
+  GRID_RESOLUTION_CONFIG,
+  type AiParams,
+  type AiPoiResult,
+  type AiZoneScore,
+  type CommuteParams,
+  type GridResolution,
+} from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const RESOLUTION_ICONS: Record<GridResolution, React.ReactNode> = {
@@ -140,6 +148,10 @@ export function MapView() {
     properties: Record<string, unknown>;
   } | null>(null);
   const [areaName, setAreaName] = useState<string | null>(null);
+  /** World-coord center of the clicked cell. Drives the "evidence" overlay. */
+  const [clickedCenter, setClickedCenter] = useState<[number, number] | null>(
+    null
+  );
 
   const scoreRange = useMemo(() => {
     if (!scoreData?.features?.length) return { min: 0, max: 1 };
@@ -226,6 +238,7 @@ export function MapView() {
       .map((f) => ({
         hexIndex: f.properties.cell_id as string,
         weight: f.properties.score as number,
+        center: f.geometry.coordinates as [number, number],
         ...f.properties,
       }));
 
@@ -239,14 +252,119 @@ export function MapView() {
         getFillColor: (d: (typeof data)[0]) =>
           scoreToColor(d.weight, scoreRange.min, scoreRange.max),
         pickable: true,
-        opacity: 0.85,
+        opacity: clickedCenter ? 0.55 : 0.85,
         stroked: false,
         filled: true,
         extruded: false,
         highPrecision: true,
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange]);
+  }, [scoreData, scoreThreshold, scoreRange, clickedCenter]);
+
+  /**
+   * Evidence overlay layers: plotted when a cell is clicked, showing the raw
+   * research each active criterion is using at that location.
+   * - Commute arcs: clicked cell → each commute destination
+   * - AI zone circles: soft violet radii from the AI criterion's research
+   * - AI POI pins: points the AI researched, sized by their weight
+   */
+  const evidenceLayers = useMemo(() => {
+    if (!clickedCenter) return [];
+    const activeCriteria = criteria.filter((c) => c.enabled);
+
+    const commuteArcs: {
+      source: [number, number];
+      target: [number, number];
+      label: string;
+    }[] = [];
+    const aiZones: (AiZoneScore & { critId: string })[] = [];
+    const aiPois: (AiPoiResult & { critId: string })[] = [];
+
+    for (const c of activeCriteria) {
+      if (c.type === "commute") {
+        const p = c.params as CommuteParams;
+        const { lat, lng } = p.destination;
+        if (lat === 0 && lng === 0) continue;
+        commuteArcs.push({
+          source: clickedCenter,
+          target: [lng, lat],
+          label: p.label ?? c.label,
+        });
+      } else if (c.type === "ai") {
+        const p = c.params as AiParams;
+        for (const z of p.zones ?? []) aiZones.push({ ...z, critId: c.id });
+        for (const poi of p.pois ?? []) aiPois.push({ ...poi, critId: c.id });
+      }
+    }
+
+    const layers: (ArcLayer | ScatterplotLayer)[] = [];
+
+    if (aiZones.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "evidence-ai-zones",
+          data: aiZones,
+          // Zone center stored as [lat, lng] in the backend — flip for deck.gl.
+          getPosition: (d: AiZoneScore) => [d.center[1], d.center[0]],
+          getRadius: (d: AiZoneScore) => d.radius_km * 1000,
+          radiusUnits: "meters",
+          getFillColor: [167, 139, 250, 46], // violet-400 @ ~18% alpha
+          getLineColor: [167, 139, 250, 130],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          filled: true,
+          pickable: false,
+        }),
+      );
+    }
+
+    if (aiPois.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "evidence-ai-pois",
+          data: aiPois,
+          getPosition: (d: AiPoiResult) => [d.lng, d.lat],
+          getRadius: (d: AiPoiResult) =>
+            6 + Math.min(Math.max(d.weight ?? 1, 0.5), 4) * 2,
+          radiusUnits: "pixels",
+          radiusMinPixels: 4,
+          radiusMaxPixels: 14,
+          getFillColor: [251, 191, 36, 220], // amber-400
+          getLineColor: [255, 255, 255, 180],
+          stroked: true,
+          lineWidthMinPixels: 1,
+          filled: true,
+          pickable: false,
+        }),
+      );
+    }
+
+    if (commuteArcs.length) {
+      layers.push(
+        new ArcLayer({
+          id: "evidence-commute-arcs",
+          data: commuteArcs,
+          getSourcePosition: (d: (typeof commuteArcs)[0]) => d.source,
+          getTargetPosition: (d: (typeof commuteArcs)[0]) => d.target,
+          getSourceColor: [56, 189, 248, 220], // sky-400 — origin (cell)
+          getTargetColor: [34, 197, 94, 220], // green-500 — destination
+          getWidth: 3,
+          getHeight: 0.6,
+          widthMinPixels: 2,
+          widthMaxPixels: 5,
+          greatCircle: false,
+          pickable: false,
+        }),
+      );
+    }
+
+    return layers;
+  }, [clickedCenter, criteria]);
+
+  const allLayers = useMemo(
+    () => [...layers, ...evidenceLayers],
+    [layers, evidenceLayers],
+  );
 
   const visibleCount = useMemo(() => {
     if (!scoreData?.features?.length) return 0;
@@ -267,6 +385,12 @@ export function MapView() {
           y: info.y ?? 0,
           properties: info.object,
         });
+        const center = (info.object.center ?? info.coordinate) as
+          | [number, number]
+          | undefined;
+        if (center && center.length >= 2) {
+          setClickedCenter([center[0], center[1]]);
+        }
 
         const zoneName = info.object.zone_name as string | undefined;
         if (zoneName) {
@@ -292,6 +416,7 @@ export function MapView() {
         setSelectedCellId(null);
         setPopupInfo(null);
         setAreaName(null);
+        setClickedCenter(null);
       }
     },
     [setSelectedCellId]
@@ -302,7 +427,7 @@ export function MapView() {
       <DeckGL
         initialViewState={cityView}
         controller={true}
-        layers={layers}
+        layers={allLayers}
         onClick={handleClick}
         getTooltip={({ object }: { object?: Record<string, unknown> }) => {
           if (!object) return null;
@@ -350,6 +475,7 @@ export function MapView() {
             setPopupInfo(null);
             setSelectedCellId(null);
             setAreaName(null);
+            setClickedCenter(null);
           }}
         />
       )}
