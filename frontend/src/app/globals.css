@@ -248,3 +248,13 @@
   position: relative;
   border-left: 2px solid var(--color-primary);
 }
+/* Heatmap focus mode: when a cell is selected, desaturate + dim the basemap
+ * tiles so the heatmap and evidence overlay pop. The deck.gl canvas (which
+ * hosts the hexagons, arcs, and POIs) is a sibling element so it is
+ * unaffected by this filter. */
+.map-root .mapboxgl-map {
+  transition: filter 280ms ease;
+}
+.map-root.cell-focused .mapboxgl-map {
+  filter: grayscale(0.55) brightness(0.65) contrast(1.05);
+}

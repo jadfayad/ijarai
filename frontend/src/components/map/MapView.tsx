@@ -6,7 +6,7 @@ import { webgl2Adapter } from "@luma.gl/webgl";
 import Map, { Marker } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
-import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { LineLayer, ScatterplotLayer } from "@deck.gl/layers";
 
 luma.registerAdapters([webgl2Adapter]);
 import {
@@ -99,6 +99,7 @@ export function MapView() {
     cityConfig,
     criteria,
     scoreData,
+    selectedCellId,
     setSelectedCellId,
     scoreThreshold,
     setScoreThreshold,
@@ -233,33 +234,55 @@ export function MapView() {
   const layers = useMemo(() => {
     if (!scoreData?.features?.length) return [];
 
-    const data = scoreData.features
-      .filter((f) => f.properties.score >= scoreThreshold)
-      .map((f) => ({
-        hexIndex: f.properties.cell_id as string,
-        weight: f.properties.score as number,
-        center: f.geometry.coordinates as [number, number],
-        ...f.properties,
-      }));
-
-    if (!data.length) return [];
+    // Keep all cells in the data array across threshold changes so row indices
+    // stay stable. Below-threshold cells are hidden by returning alpha 0 in
+    // getFillColor. Filtering `data` by threshold would re-index everything on
+    // every slider tick and cause deck.gl's attribute transition to
+    // interpolate colors between unrelated cells — colors looked "relative".
+    const data = scoreData.features.map((f) => ({
+      hexIndex: f.properties.cell_id as string,
+      weight: f.properties.score as number,
+      center: f.geometry.coordinates as [number, number],
+      ...f.properties,
+    }));
 
     return [
       new H3HexagonLayer({
         id: "score-cells",
         data,
         getHexagon: (d: (typeof data)[0]) => d.hexIndex,
-        getFillColor: (d: (typeof data)[0]) =>
-          scoreToColor(d.weight, scoreRange.min, scoreRange.max),
+        getFillColor: (d: (typeof data)[0]) => {
+          if (d.weight < scoreThreshold) return [0, 0, 0, 0];
+          const [r, g, b] = scoreToColor(d.weight, scoreRange.min, scoreRange.max);
+          if (!selectedCellId) return [r, g, b, 216];
+          // Spotlight the selected cell; others fade into the background.
+          return d.cell_id === selectedCellId
+            ? [r, g, b, 255]
+            : [r, g, b, 40];
+        },
+        getLineColor: (d: (typeof data)[0]) =>
+          d.cell_id === selectedCellId ? [255, 255, 255, 235] : [0, 0, 0, 0],
+        getLineWidth: (d: (typeof data)[0]) =>
+          d.cell_id === selectedCellId ? 2 : 0,
+        lineWidthUnits: "pixels",
+        lineWidthMinPixels: 0,
+        updateTriggers: {
+          getFillColor: [selectedCellId, scoreThreshold, scoreRange.min, scoreRange.max],
+          getLineColor: [selectedCellId],
+          getLineWidth: [selectedCellId],
+        },
         pickable: true,
-        opacity: clickedCenter ? 0.55 : 0.85,
-        stroked: false,
+        opacity: 1,
+        stroked: true,
         filled: true,
         extruded: false,
         highPrecision: true,
+        transitions: {
+          getLineWidth: { duration: 220 },
+        },
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange, clickedCenter]);
+  }, [scoreData, scoreThreshold, scoreRange, selectedCellId]);
 
   /**
    * Evidence overlay layers: plotted when a cell is clicked, showing the raw
@@ -297,7 +320,7 @@ export function MapView() {
       }
     }
 
-    const layers: (ArcLayer | ScatterplotLayer)[] = [];
+    const layers: (LineLayer | ScatterplotLayer)[] = [];
 
     if (aiZones.length) {
       layers.push(
@@ -341,18 +364,18 @@ export function MapView() {
 
     if (commuteArcs.length) {
       layers.push(
-        new ArcLayer({
-          id: "evidence-commute-arcs",
+        new LineLayer({
+          id: "evidence-commute-lines",
           data: commuteArcs,
           getSourcePosition: (d: (typeof commuteArcs)[0]) => d.source,
           getTargetPosition: (d: (typeof commuteArcs)[0]) => d.target,
-          getSourceColor: [56, 189, 248, 220], // sky-400 — origin (cell)
-          getTargetColor: [34, 197, 94, 220], // green-500 — destination
-          getWidth: 3,
-          getHeight: 0.6,
-          widthMinPixels: 2,
-          widthMaxPixels: 5,
-          greatCircle: false,
+          // Neutral hairline — reads as a connection without competing with
+          // the POI/zone layers. Scales cleanly to many destinations.
+          getColor: [255, 255, 255, 110],
+          getWidth: 1,
+          widthUnits: "pixels",
+          widthMinPixels: 1,
+          widthMaxPixels: 1.5,
           pickable: false,
         }),
       );
@@ -377,7 +400,14 @@ export function MapView() {
 
   const handleClick = useCallback(
     (info: { object?: Record<string, unknown>; x?: number; y?: number; coordinate?: number[] }) => {
-      if (info.object) {
+      // Below-threshold cells are rendered at alpha 0 but still pickable (we
+      // intentionally keep them in the data array to avoid color transition
+      // artifacts). Ignore clicks on them.
+      const hiddenByThreshold =
+        info.object &&
+        typeof info.object.score === "number" &&
+        (info.object.score as number) < scoreThreshold;
+      if (info.object && !hiddenByThreshold) {
         const cellId = info.object.cell_id as string;
         setSelectedCellId(cellId);
         setPopupInfo({
@@ -419,11 +449,15 @@ export function MapView() {
         setClickedCenter(null);
       }
     },
-    [setSelectedCellId]
+    [setSelectedCellId, scoreThreshold]
   );
 
   return (
-    <div className="relative w-full h-full">
+    <div
+      className={`relative w-full h-full map-root ${
+        selectedCellId ? "cell-focused" : ""
+      }`}
+    >
       <DeckGL
         initialViewState={cityView}
         controller={true}
