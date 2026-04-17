@@ -1,0 +1,6 @@
+{
+  "notes": "California Prop 13 base: ~1% assessed value. SF adds ~0.18% in local assessments. Mello-Roos districts (not city-wide) can add 0.25-0.5% more but are not blanket in SF. Stub uses a flat city rate; refine with parcel-level data later.",
+  "currency": "USD",
+  "city_annual_rate_fraction": 0.0118,
+  "zones": []
+}

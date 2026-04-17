@@ -35,7 +35,19 @@ export type CriterionType =
   | "aesthetics"
   | "desirability"
   | "noise"
+  | "transit"
+  | "healthcare"
+  | "schools"
+  | "hazard"
   | "ai";
+
+export type TransitMode = "train" | "bus";
+
+export type HealthcareFacilityType = "hospital" | "clinic" | "pharmacy";
+
+export type SchoolAgeBand = "primary" | "secondary" | "all";
+
+export type HazardType = "flood" | "wildfire";
 
 export type CommutePreset =
   | "office"
@@ -77,6 +89,23 @@ export interface AmenityParams {
 
 export interface BudgetParams {
   max_monthly_rent: number;
+  include_utilities?: boolean;
+}
+
+export interface TransitParams {
+  modes: TransitMode[];
+}
+
+export interface HealthcareParams {
+  facility_types: HealthcareFacilityType[];
+}
+
+export interface SchoolQualityParams {
+  age_band: SchoolAgeBand;
+}
+
+export interface HazardParams {
+  hazards: HazardType[];
 }
 
 export interface AiZoneScore {
@@ -146,7 +175,16 @@ export interface CriterionConfig {
   description: string;
   weight: number;
   enabled: boolean;
-  params: CommuteParams | AmenityParams | BudgetParams | AiParams | Record<string, never>;
+  params:
+    | CommuteParams
+    | AmenityParams
+    | BudgetParams
+    | TransitParams
+    | HealthcareParams
+    | SchoolQualityParams
+    | HazardParams
+    | AiParams
+    | Record<string, never>;
   icon: string;
 }
 
@@ -219,4 +257,5 @@ export interface CityConfig {
   rent_step: number;
   rent_default: number;
   default_destinations: DestinationConfig[];
+  utility_avg_monthly?: number;
 }

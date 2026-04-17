@@ -1,0 +1,16 @@
+{
+  "notes": "Dubai has negligible natural-hazard exposure. Occasional urban flash-flood risk in low-lying coastal/creek areas. Wildfire is not relevant. Polygons are approximate; refine against Dubai Municipality drainage-risk maps.",
+  "flood_zones": [
+    {
+      "id": "dubai_creek_lowland",
+      "risk_score": 0.35,
+      "polygon": [
+        [25.2280, 55.3080],
+        [25.2380, 55.3120],
+        [25.2380, 55.3260],
+        [25.2280, 55.3260]
+      ]
+    }
+  ],
+  "wildfire_zones": []
+}

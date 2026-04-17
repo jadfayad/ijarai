@@ -1,0 +1,57 @@
+{
+  "notes": "Flood zones approximate SFPUC 100-year combined-sewer flood-risk map bulk areas (Mission Bay reclaimed land, Bayview shoreline). Wildfire zones approximate urban-wildland interface near Twin Peaks / Mt Sutro / Glen Canyon. Refine against CalFire FHSZ and SFPUC PDFs.",
+  "flood_zones": [
+    {
+      "id": "mission_bay",
+      "risk_score": 0.65,
+      "polygon": [
+        [37.7680, -122.4000],
+        [37.7780, -122.4000],
+        [37.7780, -122.3860],
+        [37.7680, -122.3860]
+      ]
+    },
+    {
+      "id": "bayview_shoreline",
+      "risk_score": 0.55,
+      "polygon": [
+        [37.7260, -122.3950],
+        [37.7360, -122.3950],
+        [37.7360, -122.3780],
+        [37.7260, -122.3780]
+      ]
+    },
+    {
+      "id": "embarcadero_lower",
+      "risk_score": 0.4,
+      "polygon": [
+        [37.7920, -122.4020],
+        [37.8000, -122.4020],
+        [37.8000, -122.3920],
+        [37.7920, -122.3920]
+      ]
+    }
+  ],
+  "wildfire_zones": [
+    {
+      "id": "twin_peaks_mt_sutro",
+      "risk_score": 0.35,
+      "polygon": [
+        [37.7460, -122.4530],
+        [37.7620, -122.4530],
+        [37.7620, -122.4380],
+        [37.7460, -122.4380]
+      ]
+    },
+    {
+      "id": "glen_canyon_edge",
+      "risk_score": 0.3,
+      "polygon": [
+        [37.7310, -122.4450],
+        [37.7400, -122.4450],
+        [37.7400, -122.4340],
+        [37.7310, -122.4340]
+      ]
+    }
+  ]
+}

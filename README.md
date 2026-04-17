@@ -79,13 +79,17 @@ docker compose up
 
 | Criterion | Description | Data Source |
 |---|---|---|
-| Commute to Office | Travel time to your workplace | ORS isochrones (car) / Google Directions (transit) / distance fallback |
-| Commute to Airport | Travel time to DXB | Same as above |
-| Commute to Custom Place | Travel time to any address | Same as above |
+| Commute | Travel time to one or more destinations | ORS isochrones (car) / Google Directions (transit) / distance fallback |
 | Nearby Amenities | Density of gyms, cafes, beaches, parks, etc. | OpenStreetMap via Overpass API |
-| Budget / Rent | Match to your monthly rent budget | Curated zone averages for 30+ Dubai communities |
-| Neighborhood Quality | Area reputation and livability | Curated scores (0-10) per community |
+| Budget / Rent | Match to your monthly rent budget (optionally incl. utilities) | Curated zone averages + per-city utility cost |
+| Neighborhood Quality | Aggregate livability score | Curated scores per community |
+| Safety · Walkability · Green Space · Community · Infrastructure · Aesthetics · Desirability | Individually weightable neighborhood dimensions | Sub-scores from the curated neighborhood dataset |
+| Transit Access | Proximity and density of rail/metro/bus stops | OpenStreetMap via Overpass API |
+| Healthcare Access | Proximity to hospitals and clinics (emergency-access weighting) | OpenStreetMap via Overpass API |
+| Schools | School quality by primary/secondary age band | Curated per-city ratings (KHDA-style in Dubai, SFUSD-style in SF, Éducation Nationale-style in Paris) |
+| Hazard Safety | Avoid flood and wildfire risk zones | Curated per-city polygons (Seine PPRI, SF flood / CalFire WUI edges, Dubai low-lying) |
 | Low Noise | Distance from highways, airports | Computed from road/airport proximity |
+| AI Preference | Free-text spatial research | LangChain DeepAgent (or stub provider) |
 
 ## Project Structure
 

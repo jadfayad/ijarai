@@ -25,8 +25,31 @@ class AmenityParams(BaseModel):
     categories: list[str] = Field(default_factory=list)
 
 
+class TransitParams(BaseModel):
+    modes: list[Literal["train", "bus"]] = Field(
+        default_factory=lambda: ["train", "bus"]
+    )
+
+
+class HealthcareParams(BaseModel):
+    facility_types: list[Literal["hospital", "clinic", "pharmacy"]] = Field(
+        default_factory=lambda: ["hospital", "clinic"]
+    )
+
+
+class SchoolQualityParams(BaseModel):
+    age_band: Literal["primary", "secondary", "all"] = "all"
+
+
+class HazardParams(BaseModel):
+    hazards: list[Literal["flood", "wildfire"]] = Field(
+        default_factory=lambda: ["flood"]
+    )
+
+
 class BudgetParams(BaseModel):
     max_monthly_rent: float = 8000
+    include_utilities: bool = False
 
 
 class AiCriterionParams(BaseModel):
@@ -112,6 +135,26 @@ class NoiseCriterion(_CriterionBase):
     params: EmptyParams = Field(default_factory=EmptyParams)
 
 
+class TransitCriterion(_CriterionBase):
+    type: Literal["transit"] = "transit"
+    params: TransitParams = Field(default_factory=TransitParams)
+
+
+class HealthcareCriterion(_CriterionBase):
+    type: Literal["healthcare"] = "healthcare"
+    params: HealthcareParams = Field(default_factory=HealthcareParams)
+
+
+class SchoolQualityCriterion(_CriterionBase):
+    type: Literal["schools"] = "schools"
+    params: SchoolQualityParams = Field(default_factory=SchoolQualityParams)
+
+
+class HazardCriterion(_CriterionBase):
+    type: Literal["hazard"] = "hazard"
+    params: HazardParams = Field(default_factory=HazardParams)
+
+
 class AiCriterion(_CriterionBase):
     type: Literal["ai"] = "ai"
     params: AiCriterionParams = Field(default_factory=AiCriterionParams)
@@ -131,6 +174,10 @@ CriterionRequest = Annotated[
         AestheticsCriterion,
         DesirabilityCriterion,
         NoiseCriterion,
+        TransitCriterion,
+        HealthcareCriterion,
+        SchoolQualityCriterion,
+        HazardCriterion,
         AiCriterion,
     ],
     Field(discriminator="type"),
@@ -183,3 +230,4 @@ class CityConfigResponse(BaseModel):
     rent_step: int
     rent_default: int
     default_destinations: list[DestinationConfig]
+    utility_avg_monthly: float = 0

@@ -1,0 +1,65 @@
+{
+  "notes": "Approximate SFUSD attendance-area ratings (GreatSchools-style, 1-10). Replace with attendance-polygon overlays when curating.",
+  "zones": {
+    "presidio_heights": {
+      "center": [37.7860, -122.4545],
+      "radius_km": 1.2,
+      "score_primary": 8.5,
+      "score_secondary": 8.0
+    },
+    "cole_valley_ashbury": {
+      "center": [37.7650, -122.4510],
+      "radius_km": 1.0,
+      "score_primary": 8.0,
+      "score_secondary": 7.5
+    },
+    "noe_valley": {
+      "center": [37.7500, -122.4330],
+      "radius_km": 1.2,
+      "score_primary": 7.5,
+      "score_secondary": 7.0
+    },
+    "bernal_heights": {
+      "center": [37.7400, -122.4170],
+      "radius_km": 1.0,
+      "score_primary": 7.0,
+      "score_secondary": 6.5
+    },
+    "richmond": {
+      "center": [37.7820, -122.4730],
+      "radius_km": 1.8,
+      "score_primary": 7.5,
+      "score_secondary": 7.0
+    },
+    "sunset": {
+      "center": [37.7540, -122.4910],
+      "radius_km": 2.0,
+      "score_primary": 7.0,
+      "score_secondary": 6.5
+    },
+    "mission": {
+      "center": [37.7600, -122.4190],
+      "radius_km": 1.2,
+      "score_primary": 5.5,
+      "score_secondary": 5.5
+    },
+    "tenderloin": {
+      "center": [37.7840, -122.4150],
+      "radius_km": 0.6,
+      "score_primary": 4.5,
+      "score_secondary": 4.5
+    },
+    "bayview": {
+      "center": [37.7320, -122.3820],
+      "radius_km": 1.5,
+      "score_primary": 4.0,
+      "score_secondary": 4.0
+    },
+    "visitacion_valley": {
+      "center": [37.7150, -122.4090],
+      "radius_km": 1.0,
+      "score_primary": 5.0,
+      "score_secondary": 5.0
+    }
+  }
+}

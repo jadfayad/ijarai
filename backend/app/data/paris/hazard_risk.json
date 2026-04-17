@@ -1,0 +1,36 @@
+{
+  "notes": "Flood polygons approximate the Seine Plan de Prevention des Risques d'Inondation (PPRI) bulk areas across 7e/15e/13e/12e. Wildfire is not relevant to Paris. Refine against the official PPRI de la Seine shapefiles.",
+  "flood_zones": [
+    {
+      "id": "seine_left_bank_central",
+      "risk_score": 0.55,
+      "polygon": [
+        [48.8480, 2.2700],
+        [48.8600, 2.2700],
+        [48.8600, 2.3650],
+        [48.8480, 2.3650]
+      ]
+    },
+    {
+      "id": "seine_right_bank_central",
+      "risk_score": 0.45,
+      "polygon": [
+        [48.8580, 2.2750],
+        [48.8680, 2.2750],
+        [48.8680, 2.3660],
+        [48.8580, 2.3660]
+      ]
+    },
+    {
+      "id": "seine_13e_bercy",
+      "risk_score": 0.55,
+      "polygon": [
+        [48.8290, 2.3600],
+        [48.8430, 2.3600],
+        [48.8430, 2.4050],
+        [48.8290, 2.4050]
+      ]
+    }
+  ],
+  "wildfire_zones": []
+}

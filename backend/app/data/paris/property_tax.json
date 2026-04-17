@@ -1,0 +1,6 @@
+{
+  "notes": "Paris taxe fonciere plus taxe d'habitation. Taxe fonciere is roughly 0.4-0.6% of valeur locative cadastrale annually and varies by arrondissement. Stub uses a flat city rate equivalent to roughly 0.5% of a typical valuation; refine with arrondissement-level Direction generale des Finances publiques data when curating.",
+  "currency": "EUR",
+  "city_annual_rate_fraction": 0.005,
+  "zones": []
+}

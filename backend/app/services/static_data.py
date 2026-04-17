@@ -21,6 +21,9 @@ class CityStaticData:
     rent_zones: dict[str, dict] = field(default_factory=dict)
     neighborhood_scores: dict[str, dict] = field(default_factory=dict)
     noise_sources: list[dict] = field(default_factory=list)
+    utility_costs: dict = field(default_factory=dict)
+    school_quality: dict = field(default_factory=dict)
+    property_tax: dict = field(default_factory=dict)
 
 
 _cache: dict[str, CityStaticData] = {}
@@ -33,6 +36,14 @@ def _load_json(data_dir: Path, filename: str) -> dict | list:
     return json.loads(path.read_text())
 
 
+def _load_json_dict(data_dir: Path, filename: str) -> dict:
+    path = data_dir / filename
+    if not path.exists():
+        return {}
+    loaded = json.loads(path.read_text())
+    return loaded if isinstance(loaded, dict) else {}
+
+
 def _get_data(city: CityConfig) -> CityStaticData:
     if city.slug not in _cache:
         d = city.data_dir
@@ -40,8 +51,56 @@ def _get_data(city: CityConfig) -> CityStaticData:
             rent_zones=_load_json(d, "rent_zones.json"),
             neighborhood_scores=_load_json(d, "neighborhood_scores.json"),
             noise_sources=_load_json(d, "noise_sources.json"),
+            utility_costs=_load_json_dict(d, "utility_costs.json"),
+            school_quality=_load_json_dict(d, "school_quality.json"),
+            property_tax=_load_json_dict(d, "property_tax.json"),
         )
     return _cache[city.slug]
+
+
+def lookup_property_tax_rate(city: CityConfig, lat: float, lng: float) -> float:
+    """Return the annual property-tax rate (as a fraction of value) at a point.
+
+    Currently always returns the city-wide ``city_annual_rate_fraction``
+    since no per-zone data is curated. Wired here as groundwork for a
+    future buy-mode that surfaces owner carry cost; no scoring dispatch
+    consumes this today.
+    """
+    data = _get_data(city).property_tax
+    try:
+        return float(data.get("city_annual_rate_fraction", 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def get_city_average_utility_cost(city: CityConfig) -> float:
+    """Return the city-average monthly utility estimate, or 0 if unavailable."""
+    uc = _get_data(city).utility_costs
+    val = uc.get("city_average_monthly", 0)
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def lookup_utility_cost(city: CityConfig, lat: float, lng: float) -> float:
+    """Per-cell utility estimate. Falls back to city_average when no zones curated.
+
+    Zone entries (when present) follow the standard zone schema with
+    ``center``, ``radius_km``, and ``avg_utility_monthly``; IDW resolves
+    the point against them.
+    """
+    uc = _get_data(city).utility_costs
+    city_avg = get_city_average_utility_cost(city)
+    zones = uc.get("zones") or []
+    if not zones:
+        return city_avg
+    zone_dict = {
+        z.get("zone_id", str(idx)): z for idx, z in enumerate(zones)
+    }
+    return _find_zone_value(
+        lat, lng, zone_dict, "avg_utility_monthly", city_avg,
+    )
 
 
 def _find_zone_value(
@@ -101,20 +160,32 @@ def find_nearest_zone_name(city: CityConfig, lat: float, lng: float) -> str | No
 
 
 def score_budget(
-    city: CityConfig, centroids: list[dict], max_monthly_rent: float
+    city: CityConfig,
+    centroids: list[dict],
+    max_monthly_rent: float,
+    include_utilities: bool = False,
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """Score cells by how affordable they are relative to user's budget."""
+    """Score cells by how affordable they are relative to user's budget.
+
+    When ``include_utilities`` is True, adds a per-cell utility estimate
+    (from ``utility_costs.json``) to the rent before comparing against
+    ``max_monthly_rent``. This gives users a "true monthly cost" view
+    rather than list-rent.
+    """
     rent_zones = _get_data(city).rent_zones
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
         avg_rent = _find_zone_value(c["lat"], c["lng"], rent_zones, "avg_rent", 6000)
-        ratio = avg_rent / max_monthly_rent
+        total = avg_rent
+        if include_utilities:
+            total += lookup_utility_cost(city, c["lat"], c["lng"])
+        ratio = total / max_monthly_rent
         if ratio <= 1.0:
             scores[c["cell_id"]] = 1.0 - 0.5 * ratio
         else:
             scores[c["cell_id"]] = max(0.0, 0.5 * (2.0 - ratio))
-        metrics[c["cell_id"]] = round(avg_rent)
+        metrics[c["cell_id"]] = round(total)
     return scores, metrics
 
 
@@ -143,6 +214,60 @@ def score_neighborhood(
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Score cells by aggregate neighborhood reputation (thin back-compat caller)."""
     return score_neighborhood_dimension(city, centroids, "score")
+
+
+def score_schools(
+    city: CityConfig,
+    centroids: list[dict],
+    age_band: str = "all",
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Score cells by school-quality rating.
+
+    age_band in {"primary", "secondary", "all"}.
+    "all" averages the primary and secondary values per zone.
+
+    Falls back to neutral 0.5 per cell when no school_quality.json
+    is curated for a city, so scoring never breaks a request.
+    """
+    data = _get_data(city).school_quality
+    zones = data.get("zones") or {}
+
+    if not zones:
+        neutral = {c["cell_id"]: 0.5 for c in centroids}
+        return neutral, {c["cell_id"]: 0.0 for c in centroids}
+
+    # Build a synthetic zone list with a single value_key to reuse _find_zone_value.
+    if age_band == "primary":
+        value_key = "score_primary"
+    elif age_band == "secondary":
+        value_key = "score_secondary"
+    else:
+        value_key = "_combined"
+
+    prepared: dict[str, dict] = {}
+    for zid, z in zones.items():
+        center = z.get("center")
+        radius = z.get("radius_km")
+        if center is None or radius is None:
+            continue
+        primary = float(z.get("score_primary", 5.0))
+        secondary = float(z.get("score_secondary", 5.0))
+        combined = (primary + secondary) / 2.0
+        prepared[zid] = {
+            "center": center,
+            "radius_km": radius,
+            "score_primary": primary,
+            "score_secondary": secondary,
+            "_combined": combined,
+        }
+
+    scores: dict[str, float] = {}
+    metrics: dict[str, float] = {}
+    for c in centroids:
+        rating = _find_zone_value(c["lat"], c["lng"], prepared, value_key, 5.0)
+        scores[c["cell_id"]] = rating / 10.0
+        metrics[c["cell_id"]] = round(rating, 1)
+    return scores, metrics
 
 
 def score_noise(

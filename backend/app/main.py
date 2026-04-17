@@ -8,6 +8,7 @@ from app.api.geocode import router as geocode_router
 from app.api.agent import router as agent_router
 from app.city_config import get_city, get_active_city
 from app.models.schemas import CityConfigResponse
+from app.services.static_data import get_city_average_utility_cost
 
 app = FastAPI(title="OptimHouse API", version="0.1.0")
 
@@ -34,4 +35,5 @@ async def city_config(slug: str = Query(default=None)):
     city = get_city(slug) if slug else get_active_city()
     data = asdict(city)
     data.pop("data_dir_name", None)
+    data["utility_avg_monthly"] = get_city_average_utility_cost(city)
     return data

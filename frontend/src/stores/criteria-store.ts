@@ -182,6 +182,58 @@ export function createNoiseCriterion(): CriterionConfig {
   };
 }
 
+export function createTransitCriterion(): CriterionConfig {
+  return {
+    id: "transit",
+    type: "transit",
+    label: "Transit Access",
+    description: "Proximity to metro, rail, and bus stops",
+    weight: 7,
+    enabled: true,
+    params: { modes: ["train", "bus"] },
+    icon: "train",
+  };
+}
+
+export function createHealthcareCriterion(): CriterionConfig {
+  return {
+    id: "healthcare",
+    type: "healthcare",
+    label: "Healthcare Access",
+    description: "Proximity to hospitals and clinics for emergency care",
+    weight: 7,
+    enabled: true,
+    params: { facility_types: ["hospital", "clinic"] },
+    icon: "hospital",
+  };
+}
+
+export function createSchoolsCriterion(): CriterionConfig {
+  return {
+    id: "schools",
+    type: "schools",
+    label: "Schools",
+    description: "School quality (approximate; refine with local data)",
+    weight: 5,
+    enabled: true,
+    params: { age_band: "all" },
+    icon: "graduation-cap",
+  };
+}
+
+export function createHazardCriterion(): CriterionConfig {
+  return {
+    id: "hazard",
+    type: "hazard",
+    label: "Hazard Safety",
+    description: "Avoid flood and wildfire risk zones",
+    weight: 4,
+    enabled: true,
+    params: { hazards: ["flood"] },
+    icon: "flame",
+  };
+}
+
 export function createAiCriterion(
   userPrompt: string,
   researchResult?: AgentResearchResponse,

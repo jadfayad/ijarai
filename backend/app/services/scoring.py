@@ -17,17 +17,25 @@ from app.models.schemas import (
     BudgetCriterion,
     CommuteCriterion,
     CriterionRequest,
+    HazardCriterion,
+    HealthcareCriterion,
+    SchoolQualityCriterion,
     ScoreRequest,
     ScoreResponse,
+    TransitCriterion,
 )
 from app.services.grid import get_grid_centroids
 from app.services.commute import score_commute
 from app.services.amenities import score_amenities
+from app.services.transit import score_transit
+from app.services.healthcare import score_healthcare
+from app.services.hazard import score_hazard
 from app.services.static_data import (
     score_budget,
     score_neighborhood,
     score_neighborhood_dimension,
     score_noise,
+    score_schools,
     find_nearest_zone_name,
 )
 from app.services.ai_agent.scorer import score_ai_result
@@ -68,7 +76,10 @@ def _criterion_key(criterion: CriterionRequest, index: int) -> str | None:
     if isinstance(criterion, CommuteCriterion):
         src_tag = "_google" if criterion.params.source == "google" else ""
         return f"commute_{criterion.params.mode}{src_tag}_{criterion.params.time_of_day}_{index}"
-    if criterion.type in ("amenities", "budget", "neighborhood", "noise"):
+    if criterion.type in (
+        "amenities", "budget", "neighborhood", "noise",
+        "transit", "healthcare", "schools", "hazard",
+    ):
         return criterion.type
     if criterion.type in _NEIGHBORHOOD_DIMENSION_TYPES:
         return criterion.type
@@ -101,6 +112,10 @@ def _criterion_label(criterion: CriterionRequest, index: int) -> str:
         "infrastructure": "Infrastructure",
         "aesthetics": "Aesthetics",
         "desirability": "Desirability",
+        "transit": "Transit Access",
+        "healthcare": "Healthcare Access",
+        "schools": "Schools",
+        "hazard": "Hazard Safety",
     }
     return label_map.get(criterion.type, criterion.type.title())
 
@@ -140,7 +155,10 @@ async def compute_scores(
             )
         elif isinstance(criterion, BudgetCriterion):
             s, m = score_budget(
-                city, centroids, criterion.params.max_monthly_rent,
+                city,
+                centroids,
+                criterion.params.max_monthly_rent,
+                include_utilities=criterion.params.include_utilities,
             )
         elif criterion.type == "neighborhood":
             s, m = score_neighborhood(city, centroids)
@@ -150,6 +168,16 @@ async def compute_scores(
             )
         elif criterion.type == "noise":
             s, m = score_noise(city, centroids)
+        elif isinstance(criterion, TransitCriterion):
+            s, m = await score_transit(city, centroids, criterion.params.modes)
+        elif isinstance(criterion, HealthcareCriterion):
+            s, m = await score_healthcare(
+                city, centroids, criterion.params.facility_types,
+            )
+        elif isinstance(criterion, SchoolQualityCriterion):
+            s, m = score_schools(city, centroids, criterion.params.age_band)
+        elif isinstance(criterion, HazardCriterion):
+            s, m = score_hazard(city, centroids, criterion.params.hazards)
         elif isinstance(criterion, AiCriterion):
             ai_result = ResearchResult.from_params(criterion.params.model_dump())
             s, m = score_ai_result(centroids, ai_result)

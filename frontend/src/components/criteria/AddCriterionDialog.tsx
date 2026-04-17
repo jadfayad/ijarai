@@ -26,6 +26,9 @@ import {
   Wrench,
   Palette,
   TrendingUp,
+  TrainFront,
+  Hospital,
+  Flame,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import {
@@ -42,6 +45,10 @@ import {
   createInfrastructureCriterion,
   createAestheticsCriterion,
   createDesirabilityCriterion,
+  createTransitCriterion,
+  createHealthcareCriterion,
+  createSchoolsCriterion,
+  createHazardCriterion,
 } from "@/stores/criteria-store";
 import { COMMUTE_PRESETS } from "@/lib/types";
 import type { CommutePreset } from "@/lib/types";
@@ -155,6 +162,42 @@ const SINGLETON_CRITERIA = [
     iconBg: "bg-teal-500/10",
     iconText: "text-teal-400",
     create: () => createDesirabilityCriterion(),
+  },
+  {
+    id: "transit",
+    type: "transit",
+    label: "Transit Access",
+    icon: <TrainFront size={14} />,
+    iconBg: "bg-sky-500/10",
+    iconText: "text-sky-400",
+    create: () => createTransitCriterion(),
+  },
+  {
+    id: "healthcare",
+    type: "healthcare",
+    label: "Healthcare Access",
+    icon: <Hospital size={14} />,
+    iconBg: "bg-red-500/10",
+    iconText: "text-red-400",
+    create: () => createHealthcareCriterion(),
+  },
+  {
+    id: "schools",
+    type: "schools",
+    label: "Schools",
+    icon: <GraduationCap size={14} />,
+    iconBg: "bg-indigo-500/10",
+    iconText: "text-indigo-400",
+    create: () => createSchoolsCriterion(),
+  },
+  {
+    id: "hazard",
+    type: "hazard",
+    label: "Hazard Safety",
+    icon: <Flame size={14} />,
+    iconBg: "bg-amber-500/10",
+    iconText: "text-amber-400",
+    create: () => createHazardCriterion(),
   },
 ] as const;
 

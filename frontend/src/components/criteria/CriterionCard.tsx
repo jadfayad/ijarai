@@ -24,6 +24,9 @@ import {
   Wrench,
   Palette,
   TrendingUp,
+  TrainFront,
+  Hospital,
+  Flame,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
@@ -38,11 +41,19 @@ import type {
   CommuteParams,
   AmenityParams,
   BudgetParams,
+  TransitParams,
+  HealthcareParams,
+  SchoolQualityParams,
+  HazardParams,
   AiParams,
 } from "@/lib/types";
 import { CommuteConfig } from "./CommuteConfig";
 import { AmenityConfig } from "./AmenityConfig";
 import { BudgetConfig } from "./BudgetConfig";
+import { TransitConfig } from "./TransitConfig";
+import { HealthcareConfig } from "./HealthcareConfig";
+import { SchoolsConfig } from "./SchoolsConfig";
+import { HazardConfig } from "./HazardConfig";
 
 const ICON_CONFIG: Record<
   string,
@@ -162,6 +173,24 @@ const ICON_CONFIG: Record<
     text: "text-teal-400",
     activeBg: "bg-teal-500/20",
   },
+  train: {
+    icon: <TrainFront size={15} />,
+    bg: "bg-sky-500/10",
+    text: "text-sky-400",
+    activeBg: "bg-sky-500/20",
+  },
+  hospital: {
+    icon: <Hospital size={15} />,
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    activeBg: "bg-red-500/20",
+  },
+  flame: {
+    icon: <Flame size={15} />,
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    activeBg: "bg-amber-500/20",
+  },
 };
 
 const DEFAULT_ICON_CONFIG = {
@@ -188,6 +217,35 @@ function getSummary(criterion: CriterionConfig, currencySymbol: string): string 
   if (criterion.type === "budget") {
     const p = criterion.params as BudgetParams;
     return `Max ${currencySymbol}${p.max_monthly_rent.toLocaleString()}/mo`;
+  }
+  if (criterion.type === "transit") {
+    const p = criterion.params as TransitParams;
+    const modes = p.modes ?? [];
+    if (modes.length === 0) return "No modes selected";
+    const labels = modes.map((m) => (m === "train" ? "Train" : "Bus"));
+    return labels.join(" + ");
+  }
+  if (criterion.type === "healthcare") {
+    const p = criterion.params as HealthcareParams;
+    const types = p.facility_types ?? [];
+    if (types.length === 0) return "No facility types selected";
+    const labels = types.map((t) => t.charAt(0).toUpperCase() + t.slice(1));
+    return labels.length > 2
+      ? `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`
+      : labels.join(", ");
+  }
+  if (criterion.type === "schools") {
+    const p = criterion.params as SchoolQualityParams;
+    const band = p.age_band ?? "all";
+    return band === "all"
+      ? "Primary + Secondary"
+      : band.charAt(0).toUpperCase() + band.slice(1);
+  }
+  if (criterion.type === "hazard") {
+    const p = criterion.params as HazardParams;
+    const hz = p.hazards ?? [];
+    if (hz.length === 0) return "No hazards selected";
+    return hz.map((h) => h.charAt(0).toUpperCase() + h.slice(1)).join(" + ");
   }
   if (criterion.type === "ai") {
     const p = criterion.params as AiParams;
@@ -338,6 +396,18 @@ export function CriterionCard({ criterion }: Props) {
               )}
               {criterion.type === "budget" && (
                 <BudgetConfig criterion={criterion} />
+              )}
+              {criterion.type === "transit" && (
+                <TransitConfig criterion={criterion} />
+              )}
+              {criterion.type === "healthcare" && (
+                <HealthcareConfig criterion={criterion} />
+              )}
+              {criterion.type === "schools" && (
+                <SchoolsConfig criterion={criterion} />
+              )}
+              {criterion.type === "hazard" && (
+                <HazardConfig criterion={criterion} />
               )}
               {criterion.type === "ai" && (
                 <div className="space-y-2">

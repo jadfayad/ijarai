@@ -1,0 +1,65 @@
+{
+  "notes": "Approximate KHDA-inspection-based ratings aggregated per zone. 1-10 scale; refine against the official KHDA dataset (https://www.khda.gov.ae/) when curating.",
+  "zones": {
+    "jumeirah": {
+      "center": [25.2110, 55.2490],
+      "radius_km": 2.5,
+      "score_primary": 8.5,
+      "score_secondary": 8.0
+    },
+    "al_barsha": {
+      "center": [25.1100, 55.1980],
+      "radius_km": 2.0,
+      "score_primary": 8.0,
+      "score_secondary": 7.5
+    },
+    "motor_city_sports_city": {
+      "center": [25.0570, 55.2430],
+      "radius_km": 2.5,
+      "score_primary": 7.5,
+      "score_secondary": 7.0
+    },
+    "arabian_ranches": {
+      "center": [25.0540, 55.2650],
+      "radius_km": 2.5,
+      "score_primary": 8.5,
+      "score_secondary": 8.0
+    },
+    "mirdif": {
+      "center": [25.2230, 55.4170],
+      "radius_km": 2.5,
+      "score_primary": 7.0,
+      "score_secondary": 7.0
+    },
+    "downtown": {
+      "center": [25.1972, 55.2744],
+      "radius_km": 1.5,
+      "score_primary": 6.5,
+      "score_secondary": 6.5
+    },
+    "bur_dubai": {
+      "center": [25.2560, 55.2960],
+      "radius_km": 2.0,
+      "score_primary": 6.0,
+      "score_secondary": 6.0
+    },
+    "jebel_ali": {
+      "center": [25.0200, 55.1200],
+      "radius_km": 3.0,
+      "score_primary": 5.0,
+      "score_secondary": 5.0
+    },
+    "international_city": {
+      "center": [25.1630, 55.4160],
+      "radius_km": 2.0,
+      "score_primary": 5.5,
+      "score_secondary": 5.0
+    },
+    "al_warqa": {
+      "center": [25.1970, 55.3990],
+      "radius_km": 2.0,
+      "score_primary": 6.5,
+      "score_secondary": 6.0
+    }
+  }
+}
