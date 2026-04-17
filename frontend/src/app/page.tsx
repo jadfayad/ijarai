@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
-import { MapPin } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { skylines } from "@/components/Skylines";
+
+const LAST_CITY_KEY = "optim_house.last_city_slug";
 
 const cities = [
   { name: "Dubai", slug: "dubai", country: "UAE", available: true },
@@ -24,12 +26,31 @@ export default function LandingPage() {
   const router = useRouter();
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [lastCity, setLastCity] = useState<City | null>(null);
+
+  useEffect(() => {
+    try {
+      const slug = window.localStorage.getItem(LAST_CITY_KEY);
+      if (!slug) return;
+      const found = cities.find((c) => c.slug === slug && c.available);
+      // Hydrating persisted client-only state — one-shot on mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (found) setLastCity(found);
+    } catch {
+      // ignore storage errors (private mode, etc.)
+    }
+  }, []);
 
   const handleCityClick = useCallback(
     (city: City) => {
       if (!city.available || transitioning) return;
       setSelectedCity(city);
       setTransitioning(true);
+      try {
+        window.localStorage.setItem(LAST_CITY_KEY, city.slug);
+      } catch {
+        // ignore
+      }
       setTimeout(() => router.push(`/${city.slug}`), 1500);
     },
     [transitioning, router]
@@ -55,12 +76,28 @@ export default function LandingPage() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
             Your perfect home exists.
             <br />
-            <span className="font-serif italic font-normal text-primary/80">We'll find it.</span>
+            <span className="font-serif italic font-normal text-primary/80">We&apos;ll find it.</span>
           </h1>
           <p className="mx-auto max-w-lg text-base text-muted-foreground leading-relaxed">
-            Tell us your commute, lifestyle, and budget. We'll show you exactly where to live and what to rent.
+            Tell us your commute, lifestyle, and budget. We&apos;ll show you exactly where to live and what to rent.
           </p>
         </div>
+
+        {/* Continue-to-last-city shortcut */}
+        {lastCity && !transitioning && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => handleCityClick(lastCity)}
+              className="group inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.06] px-3.5 py-1.5 text-xs font-medium text-primary/80 hover:text-primary hover:border-primary/40 hover:bg-primary/[0.1] transition-all duration-200"
+            >
+              Continue to {lastCity.name}
+              <ArrowRight
+                size={13}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </button>
+          </div>
+        )}
 
         {/* City Grid */}
         <div className="space-y-5">

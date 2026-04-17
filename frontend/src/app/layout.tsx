@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toast";
 import { Home } from "lucide-react";
 import Link from "next/link";
 import "./globals.css";
@@ -40,6 +41,7 @@ export default function RootLayout({
           <span className="text-sm font-semibold tracking-tight">IJAR.AI</span>
         </Link>
         <TooltipProvider>{children}</TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );

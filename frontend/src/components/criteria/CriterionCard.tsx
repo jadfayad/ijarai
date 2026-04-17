@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Briefcase,
   Plane,
@@ -27,15 +27,22 @@ import {
   TrainFront,
   Hospital,
   Flame,
+  Wand2,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  SegmentedControl,
+  WEIGHT_OPTIONS,
+  weightToSegment,
+  weightLabel,
+} from "@/components/ui/segmented-control";
+import { toast } from "@/components/ui/toast";
 import type {
   CriterionConfig,
   CommuteParams,
@@ -259,56 +266,130 @@ interface Props {
   criterion: CriterionConfig;
 }
 
+function OriginCornerDot({ origin }: { origin: CriterionConfig["origin"] }) {
+  if (!origin || origin === "manual") return null;
+  const Icon = origin === "agent" ? Sparkles : Wand2;
+  const label = origin === "agent" ? "Added by AI" : "Added by wizard";
+  const tint =
+    origin === "agent"
+      ? "bg-violet-500/90 text-white"
+      : "bg-primary text-white";
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        aria-label={label}
+        className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-[rgba(14,14,24,0.97)] ${tint}`}
+      >
+        <Icon size={8} strokeWidth={2.5} />
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function CriterionCard({ criterion }: Props) {
-  const { updateCriterion, removeCriterion, cityConfig } = useCriteriaStore();
+  const {
+    updateCriterion,
+    removeCriterion,
+    restoreCriterion,
+    cityConfig,
+    pendingFocusCriterionId,
+    setPendingFocus,
+    criteria,
+  } = useCriteriaStore();
   const iconCfg = ICON_CONFIG[criterion.icon] ?? DEFAULT_ICON_CONFIG;
   const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const commuteAddressRef = useRef<{ focus: () => void }>(null);
 
   const summary = getSummary(criterion, cityConfig.currency_symbol);
 
+  // When this card is marked as pending-focus, auto-expand and scroll into view.
+  // One-shot handoff: the store clears pendingFocusCriterionId so this only fires once.
+  useEffect(() => {
+    if (pendingFocusCriterionId !== criterion.id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpanded(true);
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => commuteAddressRef.current?.focus(), 220);
+    setPendingFocus(null);
+    return () => clearTimeout(t);
+  }, [pendingFocusCriterionId, criterion.id, setPendingFocus]);
+
+  const handleRemove = () => {
+    const index = criteria.findIndex((c) => c.id === criterion.id);
+    removeCriterion(criterion.id);
+    const snapshot = criterion;
+    const at = index === -1 ? criteria.length : index;
+    toast(`"${snapshot.label}" removed`, {
+      action: {
+        label: "Undo",
+        onClick: () => restoreCriterion(snapshot, at),
+      },
+    });
+  };
+
   return (
     <div
+      ref={cardRef}
       className={`rounded-xl border bg-white/[0.06] transition-all duration-250 ${
         expanded
           ? "border-white/[0.16]"
           : "border-white/[0.1] hover:border-white/[0.16]"
       }`}
     >
-      {/* Collapsed header — always visible */}
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        className="w-full p-3.5 flex items-center gap-3 text-left"
-      >
-        <div
-          className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-2 shrink-0 transition-colors duration-200`}
+      {/* Header row — minimal: icon, title, chevron; trash reveals on hover. */}
+      <div className="group/header w-full p-3.5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          aria-label={expanded ? `Collapse ${criterion.label}` : `Expand ${criterion.label}`}
+          className="flex-1 min-w-0 flex items-center gap-3 text-left"
         >
-          {iconCfg.icon}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium text-white truncate">
-              {criterion.label}
-            </span>
-            <span className="text-[10px] font-mono font-semibold tabular-nums text-white/40 bg-white/[0.06] px-1.5 py-0.5 rounded-md shrink-0">
-              {criterion.weight}/10
-            </span>
+          <div className="relative shrink-0">
+            <div
+              className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-2 transition-colors duration-200`}
+            >
+              {iconCfg.icon}
+            </div>
+            <OriginCornerDot origin={criterion.origin} />
           </div>
-          {!expanded && summary && (
-            <p className="text-[11px] text-white/35 truncate mt-0.5">
-              {summary}
-            </p>
-          )}
-        </div>
 
-        <ChevronDown
-          size={14}
-          className={`text-white/25 shrink-0 transition-transform duration-200 ${
-            expanded ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-white truncate">
+              {criterion.label}
+            </div>
+            {!expanded && (
+              <p className="text-[11px] text-white/40 truncate mt-0.5">
+                {summary ? `${summary} · ` : ""}
+                <span className="text-white/55">{weightLabel(criterion.weight)}</span>
+              </p>
+            )}
+          </div>
+
+          <ChevronDown
+            size={14}
+            className={`text-white/25 shrink-0 transition-transform duration-200 ${
+              expanded ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        <Tooltip>
+          <TooltipTrigger
+            onClick={handleRemove}
+            aria-label={`Remove ${criterion.label}`}
+            className="text-white/20 hover:text-red-400 p-1.5 rounded-md hover:bg-red-500/10 transition-all duration-200 shrink-0 opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+          >
+            <Trash2 size={13} />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Remove
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Expanded details */}
       <div
@@ -320,76 +401,51 @@ export function CriterionCard({ criterion }: Props) {
           <div className="px-3.5 pb-3.5 space-y-3">
             <div className="h-px bg-white/[0.06]" />
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium text-white">
-                  {criterion.label}
-                </Label>
-                {criterion.type !== "ai" && (
-                  <Tooltip>
-                    <TooltipTrigger className="text-white/20 hover:text-white/50 transition-colors">
-                      <Info size={12} />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[220px] text-xs">
-                      {criterion.description}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-              <Tooltip>
-                <TooltipTrigger
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeCriterion(criterion.id);
-                  }}
-                  className="text-white/20 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-all duration-200"
-                >
-                  <Trash2 size={13} />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Remove
-                </TooltipContent>
-              </Tooltip>
+            <div className="flex items-center gap-1.5">
+              <Label className="text-sm font-medium text-white">
+                {criterion.label}
+              </Label>
+              {criterion.type !== "ai" && (
+                <Tooltip>
+                  <TooltipTrigger className="text-white/20 hover:text-white/50 transition-colors">
+                    <Info size={12} />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    {criterion.description}
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             <div className="space-y-3 pt-1">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
-                      Priority
-                    </span>
-                    <Tooltip>
-                      <TooltipTrigger className="text-white/15 hover:text-white/40 transition-colors">
-                        <Info size={10} />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="max-w-[200px] text-xs"
-                      >
-                        Higher priority means this criterion has more influence
-                        on the final score.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <span className="text-xs font-mono font-semibold tabular-nums text-white/70">
-                    {criterion.weight}/10
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+                    Priority
                   </span>
+                  <Tooltip>
+                    <TooltipTrigger className="text-white/15 hover:text-white/40 transition-colors">
+                      <Info size={10} />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="max-w-[200px] text-xs"
+                    >
+                      Higher priority means this criterion has more influence
+                      on the final score.
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-                <Slider
-                  value={[criterion.weight]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={(val) => {
-                    const w = Array.isArray(val) ? val[0] : val;
-                    updateCriterion(criterion.id, { weight: w });
-                  }}
+                <SegmentedControl
+                  aria-label={`${criterion.label} priority`}
+                  value={weightToSegment(criterion.weight)}
+                  onChange={(w) => updateCriterion(criterion.id, { weight: w })}
+                  options={[...WEIGHT_OPTIONS]}
                 />
               </div>
 
               {criterion.type === "commute" && (
-                <CommuteConfig criterion={criterion} />
+                <CommuteConfig criterion={criterion} addressRef={commuteAddressRef} />
               )}
               {criterion.type === "amenities" && (
                 <AmenityConfig criterion={criterion} />

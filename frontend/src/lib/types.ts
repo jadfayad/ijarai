@@ -168,6 +168,8 @@ export type AgentStreamEvent =
   | { type: "result"; data: AgentResearchResponse }
   | { type: "error"; data: { message: string } };
 
+export type CriterionOrigin = "manual" | "agent" | "wizard";
+
 export interface CriterionConfig {
   id: string;
   type: CriterionType;
@@ -186,6 +188,7 @@ export interface CriterionConfig {
     | AiParams
     | Record<string, never>;
   icon: string;
+  origin?: CriterionOrigin;
 }
 
 export interface ScoreRequest {

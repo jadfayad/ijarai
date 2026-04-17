@@ -4,39 +4,43 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Sparkles,
   Send,
+  Square,
   Trash2,
   ChevronLeft,
   Menu,
-  MapPin,
-  Building2,
+  Scale,
+  TreePine,
   Users,
-  Wallet,
+  Footprints,
 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { AgentMessageBubble } from "./AgentMessage";
 import { AgentPlanProgress } from "./AgentPlanProgress";
 import { SidebarModeToggle } from "./SidebarModeToggle";
+import { toast } from "@/components/ui/toast";
 
 const SUGGESTED_PROMPTS = [
   {
-    icon: MapPin,
-    label: "Best neighborhoods",
-    prompt: "What are the best neighborhoods for a young professional?",
+    icon: Scale,
+    label: "Weight budget over commute",
+    prompt:
+      "I care more about staying under budget than minimizing commute. Rebalance my criteria.",
   },
   {
-    icon: Building2,
-    label: "Find me an apartment",
-    prompt: "Find me a 2BR apartment near the city center under $3,000/month",
+    icon: TreePine,
+    label: "Quiet with a park",
+    prompt: "I prefer quiet neighborhoods with a park within walking distance.",
   },
   {
     icon: Users,
-    label: "Family-friendly areas",
-    prompt: "Compare the top family-friendly areas with good schools nearby",
+    label: "Family of 4, good schools",
+    prompt:
+      "I'm a family of 4 looking for good schools nearby and a 3BR-friendly area.",
   },
   {
-    icon: Wallet,
-    label: "Best value zones",
-    prompt: "Which areas offer the best value for rent with great amenities?",
+    icon: Footprints,
+    label: "Walkable under $2,500",
+    prompt: "Find me walkable areas under $2,500/month.",
   },
 ];
 
@@ -62,8 +66,14 @@ interface AgentPanelProps {
 }
 
 export function AgentPanel({ onClose }: AgentPanelProps) {
-  const { messages, isThinking, currentPlan, sendMessage, clearConversation } =
-    useAgentStore();
+  const {
+    messages,
+    isThinking,
+    currentPlan,
+    sendMessage,
+    stopAgent,
+    clearConversation,
+  } = useAgentStore();
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,10 +111,31 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
+  const handleClearClick = () => {
+    const snapshot = useAgentStore.getState().messages;
+    if (snapshot.length === 0) return;
+    clearConversation();
+    toast("Conversation cleared", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Restore the previous messages snapshot via direct state set
+          useAgentStore.setState({ messages: snapshot });
+        },
+      },
+    });
+  };
+
+  const isEmpty = messages.length === 0 && !isThinking;
+  const placeholder = isEmpty
+    ? "Ask about neighborhoods, budgets, commutes…"
+    : "Ask a follow-up…";
+
   if (!sidebarOpen) {
     return (
       <button
         onClick={() => setSidebarOpen(true)}
+        aria-label="Open AI assistant panel"
         className="absolute top-14 left-4 z-40 bg-black/60 backdrop-blur-xl border border-white/[0.12] rounded-xl px-3 py-2.5 shadow-2xl hover:bg-black/70 hover:border-white/[0.18] transition-all duration-300 text-foreground group"
       >
         <Menu
@@ -134,7 +165,8 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
                 <button
-                  onClick={clearConversation}
+                  onClick={handleClearClick}
+                  aria-label="Clear conversation"
                   className="text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
                   title="Clear conversation"
                 >
@@ -143,6 +175,7 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
               )}
               <button
                 onClick={onClose ?? (() => setSidebarOpen(false))}
+                aria-label="Collapse sidebar"
                 className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
               >
                 <ChevronLeft size={18} />
@@ -156,7 +189,7 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 && !isThinking ? (
+          {isEmpty ? (
             <div className="flex flex-col h-full">
               <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -207,32 +240,41 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
           )}
         </div>
 
-        {/* Input area */}
-        {(messages.length > 0 || isThinking) && (
-          <>
-            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
-            <div className="p-3">
-              <div className="flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-colors duration-200">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={handleTextareaChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask a follow-up..."
-                  rows={1}
-                  className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isThinking}
-                  className="p-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-30 disabled:hover:bg-primary/20 transition-all duration-200 shrink-0"
-                >
-                  <Send size={15} />
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+        {/* Input area — always visible */}
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+        <div className="p-3">
+          <div className="flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-colors duration-200">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              rows={1}
+              aria-label="Message the AI assistant"
+              className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5"
+            />
+            {isThinking ? (
+              <button
+                onClick={stopAgent}
+                aria-label="Stop generating"
+                title="Stop"
+                className="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all duration-200 shrink-0"
+              >
+                <Square size={14} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                aria-label="Send message"
+                className="p-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-30 disabled:hover:bg-primary/20 transition-all duration-200 shrink-0"
+              >
+                <Send size={15} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

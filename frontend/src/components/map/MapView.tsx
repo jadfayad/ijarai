@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CellPopup } from "./CellPopup";
+import { MapLegend } from "./MapLegend";
 import { SetupWizard } from "@/components/criteria/SetupWizard";
 import { GRID_RESOLUTION_CONFIG, type CommuteParams, type GridResolution } from "@/lib/types";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -350,6 +351,14 @@ export function MapView() {
             setSelectedCellId(null);
             setAreaName(null);
           }}
+        />
+      )}
+
+      {scoreData && (
+        <MapLegend
+          visibleCount={visibleCount}
+          totalCount={totalCount}
+          threshold={scoreThreshold}
         />
       )}
 

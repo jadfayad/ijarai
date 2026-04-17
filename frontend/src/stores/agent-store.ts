@@ -11,6 +11,8 @@ export interface AgentMessage {
   researchResult?: AgentResearchResponse;
   usage?: TokenUsage;
   criterionAdded?: boolean;
+  /** Snapshot of the agent's plan steps at completion, for transcript history. */
+  plan?: AgentTodo[];
 }
 
 let messageCounter = 0;
@@ -21,9 +23,11 @@ interface AgentStore {
   currentPlan: AgentTodo[];
   currentStep: string | null;
   sidebarMode: "criteria" | "agent";
+  abortController: AbortController | null;
 
   setSidebarMode: (mode: "criteria" | "agent") => void;
   sendMessage: (content: string) => void;
+  stopAgent: () => void;
   addCriterionFromResult: (result: AgentResearchResponse, prompt: string) => void;
   clearConversation: () => void;
 }
@@ -34,6 +38,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   currentPlan: [],
   currentStep: null,
   sidebarMode: "criteria",
+  abortController: null,
 
   setSidebarMode: (mode) => set({ sidebarMode: mode }),
 
@@ -45,11 +50,14 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       timestamp: Date.now(),
     };
 
+    const controller = new AbortController();
+
     set((state) => ({
       messages: [...state.messages, userMsg],
       isThinking: true,
       currentPlan: [],
       currentStep: null,
+      abortController: controller,
     }));
 
     try {
@@ -69,6 +77,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
             case "result": {
               const result = event.data;
+              const planSnapshot = get().currentPlan;
               const agentMsg: AgentMessage = {
                 id: `msg-${++messageCounter}`,
                 role: "agent",
@@ -78,6 +87,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 timestamp: Date.now(),
                 researchResult: result,
                 usage: result.usage,
+                plan: planSnapshot.length > 0 ? planSnapshot : undefined,
               };
 
               set((state) => ({
@@ -85,6 +95,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 isThinking: false,
                 currentPlan: [],
                 currentStep: null,
+                abortController: null,
               }));
               break;
             }
@@ -102,18 +113,25 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 isThinking: false,
                 currentPlan: [],
                 currentStep: null,
+                abortController: null,
               }));
               break;
             }
           }
         },
+        controller.signal,
       );
 
       // If stream ended without a result/error event, clear thinking state
       if (get().isThinking) {
-        set({ isThinking: false, currentPlan: [], currentStep: null });
+        set({ isThinking: false, currentPlan: [], currentStep: null, abortController: null });
       }
     } catch (err) {
+      // Silent on user-initiated abort — stopAgent already wrote the "Stopped." message
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+
       const errorMsg: AgentMessage = {
         id: `msg-${++messageCounter}`,
         role: "agent",
@@ -126,8 +144,28 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         isThinking: false,
         currentPlan: [],
         currentStep: null,
+        abortController: null,
       }));
     }
+  },
+
+  stopAgent: () => {
+    const { abortController } = get();
+    if (!abortController) return;
+    abortController.abort();
+    const stoppedMsg: AgentMessage = {
+      id: `msg-${++messageCounter}`,
+      role: "agent",
+      content: "Stopped.",
+      timestamp: Date.now(),
+    };
+    set((state) => ({
+      messages: [...state.messages, stoppedMsg],
+      isThinking: false,
+      currentPlan: [],
+      currentStep: null,
+      abortController: null,
+    }));
   },
 
   addCriterionFromResult: (result: AgentResearchResponse, prompt: string) => {
@@ -142,6 +180,15 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     }));
   },
 
-  clearConversation: () =>
-    set({ messages: [], isThinking: false, currentPlan: [], currentStep: null }),
+  clearConversation: () => {
+    const { abortController } = get();
+    if (abortController) abortController.abort();
+    set({
+      messages: [],
+      isThinking: false,
+      currentPlan: [],
+      currentStep: null,
+      abortController: null,
+    });
+  },
 }));

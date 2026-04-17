@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   Zap,
   Wand2,
-  Layers,
   SlidersHorizontal,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
@@ -40,8 +39,7 @@ function SectionHeader({
 }
 
 export function CriteriaPanel() {
-  const { cityConfig, criteria, error, scoreData, setWizardOpen } =
-    useCriteriaStore();
+  const { criteria, error, scoreData, setWizardOpen } = useCriteriaStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
 
@@ -55,6 +53,7 @@ export function CriteriaPanel() {
     return (
       <button
         onClick={() => setSidebarOpen(true)}
+        aria-label="Open search criteria panel"
         className="absolute top-14 left-4 z-40 bg-black/60 backdrop-blur-xl border border-white/[0.12] rounded-xl px-3 py-2.5 shadow-2xl hover:bg-black/70 hover:border-white/[0.18] transition-all duration-300 text-foreground group"
       >
         <Menu
@@ -82,26 +81,38 @@ export function CriteriaPanel() {
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              {backendOk !== null && (
-                <Tooltip>
-                  <TooltipTrigger className="flex items-center">
-                    <span
-                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                        backendOk
+              <Tooltip>
+                <TooltipTrigger
+                  className="flex items-center"
+                  aria-label={
+                    backendOk === null
+                      ? "Checking backend"
+                      : backendOk
+                        ? "Backend connected"
+                        : "Backend offline"
+                  }
+                >
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                      backendOk === null
+                        ? "bg-white/20 animate-pulse"
+                        : backendOk
                           ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"
                           : "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]"
-                      }`}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {backendOk
+                    }`}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {backendOk === null
+                    ? "Checking backend…"
+                    : backendOk
                       ? "Backend connected"
                       : "Backend offline — start the server on port 8000"}
-                  </TooltipContent>
-                </Tooltip>
-              )}
+                </TooltipContent>
+              </Tooltip>
               <button
                 onClick={() => setSidebarOpen(false)}
+                aria-label="Collapse sidebar"
                 className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all duration-200"
               >
                 <ChevronLeft size={18} />
@@ -113,16 +124,15 @@ export function CriteriaPanel() {
 
         {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto">
-          {/* ── Section: Scenario ── */}
-          <div className="px-4 pt-3 pb-4">
-            <SectionHeader icon={Layers} label="Scenario" />
+          {/* Scenario switcher — inline, no section label */}
+          <div className="px-4 pt-3 pb-2">
             <ScenarioSwitcher />
           </div>
 
           <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
 
           {/* ── Section: Criteria ── */}
-          <div className="px-4 pt-4 pb-4 space-y-2.5">
+          <div className="px-4 pt-3 pb-4 space-y-2.5">
             <SectionHeader icon={SlidersHorizontal} label="Criteria" />
 
             {backendOk === false && (

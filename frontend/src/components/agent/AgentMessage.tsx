@@ -1,9 +1,10 @@
 "use client";
 
-import { Bot, User, Plus, Check } from "lucide-react";
+import { useState } from "react";
+import { Bot, User, Plus, Check, ChevronDown, CheckCircle2 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import type { AgentMessage as AgentMessageType } from "@/stores/agent-store";
-import type { TokenUsage } from "@/lib/types";
+import type { TokenUsage, AgentTodo } from "@/lib/types";
 
 function formatTime(timestamp: number) {
   return new Date(timestamp).toLocaleTimeString([], {
@@ -31,7 +32,53 @@ function formatTokenCount(n: number): string {
   return String(n);
 }
 
+function CompletedPlan({ plan }: { plan: AgentTodo[] }) {
+  const [open, setOpen] = useState(false);
+  const completedCount = plan.filter((t) => t.status === "completed").length;
+  return (
+    <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
+        aria-expanded={open}
+      >
+        <CheckCircle2 size={11} className="text-emerald-400/70 shrink-0" />
+        <span className="flex-1 text-left tabular-nums">
+          {completedCount} of {plan.length} steps completed
+        </span>
+        <ChevronDown
+          size={11}
+          className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <ol className="px-2.5 pb-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+          {plan.map((todo, i) => (
+            <li
+              key={todo.id ?? i}
+              className="flex items-start gap-2 text-[11px] leading-relaxed"
+            >
+              <span className="shrink-0 mt-0.5">
+                {todo.status === "completed" ? (
+                  <CheckCircle2 size={10} className="text-emerald-400/70" />
+                ) : (
+                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-white/20" />
+                )}
+              </span>
+              <span className="text-white/50">{todo.content}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+const SHOW_TOKEN_DEBUG = process.env.NEXT_PUBLIC_DEBUG === "true";
+
 function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
+  if (!SHOW_TOKEN_DEBUG) return null;
   const total = usage.input_tokens + usage.output_tokens;
   if (total === 0) return null;
   return (
@@ -78,6 +125,10 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         >
           {isUser ? message.content : renderContent(message.content)}
         </div>
+
+        {!isUser && message.plan && message.plan.length > 0 && (
+          <CompletedPlan plan={message.plan} />
+        )}
 
         {!isUser && message.researchResult && (
           message.criterionAdded ? (

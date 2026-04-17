@@ -4,6 +4,7 @@ import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
 import { useScenarioStore } from "./scenario-store";
 import type {
   CriterionConfig,
+  CriterionOrigin,
   GridResolution,
   ScoreResponse,
   CityConfig,
@@ -14,7 +15,8 @@ import type {
 
 export function createCommuteCriterion(
   preset: CommutePreset,
-  dest?: { lat: number; lng: number; label?: string }
+  dest?: { lat: number; lng: number; label?: string },
+  origin: CriterionOrigin = "manual",
 ): CriterionConfig {
   const presetCfg = COMMUTE_PRESETS.find((p) => p.preset === preset)!;
   return {
@@ -32,11 +34,13 @@ export function createCommuteCriterion(
       label: dest?.label ?? "",
     },
     icon: presetCfg.icon,
+    origin,
   };
 }
 
 export function createAmenityCriterion(
-  categories: string[] = ["gym", "cafe", "park", "supermarket"]
+  categories: string[] = ["gym", "cafe", "park", "supermarket"],
+  origin: CriterionOrigin = "manual",
 ): CriterionConfig {
   return {
     id: "amenities",
@@ -47,11 +51,13 @@ export function createAmenityCriterion(
     enabled: true,
     params: { categories },
     icon: "trees",
+    origin,
   };
 }
 
 export function createBudgetCriterion(
-  maxRent = 7000
+  maxRent = 7000,
+  origin: CriterionOrigin = "manual",
 ): CriterionConfig {
   return {
     id: "budget",
@@ -62,10 +68,13 @@ export function createBudgetCriterion(
     enabled: true,
     params: { max_monthly_rent: maxRent },
     icon: "wallet",
+    origin,
   };
 }
 
-export function createNeighborhoodCriterion(): CriterionConfig {
+export function createNeighborhoodCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "neighborhood",
     type: "neighborhood",
@@ -75,10 +84,13 @@ export function createNeighborhoodCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "star",
+    origin,
   };
 }
 
-export function createSafetyCriterion(): CriterionConfig {
+export function createSafetyCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "safety",
     type: "safety",
@@ -88,10 +100,13 @@ export function createSafetyCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "shield",
+    origin,
   };
 }
 
-export function createWalkabilityCriterion(): CriterionConfig {
+export function createWalkabilityCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "walkability",
     type: "walkability",
@@ -101,10 +116,13 @@ export function createWalkabilityCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "footprints",
+    origin,
   };
 }
 
-export function createGreenSpacesCriterion(): CriterionConfig {
+export function createGreenSpacesCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "green_spaces",
     type: "green_spaces",
@@ -114,10 +132,13 @@ export function createGreenSpacesCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "tree-pine",
+    origin,
   };
 }
 
-export function createCommunityCriterion(): CriterionConfig {
+export function createCommunityCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "community",
     type: "community",
@@ -127,10 +148,13 @@ export function createCommunityCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "users-round",
+    origin,
   };
 }
 
-export function createInfrastructureCriterion(): CriterionConfig {
+export function createInfrastructureCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "infrastructure",
     type: "infrastructure",
@@ -140,10 +164,13 @@ export function createInfrastructureCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "wrench",
+    origin,
   };
 }
 
-export function createAestheticsCriterion(): CriterionConfig {
+export function createAestheticsCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "aesthetics",
     type: "aesthetics",
@@ -153,10 +180,13 @@ export function createAestheticsCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "palette",
+    origin,
   };
 }
 
-export function createDesirabilityCriterion(): CriterionConfig {
+export function createDesirabilityCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "desirability",
     type: "desirability",
@@ -166,10 +196,13 @@ export function createDesirabilityCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "trending-up",
+    origin,
   };
 }
 
-export function createNoiseCriterion(): CriterionConfig {
+export function createNoiseCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "noise",
     type: "noise",
@@ -179,10 +212,13 @@ export function createNoiseCriterion(): CriterionConfig {
     enabled: true,
     params: {},
     icon: "volume-x",
+    origin,
   };
 }
 
-export function createTransitCriterion(): CriterionConfig {
+export function createTransitCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "transit",
     type: "transit",
@@ -192,10 +228,13 @@ export function createTransitCriterion(): CriterionConfig {
     enabled: true,
     params: { modes: ["train", "bus"] },
     icon: "train",
+    origin,
   };
 }
 
-export function createHealthcareCriterion(): CriterionConfig {
+export function createHealthcareCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "healthcare",
     type: "healthcare",
@@ -205,10 +244,13 @@ export function createHealthcareCriterion(): CriterionConfig {
     enabled: true,
     params: { facility_types: ["hospital", "clinic"] },
     icon: "hospital",
+    origin,
   };
 }
 
-export function createSchoolsCriterion(): CriterionConfig {
+export function createSchoolsCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "schools",
     type: "schools",
@@ -218,10 +260,13 @@ export function createSchoolsCriterion(): CriterionConfig {
     enabled: true,
     params: { age_band: "all" },
     icon: "graduation-cap",
+    origin,
   };
 }
 
-export function createHazardCriterion(): CriterionConfig {
+export function createHazardCriterion(
+  origin: CriterionOrigin = "manual",
+): CriterionConfig {
   return {
     id: "hazard",
     type: "hazard",
@@ -231,6 +276,7 @@ export function createHazardCriterion(): CriterionConfig {
     enabled: true,
     params: { hazards: ["flood"] },
     icon: "flame",
+    origin,
   };
 }
 
@@ -260,6 +306,7 @@ export function createAiCriterion(
     enabled: true,
     params: params as CriterionConfig["params"],
     icon: "sparkles",
+    origin: "agent",
   };
 }
 
@@ -309,11 +356,14 @@ interface CriteriaStore {
   scoreThreshold: number;
   gridResolution: GridResolution;
   wizardOpen: boolean;
+  /** Criterion id that should auto-expand and focus its primary input on mount/update. */
+  pendingFocusCriterionId: string | null;
 
   loadCityConfig: (slug?: string) => Promise<void>;
   setCriteria: (criteria: CriterionConfig[]) => void;
   addCriterion: (criterion: CriterionConfig) => void;
   removeCriterion: (id: string) => void;
+  restoreCriterion: (criterion: CriterionConfig, index: number) => void;
   updateCriterion: (id: string, updates: Partial<CriterionConfig>) => void;
   setScoreData: (data: ScoreResponse | null) => void;
   setLoading: (loading: boolean) => void;
@@ -322,6 +372,7 @@ interface CriteriaStore {
   setScoreThreshold: (threshold: number) => void;
   setGridResolution: (resolution: GridResolution) => void;
   setWizardOpen: (open: boolean) => void;
+  setPendingFocus: (id: string | null) => void;
   generate: () => Promise<void>;
   cancelGeneration: () => void;
 
@@ -341,6 +392,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   scoreThreshold: 0,
   gridResolution: "normal",
   wizardOpen: false,
+  pendingFocusCriterionId: null,
 
   loadCityConfig: async (slug?: string) => {
     try {
@@ -361,12 +413,23 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       criteria: state.criteria.filter((c) => c.id !== id),
     })),
 
+  restoreCriterion: (criterion, index) =>
+    set((state) => {
+      if (state.criteria.some((c) => c.id === criterion.id)) return state;
+      const next = [...state.criteria];
+      const at = Math.min(Math.max(index, 0), next.length);
+      next.splice(at, 0, criterion);
+      return { criteria: next };
+    }),
+
   updateCriterion: (id, updates) =>
     set((state) => ({
       criteria: state.criteria.map((c) =>
         c.id === id ? { ...c, ...updates } : c
       ),
     })),
+
+  setPendingFocus: (id) => set({ pendingFocusCriterionId: id }),
 
   setScoreData: (data) => set({ scoreData: data }),
   setLoading: (loading) => set({ loading }),

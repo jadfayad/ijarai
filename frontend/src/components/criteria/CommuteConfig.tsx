@@ -1,9 +1,10 @@
 "use client";
 
+import type { RefObject } from "react";
 import { useCallback } from "react";
 import { Car, TrainFront, Gauge, Navigation } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
-import { AddressAutocomplete } from "./AddressAutocomplete";
+import { AddressAutocomplete, type AddressAutocompleteHandle } from "./AddressAutocomplete";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -14,9 +15,10 @@ import type { CriterionConfig, CommuteParams, CommuteSource, TimeOfDay } from "@
 
 interface Props {
   criterion: CriterionConfig;
+  addressRef?: RefObject<AddressAutocompleteHandle | null>;
 }
 
-export function CommuteConfig({ criterion }: Props) {
+export function CommuteConfig({ criterion, addressRef }: Props) {
   const { updateCriterion, cityConfig } = useCriteriaStore();
   const params = criterion.params as CommuteParams;
 
@@ -36,6 +38,7 @@ export function CommuteConfig({ criterion }: Props) {
   return (
     <div className="space-y-3 pt-1">
       <AddressAutocomplete
+        ref={addressRef}
         value={params.label ?? ""}
         onSelect={handleSelect}
         placeholder="Search for a destination..."

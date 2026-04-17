@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Briefcase,
   Plane,
@@ -109,7 +109,7 @@ export function SetupWizard({ onComplete }: Props) {
   const [neighborhoodEnabled, setNeighborhoodEnabled] = useState(false);
   const [noiseEnabled, setNoiseEnabled] = useState(false);
 
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   const handleAddCommute = useCallback((preset: CommutePreset) => {
     const existing = commutes.find((c) => c.preset === preset);
@@ -168,25 +168,29 @@ export function SetupWizard({ onComplete }: Props) {
     const result = [];
 
     for (const c of commutes) {
-      const criterion = createCommuteCriterion(c.preset, {
-        lat: c.destination?.lat ?? 0,
-        lng: c.destination?.lng ?? 0,
-        label: c.label,
-      });
+      const criterion = createCommuteCriterion(
+        c.preset,
+        {
+          lat: c.destination?.lat ?? 0,
+          lng: c.destination?.lng ?? 0,
+          label: c.label,
+        },
+        "wizard",
+      );
       const commuteParams = criterion.params as CommuteParams;
       criterion.params = { ...commuteParams, mode: c.mode };
       result.push(criterion);
     }
 
     if (amenitiesEnabled && amenityCategories.length > 0) {
-      const amenity = createAmenityCriterion(amenityCategories);
+      const amenity = createAmenityCriterion(amenityCategories, "wizard");
       amenity.weight = amenityWeight;
       result.push(amenity);
     }
 
-    if (budgetEnabled) result.push(createBudgetCriterion(maxRent));
-    if (neighborhoodEnabled) result.push(createNeighborhoodCriterion());
-    if (noiseEnabled) result.push(createNoiseCriterion());
+    if (budgetEnabled) result.push(createBudgetCriterion(maxRent, "wizard"));
+    if (neighborhoodEnabled) result.push(createNeighborhoodCriterion("wizard"));
+    if (noiseEnabled) result.push(createNoiseCriterion("wizard"));
 
     return result;
   };
@@ -209,11 +213,33 @@ export function SetupWizard({ onComplete }: Props) {
     }
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus the first interactive element of the current step on mount / step change.
+  useEffect(() => {
+    const root = dialogRef.current;
+    if (!root) return;
+    const target = root.querySelector<HTMLElement>(
+      'button:not([tabindex="-1"]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    target?.focus();
+  }, [step]);
+
+  // Trap Escape to close the wizard.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center">
+    <div className="absolute inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Setup wizard">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-      <div className="relative w-full max-w-[540px] mx-4 animate-in fade-in zoom-in-95 duration-300">
+      <div ref={dialogRef} className="relative w-full max-w-[540px] mx-4 animate-in fade-in zoom-in-95 duration-300">
         <div className="bg-gradient-to-b from-[rgba(22,22,38,0.95)] to-[rgba(14,14,24,0.97)] backdrop-blur-2xl rounded-3xl border border-white/[0.1] shadow-2xl shadow-black/50 overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-7 pb-5">
@@ -231,12 +257,24 @@ export function SetupWizard({ onComplete }: Props) {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={handleClose}
-                className="text-white/30 hover:text-white/60 p-1.5 rounded-lg hover:bg-white/[0.06] transition-all"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setWizardOpen(false);
+                    onComplete();
+                  }}
+                  className="text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-all"
+                >
+                  Skip wizard
+                </button>
+                <button
+                  onClick={handleClose}
+                  aria-label="Close wizard"
+                  className="text-white/30 hover:text-white/60 p-1.5 rounded-lg hover:bg-white/[0.06] transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Step indicator */}
@@ -331,6 +369,7 @@ export function SetupWizard({ onComplete }: Props) {
                             centerLat={cityConfig.center_lat}
                             centerLng={cityConfig.center_lng}
                             countryCode={cityConfig.country_code}
+                            autoFocus={!c.destination}
                           />
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium w-9 shrink-0">
@@ -360,185 +399,195 @@ export function SetupWizard({ onComplete }: Props) {
             )}
 
             {step === 1 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-200">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-semibold text-white">
-                    What do you need nearby?
-                  </h3>
+              <div className="animate-in fade-in slide-in-from-right-4 duration-200 space-y-2.5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                  What else matters?
+                </h3>
+                <p className="text-xs text-white/35 mb-4">
+                  Enable the preferences that matter to you. All are optional.
+                </p>
+
+                {/* Amenities — enable card with expandable chip picker + priority */}
+                <div
+                  className={`rounded-xl border transition-all duration-200 ${
+                    amenitiesEnabled
+                      ? "bg-emerald-500/[0.06] border-emerald-500/25"
+                      : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                  }`}
+                >
                   <button
                     onClick={() => setAmenitiesEnabled(!amenitiesEnabled)}
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-md border transition-all ${
-                      amenitiesEnabled
-                        ? "bg-primary/15 text-primary border-primary/30"
-                        : "bg-white/[0.04] text-white/30 border-white/[0.08]"
-                    }`}
+                    className="w-full flex items-center gap-3 p-3.5"
                   >
-                    {amenitiesEnabled ? "Enabled" : "Disabled"}
-                  </button>
-                </div>
-                <p className="text-xs text-white/35 mb-5">
-                  Pick amenities that matter to your lifestyle.
-                </p>
-
-                <div className={`flex flex-wrap gap-2 mb-6 transition-opacity ${amenitiesEnabled ? "" : "opacity-40 pointer-events-none"}`}>
-                  {AMENITY_OPTIONS.map(({ key, label, icon }) => {
-                    const active = amenityCategories.includes(key);
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => toggleAmenity(key)}
-                        className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-all duration-200 select-none ${
-                          active
-                            ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                            : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
-                        }`}
-                      >
-                        {icon}
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {amenitiesEnabled && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
-                        Priority
-                      </span>
-                      <span className="text-xs font-mono font-semibold tabular-nums text-white/70">
-                        {amenityWeight}/10
-                      </span>
-                    </div>
-                    <Slider
-                      value={[amenityWeight]}
-                      min={1}
-                      max={10}
-                      step={1}
-                      onValueChange={(val) => {
-                        const w = Array.isArray(val) ? val[0] : val;
-                        setAmenityWeight(w);
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-200">
-                <h3 className="text-sm font-semibold text-white mb-1">
-                  Other preferences
-                </h3>
-                <p className="text-xs text-white/35 mb-5">
-                  Fine-tune your search with additional criteria.
-                </p>
-
-                <div className="space-y-2.5">
-                  {/* Budget */}
-                  <div
-                    className={`rounded-xl border transition-all duration-200 ${
-                      budgetEnabled
-                        ? "bg-amber-500/[0.06] border-amber-500/25"
-                        : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
-                    }`}
-                  >
-                    <button
-                      onClick={() => setBudgetEnabled(!budgetEnabled)}
-                      className="w-full flex items-center gap-3 p-3.5"
-                    >
-                      <div className={`p-2 rounded-lg transition-colors ${budgetEnabled ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-white/30"}`}>
-                        <Wallet size={16} />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-medium text-white/80">Budget / Rent</div>
-                        <div className="text-[11px] text-white/30">Match areas to your monthly rent budget</div>
-                      </div>
-                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                        budgetEnabled
-                          ? "bg-primary border-primary"
-                          : "border-white/[0.15]"
-                      }`}>
-                        {budgetEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
-                      </div>
-                    </button>
-                    {budgetEnabled && (
-                      <div className="px-3.5 pb-3.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] text-white/35 uppercase tracking-wider font-medium">
-                            Max Monthly Rent
-                          </span>
-                          <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
-                            {cityConfig.currency_symbol}{maxRent.toLocaleString()}
-                          </span>
-                        </div>
-                        <Slider
-                          value={[maxRent]}
-                          min={cityConfig.rent_min}
-                          max={cityConfig.rent_max}
-                          step={cityConfig.rent_step}
-                          onValueChange={(val) => {
-                            const v = Array.isArray(val) ? val[0] : val;
-                            setMaxRent(v);
-                          }}
-                        />
-                        <div className="flex justify-between text-[10px] text-white/20 mt-1">
-                          <span>{cityConfig.rent_min.toLocaleString()}</span>
-                          <span>{cityConfig.rent_max.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Neighborhood */}
-                  <button
-                    onClick={() => setNeighborhoodEnabled(!neighborhoodEnabled)}
-                    className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
-                      neighborhoodEnabled
-                        ? "bg-purple-500/[0.06] border-purple-500/25"
-                        : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg transition-colors ${neighborhoodEnabled ? "bg-purple-500/20 text-purple-400" : "bg-white/[0.06] text-white/30"}`}>
-                      <Star size={16} />
+                    <div className={`p-2 rounded-lg transition-colors ${amenitiesEnabled ? "bg-emerald-500/20 text-emerald-400" : "bg-white/[0.06] text-white/30"}`}>
+                      <Sparkles size={16} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="text-sm font-medium text-white/80">Neighborhood Quality</div>
-                      <div className="text-[11px] text-white/30">Overall reputation and livability</div>
+                      <div className="text-sm font-medium text-white/80">Nearby Amenities</div>
+                      <div className="text-[11px] text-white/30">Gyms, cafes, parks, groceries within walking distance</div>
                     </div>
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                      neighborhoodEnabled
-                        ? "bg-primary border-primary"
-                        : "border-white/[0.15]"
+                      amenitiesEnabled ? "bg-primary border-primary" : "border-white/[0.15]"
                     }`}>
-                      {neighborhoodEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
+                      {amenitiesEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
                     </div>
                   </button>
+                  {amenitiesEnabled && (
+                    <div className="px-3.5 pb-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="flex flex-wrap gap-1.5">
+                        {AMENITY_OPTIONS.map(({ key, label, icon }) => {
+                          const active = amenityCategories.includes(key);
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => toggleAmenity(key)}
+                              className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 select-none ${
+                                active
+                                  ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
+                                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                              }`}
+                            >
+                              {icon}
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-white/35 uppercase tracking-wider font-medium">
+                          Priority
+                        </span>
+                        <span className="text-xs font-mono font-semibold tabular-nums text-white/70">
+                          {amenityWeight}/10
+                        </span>
+                      </div>
+                      <Slider
+                        value={[amenityWeight]}
+                        min={1}
+                        max={10}
+                        step={1}
+                        onValueChange={(val) => {
+                          const w = Array.isArray(val) ? val[0] : val;
+                          setAmenityWeight(w);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
 
-                  {/* Noise */}
+                {/* Budget */}
+                <div
+                  className={`rounded-xl border transition-all duration-200 ${
+                    budgetEnabled
+                      ? "bg-amber-500/[0.06] border-amber-500/25"
+                      : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                  }`}
+                >
                   <button
-                    onClick={() => setNoiseEnabled(!noiseEnabled)}
-                    className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
-                      noiseEnabled
-                        ? "bg-slate-500/[0.06] border-slate-500/25"
-                        : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
-                    }`}
+                    onClick={() => setBudgetEnabled(!budgetEnabled)}
+                    className="w-full flex items-center gap-3 p-3.5"
                   >
-                    <div className={`p-2 rounded-lg transition-colors ${noiseEnabled ? "bg-slate-500/20 text-slate-400" : "bg-white/[0.06] text-white/30"}`}>
-                      <VolumeX size={16} />
+                    <div className={`p-2 rounded-lg transition-colors ${budgetEnabled ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-white/30"}`}>
+                      <Wallet size={16} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="text-sm font-medium text-white/80">Low Noise</div>
-                      <div className="text-[11px] text-white/30">Distance from highways, airports, construction</div>
+                      <div className="text-sm font-medium text-white/80">Budget / Rent</div>
+                      <div className="text-[11px] text-white/30">Match areas to your monthly rent budget</div>
                     </div>
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                      noiseEnabled
-                        ? "bg-primary border-primary"
-                        : "border-white/[0.15]"
+                      budgetEnabled ? "bg-primary border-primary" : "border-white/[0.15]"
                     }`}>
-                      {noiseEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
+                      {budgetEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
                     </div>
                   </button>
+                  {budgetEnabled && (
+                    <div className="px-3.5 pb-3.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] text-white/35 uppercase tracking-wider font-medium">
+                          Max Monthly Rent
+                        </span>
+                        <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
+                          {cityConfig.currency_symbol}{maxRent.toLocaleString()}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[maxRent]}
+                        min={cityConfig.rent_min}
+                        max={cityConfig.rent_max}
+                        step={cityConfig.rent_step}
+                        onValueChange={(val) => {
+                          const v = Array.isArray(val) ? val[0] : val;
+                          setMaxRent(v);
+                        }}
+                      />
+                      <div className="flex justify-between text-[10px] text-white/20 mt-1">
+                        <span>{cityConfig.rent_min.toLocaleString()}</span>
+                        <span>{cityConfig.rent_max.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Neighborhood */}
+                <button
+                  onClick={() => setNeighborhoodEnabled(!neighborhoodEnabled)}
+                  className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
+                    neighborhoodEnabled
+                      ? "bg-purple-500/[0.06] border-purple-500/25"
+                      : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg transition-colors ${neighborhoodEnabled ? "bg-purple-500/20 text-purple-400" : "bg-white/[0.06] text-white/30"}`}>
+                    <Star size={16} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium text-white/80">Neighborhood Quality</div>
+                    <div className="text-[11px] text-white/30">Overall reputation and livability</div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                    neighborhoodEnabled ? "bg-primary border-primary" : "border-white/[0.15]"
+                  }`}>
+                    {neighborhoodEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </div>
+                </button>
+
+                {/* Noise */}
+                <button
+                  onClick={() => setNoiseEnabled(!noiseEnabled)}
+                  className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
+                    noiseEnabled
+                      ? "bg-slate-500/[0.06] border-slate-500/25"
+                      : "bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg transition-colors ${noiseEnabled ? "bg-slate-500/20 text-slate-400" : "bg-white/[0.06] text-white/30"}`}>
+                    <VolumeX size={16} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium text-white/80">Low Noise</div>
+                    <div className="text-[11px] text-white/30">Distance from highways, airports, construction</div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                    noiseEnabled ? "bg-primary border-primary" : "border-white/[0.15]"
+                  }`}>
+                    {noiseEnabled && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </div>
+                </button>
+
+                {/* Recap */}
+                <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
+                  <div className="text-[10px] uppercase tracking-wider text-white/30 font-medium mb-1">
+                    Ready to generate
+                  </div>
+                  <div className="text-[11px] text-white/60">
+                    {commutes.length} commute{commutes.length === 1 ? "" : "s"}
+                    {amenitiesEnabled && amenityCategories.length > 0
+                      ? ` · ${amenityCategories.length} amenit${amenityCategories.length === 1 ? "y" : "ies"}`
+                      : ""}
+                    {budgetEnabled ? ` · budget ≤ ${cityConfig.currency_symbol}${maxRent.toLocaleString()}` : ""}
+                    {neighborhoodEnabled ? " · neighborhood quality" : ""}
+                    {noiseEnabled ? " · low noise" : ""}
+                  </div>
                 </div>
               </div>
             )}

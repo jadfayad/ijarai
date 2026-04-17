@@ -18,6 +18,21 @@ import { useCriteriaStore } from "@/stores/criteria-store";
 
 let _initialSyncDone = false;
 
+/**
+ * Returns a timestamp captured on mount and refreshed every 30 s. Using this
+ * instead of calling Date.now() directly during render keeps the component
+ * pure (react-hooks/purity) while still producing reasonably fresh
+ * "x minutes ago" labels.
+ */
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
 export function ScenarioSwitcher() {
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const allScenarios = useScenarioStore((s) => s.scenarios);
@@ -72,6 +87,8 @@ export function ScenarioSwitcher() {
 
   useEffect(() => {
     if (!open) {
+      // Reset inline edit state when the menu closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingId(null);
       return;
     }
@@ -106,8 +123,11 @@ export function ScenarioSwitcher() {
     return Math.round((sum / sc.scoreData.features.length) * 100);
   };
 
+  // `now` is captured once per render so the derived "relative time" labels
+  // stay pure within a render pass (react-hooks/purity).
+  const now = useNow();
   const relativeTime = (ts: number) => {
-    const diff = Date.now() - ts;
+    const diff = now - ts;
     const mins = Math.floor(diff / 60_000);
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins}m ago`;
@@ -120,16 +140,17 @@ export function ScenarioSwitcher() {
   const active = scenarios.find((s) => s.id === activeId);
   const activeScore = activeId ? avgScore(activeId) : null;
 
-  const menuPos = (() => {
-    if (!triggerRef.current) return {};
+  const [menuPos, setMenuPos] = useState<React.CSSProperties>({});
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    return {
-      position: "fixed" as const,
+    setMenuPos({
+      position: "fixed",
       top: rect.bottom + 6,
       left: rect.left,
       width: rect.width,
-    };
-  })();
+    });
+  }, [open]);
 
   return (
     <div className="w-full">

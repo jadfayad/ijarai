@@ -208,7 +208,7 @@ const PLACEHOLDER_SUGGESTIONS = [
 ];
 
 export function AddCriterionDialog() {
-  const { criteria, addCriterion, resolveDefaultDest } = useCriteriaStore();
+  const { criteria, addCriterion, resolveDefaultDest, setPendingFocus } = useCriteriaStore();
   const [open, setOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -262,25 +262,38 @@ export function AddCriterionDialog() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  const availableSingletons = SINGLETON_CRITERIA.filter(
-    (s) => !criteria.some((c) => c.id === s.id)
-  );
+  const singletonsWithStatus = SINGLETON_CRITERIA.map((s) => ({
+    ...s,
+    existing: criteria.find((c) => c.id === s.id) ?? null,
+  }));
 
   const handleAddCommute = (preset: CommutePreset) => {
     const presetCfg = COMMUTE_PRESETS.find((p) => p.preset === preset)!;
     const defaultDest = resolveDefaultDest(presetCfg.icon);
-    const criterion = createCommuteCriterion(preset, {
-      lat: defaultDest.lat,
-      lng: defaultDest.lng,
-      label: defaultDest.label,
-    });
+    const hasResolvedDest =
+      defaultDest.label !== "" && (defaultDest.lat !== 0 || defaultDest.lng !== 0);
+    const criterion = createCommuteCriterion(
+      preset,
+      hasResolvedDest
+        ? { lat: defaultDest.lat, lng: defaultDest.lng, label: defaultDest.label }
+        : undefined,
+    );
     addCriterion(criterion);
     setOpen(false);
+    // Auto-expand + focus address input when no usable default destination exists.
+    if (!hasResolvedDest) {
+      setPendingFocus(criterion.id);
+    }
   };
 
   const handleAddSingleton = (s: (typeof SINGLETON_CRITERIA)[number]) => {
     addCriterion(s.create());
     setOpen(false);
+  };
+
+  const handleEditExisting = (existingId: string) => {
+    setOpen(false);
+    setPendingFocus(existingId);
   };
 
   return (
@@ -326,7 +339,7 @@ export function AddCriterionDialog() {
                     <Bot size={18} className="text-violet-400/60" />
                   </div>
                   <p className="text-[11px] text-white/30 text-center leading-relaxed max-w-[220px]">
-                    Describe what you're looking for and I'll turn it into
+                    Describe what you&apos;re looking for and I&apos;ll turn it into
                     search criteria.
                   </p>
                   <div className="flex flex-wrap gap-1.5 justify-center mt-1">
@@ -388,30 +401,40 @@ export function AddCriterionDialog() {
                 </div>
               </div>
 
-              {availableSingletons.length > 0 && (
-                <>
-                  <div className="h-px bg-white/[0.06] mx-3" />
-                  <div className="p-3">
-                    <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
-                      Other
-                    </div>
-                    <div className="space-y-0.5">
-                      {availableSingletons.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => handleAddSingleton(s)}
-                          className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
-                        >
-                          <span className={`${s.iconBg} ${s.iconText} p-1.5 rounded-md`}>
-                            {s.icon}
-                          </span>
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
+              <div className="h-px bg-white/[0.06] mx-3" />
+              <div className="p-3">
+                <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
+                  Other
+                </div>
+                <div className="space-y-0.5">
+                  {singletonsWithStatus.map((s) =>
+                    s.existing ? (
+                      <button
+                        key={s.id}
+                        onClick={() => handleEditExisting(s.existing!.id)}
+                        className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg text-white/30 hover:bg-white/[0.04] hover:text-white/50 transition-all duration-150"
+                      >
+                        <span className={`${s.iconBg} ${s.iconText} opacity-50 p-1.5 rounded-md`}>
+                          {s.icon}
+                        </span>
+                        <span className="flex-1 text-left">{s.label}</span>
+                        <span className="text-[10px] text-white/25 italic">Added · Edit</span>
+                      </button>
+                    ) : (
+                      <button
+                        key={s.id}
+                        onClick={() => handleAddSingleton(s)}
+                        className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
+                      >
+                        <span className={`${s.iconBg} ${s.iconText} p-1.5 rounded-md`}>
+                          {s.icon}
+                        </span>
+                        {s.label}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
 
               <div className="h-px bg-white/[0.06] mx-3" />
               <div className="p-3">

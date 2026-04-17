@@ -1,7 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { Input } from "@/components/ui/input";
+
+export interface AddressAutocompleteHandle {
+  focus: () => void;
+}
 
 interface Prediction {
   place_id: string;
@@ -16,6 +28,7 @@ interface Props {
   centerLat?: number;
   centerLng?: number;
   countryCode?: string;
+  autoFocus?: boolean;
 }
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY ?? "";
@@ -68,15 +81,19 @@ async function fetchPlaceLocation(placeId: string): Promise<{ lat: number; lng: 
   return { lat: data.location.latitude, lng: data.location.longitude };
 }
 
-export function AddressAutocomplete({
-  value,
-  onSelect,
-  placeholder = "Search for an address...",
-  className,
-  centerLat = 25.2048,
-  centerLng = 55.2708,
-  countryCode = "ae",
-}: Props) {
+export const AddressAutocomplete = forwardRef<AddressAutocompleteHandle, Props>(function AddressAutocomplete(
+  {
+    value,
+    onSelect,
+    placeholder = "Search for an address...",
+    className,
+    centerLat = 25.2048,
+    centerLng = 55.2708,
+    countryCode = "ae",
+    autoFocus = false,
+  },
+  ref,
+) {
   const center = useMemo(
     () => ({ latitude: centerLat, longitude: centerLng }),
     [centerLat, centerLng]
@@ -87,6 +104,11 @@ export function AddressAutocomplete({
   const [activeIndex, setActiveIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }), []);
 
   useEffect(() => {
     setQuery(value);
@@ -153,13 +175,22 @@ export function AddressAutocomplete({
 
   return (
     <div ref={containerRef} className="relative flex-1">
+      <label className="sr-only" htmlFor="address-autocomplete-input">
+        {placeholder}
+      </label>
       <Input
+        id="address-autocomplete-input"
+        ref={inputRef}
         placeholder={placeholder}
         value={query}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onFocus={() => predictions.length > 0 && setOpen(true)}
         className={className}
+        autoFocus={autoFocus}
+        aria-label={placeholder}
+        aria-autocomplete="list"
+        aria-expanded={open && predictions.length > 0}
       />
       {open && predictions.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-white/[0.08] bg-black/70 backdrop-blur-2xl shadow-2xl">
@@ -180,4 +211,4 @@ export function AddressAutocomplete({
       )}
     </div>
   );
-}
+});
