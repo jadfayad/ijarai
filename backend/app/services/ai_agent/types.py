@@ -108,6 +108,12 @@ class AgentResearchRequest(BaseModel):
     city: str = "dubai"
 
 
+class TokenUsage(BaseModel):
+    """Token counts for an LLM agent exchange."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
 class AgentResearchResponse(BaseModel):
     """Returned to the frontend after the agent completes research."""
     strategy: str
@@ -118,3 +124,4 @@ class AgentResearchResponse(BaseModel):
     pois: list[dict] = Field(default_factory=list)
     poi_scoring_mode: str = "density"
     poi_search_radius_m: float = 1000.0
+    usage: TokenUsage | None = None

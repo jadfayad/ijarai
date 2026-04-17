@@ -1,8 +1,9 @@
 "use client";
 
-import { Bot, User, Plus } from "lucide-react";
+import { Bot, User, Plus, Check } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import type { AgentMessage as AgentMessageType } from "@/stores/agent-store";
+import type { TokenUsage } from "@/lib/types";
 
 function formatTime(timestamp: number) {
   return new Date(timestamp).toLocaleTimeString([], {
@@ -23,6 +24,24 @@ function renderContent(text: string) {
     }
     return <span key={i}>{part}</span>;
   });
+}
+
+function formatTokenCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
+  const total = usage.input_tokens + usage.output_tokens;
+  if (total === 0) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] text-white/20 font-mono"
+      title={`In: ${usage.input_tokens.toLocaleString()} · Out: ${usage.output_tokens.toLocaleString()}`}
+    >
+      {formatTokenCount(usage.input_tokens)}↑ {formatTokenCount(usage.output_tokens)}↓
+    </span>
+  );
 }
 
 export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
@@ -61,20 +80,28 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         </div>
 
         {!isUser && message.researchResult && (
-          <button
-            onClick={() => {
-              const userMsg = findUserPromptBefore(message);
-              addCriterionFromResult(message.researchResult!, userMsg);
-            }}
-            className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
-          >
-            <Plus size={13} />
-            Add to criteria
-          </button>
+          message.criterionAdded ? (
+            <div className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
+              <Check size={13} />
+              Added
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                const userMsg = findUserPromptBefore(message);
+                addCriterionFromResult(message.researchResult!, userMsg);
+              }}
+              className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
+            >
+              <Plus size={13} />
+              Add to criteria
+            </button>
+          )
         )}
 
-        <span className="text-[10px] text-white/25 mt-1 px-1">
+        <span className="text-[10px] text-white/25 mt-1 px-1 flex items-center gap-2">
           {formatTime(message.timestamp)}
+          {!isUser && message.usage && <TokenUsageBadge usage={message.usage} />}
         </span>
       </div>
     </div>

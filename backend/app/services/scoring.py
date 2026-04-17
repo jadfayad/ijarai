@@ -23,9 +23,26 @@ from app.models.schemas import (
 from app.services.grid import get_grid_centroids
 from app.services.commute import score_commute
 from app.services.amenities import score_amenities
-from app.services.static_data import score_budget, score_neighborhood, score_noise, find_nearest_zone_name
+from app.services.static_data import (
+    score_budget,
+    score_neighborhood,
+    score_neighborhood_dimension,
+    score_noise,
+    find_nearest_zone_name,
+)
 from app.services.ai_agent.scorer import score_ai_result
 from app.services.ai_agent.types import ResearchResult
+
+# Neighborhood sub-score criterion types → key in neighborhood_scores.json
+_NEIGHBORHOOD_DIMENSION_TYPES: dict[str, str] = {
+    "safety": "safety",
+    "walkability": "walkability",
+    "green_spaces": "green_spaces",
+    "community": "community",
+    "infrastructure": "infrastructure",
+    "aesthetics": "aesthetics",
+    "desirability": "desirability",
+}
 
 
 class ComputationCancelled(Exception):
@@ -53,6 +70,8 @@ def _criterion_key(criterion: CriterionRequest, index: int) -> str | None:
         return f"commute_{criterion.params.mode}{src_tag}_{criterion.params.time_of_day}_{index}"
     if criterion.type in ("amenities", "budget", "neighborhood", "noise"):
         return criterion.type
+    if criterion.type in _NEIGHBORHOOD_DIMENSION_TYPES:
+        return criterion.type
     if isinstance(criterion, AiCriterion):
         return f"ai_{index}"
     return None
@@ -75,6 +94,13 @@ def _criterion_label(criterion: CriterionRequest, index: int) -> str:
         "budget": "Budget Match",
         "neighborhood": "Neighborhood",
         "noise": "Low Noise",
+        "safety": "Safety",
+        "walkability": "Walkability",
+        "green_spaces": "Green Space",
+        "community": "Community",
+        "infrastructure": "Infrastructure",
+        "aesthetics": "Aesthetics",
+        "desirability": "Desirability",
     }
     return label_map.get(criterion.type, criterion.type.title())
 
@@ -118,6 +144,10 @@ async def compute_scores(
             )
         elif criterion.type == "neighborhood":
             s, m = score_neighborhood(city, centroids)
+        elif criterion.type in _NEIGHBORHOOD_DIMENSION_TYPES:
+            s, m = score_neighborhood_dimension(
+                city, centroids, _NEIGHBORHOOD_DIMENSION_TYPES[criterion.type],
+            )
         elif criterion.type == "noise":
             s, m = score_noise(city, centroids)
         elif isinstance(criterion, AiCriterion):

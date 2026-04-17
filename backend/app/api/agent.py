@@ -12,6 +12,7 @@ from app.services.ai_agent.types import (
     AgentResearchRequest,
     AgentResearchResponse,
     ResearchResult,
+    TokenUsage,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,11 @@ def _cache_key(city: str, prompt: str) -> str:
     return f"{city}:{prompt.strip().lower()}"
 
 
-def _result_to_response(result: ResearchResult, prompt: str) -> dict:
+def _result_to_response(
+    result: ResearchResult,
+    prompt: str,
+    usage: TokenUsage | None = None,
+) -> dict:
     prompt_short = prompt if len(prompt) <= 50 else prompt[:47] + "..."
     return AgentResearchResponse(
         strategy=result.strategy.value,
@@ -36,6 +41,7 @@ def _result_to_response(result: ResearchResult, prompt: str) -> dict:
         pois=[p.model_dump() for p in result.pois],
         poi_scoring_mode=result.poi_scoring_mode,
         poi_search_radius_m=result.poi_search_radius_m,
+        usage=usage,
     ).model_dump()
 
 
@@ -91,8 +97,13 @@ async def agent_research_stream(request: AgentResearchRequest):
                 payload = event["data"]
 
                 if event_type == "result":
+                    usage = event.get("usage")
                     if isinstance(payload, ResearchResult):
-                        payload = _result_to_response(payload, request.prompt)
+                        payload = _result_to_response(
+                            payload, request.prompt, usage=usage,
+                        )
+                    elif usage is not None:
+                        payload["usage"] = usage.model_dump()
                     _ai_cache[ck] = payload
                     serialized = json.dumps(payload)
                 else:

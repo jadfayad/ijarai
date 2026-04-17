@@ -72,6 +72,41 @@ class NeighborhoodCriterion(_CriterionBase):
     params: EmptyParams = Field(default_factory=EmptyParams)
 
 
+class SafetyCriterion(_CriterionBase):
+    type: Literal["safety"] = "safety"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class WalkabilityCriterion(_CriterionBase):
+    type: Literal["walkability"] = "walkability"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class GreenSpacesCriterion(_CriterionBase):
+    type: Literal["green_spaces"] = "green_spaces"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class CommunityCriterion(_CriterionBase):
+    type: Literal["community"] = "community"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class InfrastructureCriterion(_CriterionBase):
+    type: Literal["infrastructure"] = "infrastructure"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class AestheticsCriterion(_CriterionBase):
+    type: Literal["aesthetics"] = "aesthetics"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
+class DesirabilityCriterion(_CriterionBase):
+    type: Literal["desirability"] = "desirability"
+    params: EmptyParams = Field(default_factory=EmptyParams)
+
+
 class NoiseCriterion(_CriterionBase):
     type: Literal["noise"] = "noise"
     params: EmptyParams = Field(default_factory=EmptyParams)
@@ -88,6 +123,13 @@ CriterionRequest = Annotated[
         AmenitiesCriterion,
         BudgetCriterion,
         NeighborhoodCriterion,
+        SafetyCriterion,
+        WalkabilityCriterion,
+        GreenSpacesCriterion,
+        CommunityCriterion,
+        InfrastructureCriterion,
+        AestheticsCriterion,
+        DesirabilityCriterion,
         NoiseCriterion,
         AiCriterion,
     ],

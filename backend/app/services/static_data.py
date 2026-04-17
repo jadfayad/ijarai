@@ -118,18 +118,31 @@ def score_budget(
     return scores, metrics
 
 
-def score_neighborhood(
-    city: CityConfig, centroids: list[dict],
+def score_neighborhood_dimension(
+    city: CityConfig, centroids: list[dict], dimension: str = "score",
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """Score cells by neighborhood reputation."""
+    """Score cells by a single neighborhood dimension (e.g. 'safety').
+
+    Reads the named key from each zone's entry in neighborhood_scores.json
+    and IDW-interpolates. All dimensions in the dataset are on a 1-10 scale
+    (matching the aggregate 'score' field), so the same /10 normalisation
+    applies. Missing keys fall back to a neutral 5.0.
+    """
     neighborhood_scores = _get_data(city).neighborhood_scores
     scores: dict[str, float] = {}
     metrics: dict[str, float] = {}
     for c in centroids:
-        rep = _find_zone_value(c["lat"], c["lng"], neighborhood_scores, "score", 5.0)
+        rep = _find_zone_value(c["lat"], c["lng"], neighborhood_scores, dimension, 5.0)
         scores[c["cell_id"]] = rep / 10.0
         metrics[c["cell_id"]] = round(rep, 1)
     return scores, metrics
+
+
+def score_neighborhood(
+    city: CityConfig, centroids: list[dict],
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Score cells by aggregate neighborhood reputation (thin back-compat caller)."""
+    return score_neighborhood_dimension(city, centroids, "score")
 
 
 def score_noise(

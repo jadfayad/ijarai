@@ -27,6 +27,13 @@ export type CriterionType =
   | "amenities"
   | "budget"
   | "neighborhood"
+  | "safety"
+  | "walkability"
+  | "green_spaces"
+  | "community"
+  | "infrastructure"
+  | "aesthetics"
+  | "desirability"
   | "noise"
   | "ai";
 
@@ -103,6 +110,11 @@ export interface AgentResearchRequest {
   city: string;
 }
 
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export interface AgentResearchResponse {
   strategy: string;
   summary: string;
@@ -112,6 +124,7 @@ export interface AgentResearchResponse {
   pois: AiPoiResult[];
   poi_scoring_mode: string;
   poi_search_radius_m: number;
+  usage?: TokenUsage;
 }
 
 export interface AgentTodo {

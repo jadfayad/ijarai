@@ -17,6 +17,13 @@ import {
   Info,
   Trash2,
   ChevronDown,
+  Shield,
+  Footprints,
+  TreePine,
+  UsersRound,
+  Wrench,
+  Palette,
+  TrendingUp,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { Slider } from "@/components/ui/slider";
@@ -31,6 +38,7 @@ import type {
   CommuteParams,
   AmenityParams,
   BudgetParams,
+  AiParams,
 } from "@/lib/types";
 import { CommuteConfig } from "./CommuteConfig";
 import { AmenityConfig } from "./AmenityConfig";
@@ -112,6 +120,48 @@ const ICON_CONFIG: Record<
     text: "text-violet-400",
     activeBg: "bg-violet-500/20",
   },
+  shield: {
+    icon: <Shield size={15} />,
+    bg: "bg-rose-500/10",
+    text: "text-rose-400",
+    activeBg: "bg-rose-500/20",
+  },
+  footprints: {
+    icon: <Footprints size={15} />,
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    activeBg: "bg-cyan-500/20",
+  },
+  "tree-pine": {
+    icon: <TreePine size={15} />,
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    activeBg: "bg-green-500/20",
+  },
+  "users-round": {
+    icon: <UsersRound size={15} />,
+    bg: "bg-orange-500/10",
+    text: "text-orange-400",
+    activeBg: "bg-orange-500/20",
+  },
+  wrench: {
+    icon: <Wrench size={15} />,
+    bg: "bg-zinc-500/10",
+    text: "text-zinc-300",
+    activeBg: "bg-zinc-500/20",
+  },
+  palette: {
+    icon: <Palette size={15} />,
+    bg: "bg-fuchsia-500/10",
+    text: "text-fuchsia-400",
+    activeBg: "bg-fuchsia-500/20",
+  },
+  "trending-up": {
+    icon: <TrendingUp size={15} />,
+    bg: "bg-teal-500/10",
+    text: "text-teal-400",
+    activeBg: "bg-teal-500/20",
+  },
 };
 
 const DEFAULT_ICON_CONFIG = {
@@ -140,7 +190,9 @@ function getSummary(criterion: CriterionConfig, currencySymbol: string): string 
     return `Max ${currencySymbol}${p.max_monthly_rent.toLocaleString()}/mo`;
   }
   if (criterion.type === "ai") {
-    return criterion.description;
+    const p = criterion.params as AiParams;
+    const strategy = p.strategy === "zone" ? "Zone scoring" : "POI scoring";
+    return p.metric_label ? `${strategy} · ${p.metric_label}` : strategy;
   }
   return "";
 }
@@ -215,14 +267,16 @@ export function CriterionCard({ criterion }: Props) {
                 <Label className="text-sm font-medium text-white">
                   {criterion.label}
                 </Label>
-                <Tooltip>
-                  <TooltipTrigger className="text-white/20 hover:text-white/50 transition-colors">
-                    <Info size={12} />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[220px] text-xs">
-                    {criterion.description}
-                  </TooltipContent>
-                </Tooltip>
+                {criterion.type !== "ai" && (
+                  <Tooltip>
+                    <TooltipTrigger className="text-white/20 hover:text-white/50 transition-colors">
+                      <Info size={12} />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-xs">
+                      {criterion.description}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
               <Tooltip>
                 <TooltipTrigger
@@ -284,6 +338,16 @@ export function CriterionCard({ criterion }: Props) {
               )}
               {criterion.type === "budget" && (
                 <BudgetConfig criterion={criterion} />
+              )}
+              {criterion.type === "ai" && (
+                <div className="space-y-2">
+                  <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+                    Research Summary
+                  </span>
+                  <p className="text-[12px] leading-relaxed text-white/60 whitespace-pre-wrap">
+                    {criterion.description}
+                  </p>
+                </div>
               )}
             </div>
           </div>

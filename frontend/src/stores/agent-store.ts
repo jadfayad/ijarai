@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { agentResearchStream } from "@/lib/api";
 import { useCriteriaStore, createAiCriterion } from "./criteria-store";
-import type { AgentResearchResponse, AgentTodo } from "@/lib/types";
+import type { AgentResearchResponse, AgentTodo, TokenUsage } from "@/lib/types";
 
 export interface AgentMessage {
   id: string;
@@ -9,6 +9,8 @@ export interface AgentMessage {
   content: string;
   timestamp: number;
   researchResult?: AgentResearchResponse;
+  usage?: TokenUsage;
+  criterionAdded?: boolean;
 }
 
 let messageCounter = 0;
@@ -75,6 +77,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                   "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
                 timestamp: Date.now(),
                 researchResult: result,
+                usage: result.usage,
               };
 
               set((state) => ({
@@ -131,15 +134,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const criterion = createAiCriterion(prompt, result);
     useCriteriaStore.getState().addCriterion(criterion);
 
-    const confirmMsg: AgentMessage = {
-      id: `msg-${++messageCounter}`,
-      role: "agent",
-      content: `Added **"${result.label}"** as a criterion. Adjust its weight in the criteria panel, then hit **Generate** to see it on the map.`,
-      timestamp: Date.now(),
-    };
-
     set((state) => ({
-      messages: [...state.messages, confirmMsg],
+      messages: state.messages.map((m) =>
+        m.researchResult === result ? { ...m, criterionAdded: true } : m
+      ),
       sidebarMode: "criteria",
     }));
   },

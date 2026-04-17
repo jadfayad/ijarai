@@ -78,6 +78,97 @@ export function createNeighborhoodCriterion(): CriterionConfig {
   };
 }
 
+export function createSafetyCriterion(): CriterionConfig {
+  return {
+    id: "safety",
+    type: "safety",
+    label: "Safety",
+    description: "Perceived safety and crime-risk of the area",
+    weight: 9,
+    enabled: true,
+    params: {},
+    icon: "shield",
+  };
+}
+
+export function createWalkabilityCriterion(): CriterionConfig {
+  return {
+    id: "walkability",
+    type: "walkability",
+    label: "Walkability",
+    description: "Ease of getting around on foot in this area",
+    weight: 8,
+    enabled: true,
+    params: {},
+    icon: "footprints",
+  };
+}
+
+export function createGreenSpacesCriterion(): CriterionConfig {
+  return {
+    id: "green_spaces",
+    type: "green_spaces",
+    label: "Green Space",
+    description: "Access to parks, trees, and outdoor greenery",
+    weight: 6,
+    enabled: true,
+    params: {},
+    icon: "tree-pine",
+  };
+}
+
+export function createCommunityCriterion(): CriterionConfig {
+  return {
+    id: "community",
+    type: "community",
+    label: "Community",
+    description: "Sense of neighborly community and belonging",
+    weight: 5,
+    enabled: true,
+    params: {},
+    icon: "users-round",
+  };
+}
+
+export function createInfrastructureCriterion(): CriterionConfig {
+  return {
+    id: "infrastructure",
+    type: "infrastructure",
+    label: "Infrastructure",
+    description: "Quality of roads, utilities, and public services",
+    weight: 5,
+    enabled: true,
+    params: {},
+    icon: "wrench",
+  };
+}
+
+export function createAestheticsCriterion(): CriterionConfig {
+  return {
+    id: "aesthetics",
+    type: "aesthetics",
+    label: "Aesthetics",
+    description: "Visual appeal and pleasantness of the surroundings",
+    weight: 4,
+    enabled: true,
+    params: {},
+    icon: "palette",
+  };
+}
+
+export function createDesirabilityCriterion(): CriterionConfig {
+  return {
+    id: "desirability",
+    type: "desirability",
+    label: "Desirability",
+    description: "Overall market desirability of the area",
+    weight: 5,
+    enabled: true,
+    params: {},
+    icon: "trending-up",
+  };
+}
+
 export function createNoiseCriterion(): CriterionConfig {
   return {
     id: "noise",
@@ -95,9 +186,8 @@ export function createAiCriterion(
   userPrompt: string,
   researchResult?: AgentResearchResponse,
 ): CriterionConfig {
-  const preview =
-    userPrompt.length > 60 ? userPrompt.slice(0, 57) + "..." : userPrompt;
   const label = researchResult?.label ?? "AI Preference";
+  const description = researchResult?.summary ?? userPrompt;
 
   const params: Record<string, unknown> = { prompt: userPrompt };
   if (researchResult) {
@@ -113,7 +203,7 @@ export function createAiCriterion(
     id: `ai-${crypto.randomUUID().slice(0, 8)}`,
     type: "ai",
     label,
-    description: preview,
+    description,
     weight: 5,
     enabled: true,
     params: params as CriterionConfig["params"],

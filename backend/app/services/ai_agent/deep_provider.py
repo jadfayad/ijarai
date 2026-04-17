@@ -23,6 +23,7 @@ from app.services.ai_agent.types import (
     PoiResult,
     ResearchResult,
     ResearchStrategy,
+    TokenUsage,
     ZoneScore,
 )
 from app.services.static_data import format_zone_name, load_neighborhood_data
@@ -125,6 +126,19 @@ you finish it by calling ``write_todos`` again with the updated list.
 # Helpers
 # ---------------------------------------------------------------------------
 
+
+def _aggregate_token_usage(messages: list) -> TokenUsage:
+    """Sum input/output token counts across all AI messages in the conversation."""
+    input_tokens = 0
+    output_tokens = 0
+    for msg in messages:
+        if getattr(msg, "type", None) != "ai":
+            continue
+        meta = getattr(msg, "usage_metadata", None) or {}
+        if isinstance(meta, dict):
+            input_tokens += meta.get("input_tokens", 0)
+            output_tokens += meta.get("output_tokens", 0)
+    return TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +245,8 @@ class DeepAgentProvider(AgentProvider):
         result = self._validate_bounds(
             self._extract_result(all_messages), city,
         )
-        yield {"type": "result", "data": result}
+        usage = _aggregate_token_usage(all_messages)
+        yield {"type": "result", "data": result, "usage": usage}
 
     # -- Tool factory ---------------------------------------------------
 
