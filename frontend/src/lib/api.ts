@@ -6,6 +6,7 @@ import type {
   AgentResearchRequest,
   AgentResearchResponse,
   AgentStreamEvent,
+  RentalSearchResponse,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -55,6 +56,17 @@ export async function healthCheck(): Promise<{ status: string }> {
 export async function fetchCityConfig(slug?: string): Promise<CityConfig> {
   const params = slug ? `?slug=${encodeURIComponent(slug)}` : "";
   return request<CityConfig>(`/api/city${params}`);
+}
+
+export async function searchRentalsInHex(
+  citySlug: string,
+  hexId: string,
+  areaName?: string | null,
+  signal?: AbortSignal,
+): Promise<RentalSearchResponse> {
+  const q = new URLSearchParams({ city: citySlug, hex_id: hexId });
+  if (areaName) q.set("area_name", areaName);
+  return request<RentalSearchResponse>(`/api/rentals/search?${q.toString()}`, { signal });
 }
 
 export async function agentResearch(

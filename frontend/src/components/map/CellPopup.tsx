@@ -1,7 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Home, Loader2, X } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { useRentalStore } from "@/stores/rental-store";
 
 /**
  * Fallback labels for legacy keys or when criterion_labels is absent.
@@ -78,6 +79,7 @@ function ScoreBar({
 interface CellPopupProps {
   x: number;
   y: number;
+  cellId: string;
   properties: Record<string, unknown>;
   areaName?: string | null;
   /** Maps raw criterion keys (without s_ prefix) to display labels */
@@ -85,8 +87,14 @@ interface CellPopupProps {
   onClose: () => void;
 }
 
-export function CellPopup({ x, y, properties, areaName, criterionLabels, onClose }: CellPopupProps) {
+export function CellPopup({ x, y, cellId, properties, areaName, criterionLabels, onClose }: CellPopupProps) {
   const currencySymbol = useCriteriaStore((s) => s.cityConfig.currency_symbol);
+  const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
+  const rentalProvider = useCriteriaStore((s) => s.cityConfig.rental_provider);
+  const rentalLoading = useRentalStore((s) => s.loading);
+  const rentalHexId = useRentalStore((s) => s.hexId);
+  const searchForHex = useRentalStore((s) => s.searchForHex);
+  const isSearchingThisCell = rentalLoading && rentalHexId === cellId;
   const score = properties.score as number;
   const pct = Math.round(score * 100);
   const breakdownKeys = Object.keys(properties).filter((k) =>
@@ -155,6 +163,28 @@ export function CellPopup({ x, y, properties, areaName, criterionLabels, onClose
           );
         })}
       </div>
+
+      {rentalProvider && (
+        <div className="px-4 pb-4 -mt-1">
+          <button
+            onClick={() => searchForHex(citySlug, cellId, areaName)}
+            disabled={isSearchingThisCell}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-60 disabled:cursor-wait border border-white/[0.08] text-white/80 hover:text-white text-[12px] font-medium transition-all duration-200"
+          >
+            {isSearchingThisCell ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                Searching…
+              </>
+            ) : (
+              <>
+                <Home size={13} />
+                Find rentals here
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -247,3 +247,4 @@ class CityConfigResponse(BaseModel):
     rent_default: int
     default_destinations: list[DestinationConfig]
     utility_avg_monthly: float = 0
+    rental_provider: str | None = None

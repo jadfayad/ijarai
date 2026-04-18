@@ -26,6 +26,7 @@ import {
   Square,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { useRentalStore } from "@/stores/rental-store";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -39,6 +40,8 @@ import { CellPopup } from "./CellPopup";
 import { MapLegend } from "./MapLegend";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
+import { RentalListCard } from "@/components/rentals/RentalListCard";
+import type { RentalListing } from "@/lib/types";
 import {
   GRID_RESOLUTION_CONFIG,
   type AiParams,
@@ -382,9 +385,47 @@ export function MapView() {
     return layers;
   }, [clickedCenter, criteria]);
 
+  const rentalListings = useRentalStore((s) => s.listings);
+  const selectedListingId = useRentalStore((s) => s.selectedListingId);
+  const selectListing = useRentalStore((s) => s.selectListing);
+
+  const rentalPinsLayer = useMemo(() => {
+    if (!rentalListings.length) return null;
+    return new ScatterplotLayer({
+      id: "rental-pins",
+      data: rentalListings,
+      getPosition: (d: RentalListing) => [d.lng, d.lat],
+      getRadius: (d: RentalListing) =>
+        d.id === selectedListingId ? 10 : 7,
+      radiusUnits: "pixels",
+      getFillColor: (d: RentalListing) =>
+        d.id === selectedListingId ? [96, 165, 250, 245] : [255, 255, 255, 235],
+      getLineColor: (d: RentalListing) =>
+        d.id === selectedListingId ? [255, 255, 255, 255] : [10, 10, 20, 160],
+      getLineWidth: 1.5,
+      lineWidthUnits: "pixels",
+      stroked: true,
+      filled: true,
+      pickable: true,
+      onClick: (info) => {
+        const obj = info.object as RentalListing | undefined;
+        if (obj) selectListing(obj.id);
+      },
+      updateTriggers: {
+        getRadius: [selectedListingId],
+        getFillColor: [selectedListingId],
+        getLineColor: [selectedListingId],
+      },
+    });
+  }, [rentalListings, selectedListingId, selectListing]);
+
   const allLayers = useMemo(
-    () => [...layers, ...evidenceLayers],
-    [layers, evidenceLayers],
+    () => [
+      ...layers,
+      ...evidenceLayers,
+      ...(rentalPinsLayer ? [rentalPinsLayer] : []),
+    ],
+    [layers, evidenceLayers, rentalPinsLayer],
   );
 
   const visibleCount = useMemo(() => {
@@ -500,6 +541,7 @@ export function MapView() {
         <CellPopup
           x={popupInfo.x}
           y={popupInfo.y}
+          cellId={popupInfo.properties.cell_id as string}
           properties={popupInfo.properties}
           areaName={areaName}
           criterionLabels={scoreData?.criterion_labels}
@@ -511,6 +553,9 @@ export function MapView() {
           }}
         />
       )}
+
+      <RentalListCard />
+
 
       {scoreData && (
         <MapLegend

@@ -41,6 +41,7 @@ class CityConfig:
     rent_default: int = 3000
     default_destinations: tuple[Destination, ...] = field(default_factory=tuple)
     data_dir_name: str | None = None
+    rental_provider: str | None = None
 
     @property
     def data_dir(self) -> Path:
@@ -73,6 +74,7 @@ CITIES: dict[str, CityConfig] = {
             Destination(label="DXB Airport", lat=25.2532, lng=55.3657, icon="plane"),
             Destination(label="", lat=25.2048, lng=55.2708, icon="map-pin"),
         ),
+        rental_provider="propertyfinder",
     ),
     "san-francisco": CityConfig(
         slug="san-francisco",

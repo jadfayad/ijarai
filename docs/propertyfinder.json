@@ -1,0 +1,4612 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PropertyFinder UAE API",
+    "description": "Comprehensive UAE Real Estate API with 500K+ Property Listings: Updated daily",
+    "version": "1.0",
+    "x-category": "Data",
+    "x-long-description": "Access the most complete UAE real estate database with properties from Dubai, Abu Dhabi, Sharjah and across all United Arabs Emirates. Perfect for PropTech apps, real estate platforms, and market analysis tools.\r\n\r\n🏠 What You Get: 500K+ Properties - Apartments, villas, commercial spaces. UAE list of Agent & Broker Data - Direct contact information included. Rich Property Details - Images, amenities, specifications. Real-time Data - Updated daily from PropertyFinder.ae.\r\n\r\n🔍 Advanced Filtering: Location, property type, bedrooms, bathrooms Price range, size, listing dates Category (Rent/Buy/Commercial/New Projects) ⚡ Features:\r\n\r\nRedis caching for fast responses Pagination support (50 results per request) RESTful JSON API Comprehensive documentation\r\n\r\n💼 Perfect For: Real estate mobile apps Property comparison websites Market research & analytics Investment analysis tools Lead generation platforms\r\n\r\n🌟 Why Choose This API: Most comprehensive UAE property dataset Includes agent contact details (unique!) Professional-grade caching & performance Tiered pricing for every budget Start building your UAE real estate application today!\r\n\r\nComprehensive UAE Real Estate API with 500K+ Property Listings: Updated daily. Access the most complete UAE real estate database with properties from Dubai, Abu Dhabi, Sharjah and across all United Arabs Emirates. Get UAE Property Agents and Brokers.\r\n\r\n",
+    "x-website": "https://propertyfinder.ae",
+    "x-public": true,
+    "x-thumbnail": "https://rapidapi-prod-apis.s3.amazonaws.com/a944363c-c20b-44f6-9500-962aad357933.png",
+    "x-version-lifecycle": "active",
+    "termsOfService": "The best unofficial real time propertyfinder.ae Data API"
+  },
+  "servers": [
+    {
+      "url": "https://propertyfinder-uae-data.p.rapidapi.com",
+      "description": "Base URL"
+    }
+  ],
+  "security": [
+    {
+      "RapidApiKey": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "RapidApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key"
+      }
+    },
+    "parameters": {
+      "RapidApiHostHeader": {
+        "name": "X-RapidAPI-Host",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "default": "propertyfinder-uae-data.p.rapidapi.com"
+        }
+      }
+    },
+    "schemas": {
+      "CommonHealthCheckResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "PropertyFinderErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Health check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonHealthCheckResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/autocomplete-location": {
+      "get": {
+        "tags": [
+          "Location"
+        ],
+        "summary": "Search for locations in UAE",
+        "description": "Get location suggestions and IDs for property searches. Returns location IDs that can be used as input for property search endpoints.",
+        "operationId": "autocomplete-location",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "- Search query for location autocomplete\n- Returns location IDs to use in property search\n- Examples: `Dubai Marina`, `Downtown Dubai`, `Palm Jumeirah`, `Business Bay`",
+              "example": "Dubai Marina"
+            },
+            "required": true,
+            "description": "- Search query for location autocomplete\n- Returns location IDs to use in property search\n- Examples: `Dubai Marina`, `Downtown Dubai`, `Palm Jumeirah`, `Business Bay`",
+            "name": "query",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "coordinates": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lon": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lon"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "coordinates"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "id": 50,
+                        "name": "Dubai Marina",
+                        "coordinates": {
+                          "lat": 25.078367,
+                          "lon": 55.14041
+                        }
+                      },
+                      {
+                        "id": 8995,
+                        "name": "Vida Residences Dubai Marina",
+                        "coordinates": {
+                          "lat": 25.072375,
+                          "lon": 55.136286
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/price-trend-of-location": {
+      "get": {
+        "tags": [
+          "Market Data"
+        ],
+        "summary": "Get price trends",
+        "description": "Get property price trends for a specific location and property type.",
+        "operationId": "price-trend-of-location",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID\n- Example: `50` (Dubai Marina)",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID\n- Example: `50` (Dubai Marina)",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "default": "apartment",
+              "description": "- Property type for trend analysis\n- Default: `apartment`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Property type for trend analysis\n- Default: `apartment`",
+            "name": "property_type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Price trends for location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bedroom_id": {
+                            "type": "number"
+                          },
+                          "community_price": {
+                            "type": "number"
+                          },
+                          "date": {
+                            "type": "string"
+                          },
+                          "period": {
+                            "type": "string"
+                          },
+                          "time_frame": {
+                            "type": "string"
+                          },
+                          "tower_price": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "bedroom_id",
+                          "community_price",
+                          "date",
+                          "period",
+                          "time_frame"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "bedroom_id": 1,
+                        "community_price": 2500,
+                        "date": "2025-02-01T00:00:00Z",
+                        "period": "Feb 2025",
+                        "time_frame": "1Y",
+                        "tower_price": 2500
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/property-insight": {
+      "get": {
+        "tags": [
+          "Market Data"
+        ],
+        "summary": "Get property insights",
+        "description": "Get community insights and market analysis for a specific location.",
+        "operationId": "property-insight",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID (Community ID)\n- Example: `51`",
+              "example": "51"
+            },
+            "required": true,
+            "description": "- Location ID (Community ID)\n- Example: `51`",
+            "name": "location_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Market insights for location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": {
+                      "attributes": {
+                        "id": 50,
+                        "name": "Dubai Marina",
+                        "location_type": "community",
+                        "average_price": 2000000
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-rent": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Search properties for rent",
+        "description": "Search residential properties available for rent in UAE. Filter by location, property type, bedrooms, bathrooms, price range, amenities, and more. Returns parsed, structured data.",
+        "operationId": "search-rent",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed properties\n- Example: `3` for 3-bedroom only",
+              "example": "0,1,2"
+            },
+            "required": false,
+            "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed properties\n- Example: `3` for 3-bedroom only",
+            "name": "bedrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Number of bathrooms as comma-separated values\n- Example: `1,2` for properties with 1 or 2 bathrooms\n- Example: `3` for 3-bathroom only",
+              "example": "1,2"
+            },
+            "required": false,
+            "description": "- Number of bathrooms as comma-separated values\n- Example: `1,2` for properties with 1 or 2 bathrooms\n- Example: `3` for 3-bathroom only",
+            "name": "bathrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum annual rent price in AED\n- Examples: `20000`, `50000`, `100000`",
+              "example": "20000"
+            },
+            "required": false,
+            "description": "- Minimum annual rent price in AED\n- Examples: `20000`, `50000`, `100000`",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum annual rent price in AED\n- Examples: `50000`, `100000`, `200000`",
+              "example": "100000"
+            },
+            "required": false,
+            "description": "- Maximum annual rent price in AED\n- Examples: `50000`, `100000`, `200000`",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "yearly",
+                "monthly",
+                "weekly",
+                "daily"
+              ],
+              "default": "yearly",
+              "description": "- Rent payment frequency\n- Options: `yearly`, `monthly`, `weekly`, `daily`\n- Default: `yearly`",
+              "example": "monthly"
+            },
+            "required": false,
+            "description": "- Rent payment frequency\n- Options: `yearly`, `monthly`, `weekly`, `daily`\n- Default: `yearly`",
+            "name": "rent_frequency",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+              "example": "500"
+            },
+            "required": false,
+            "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+            "name": "area_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+              "example": "3000"
+            },
+            "required": false,
+            "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+            "name": "area_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "furnished",
+                "unfurnished",
+                "partly"
+              ],
+              "description": "- Furnishing status filter\n- Options: `furnished`, `unfurnished`, `partly`",
+              "example": "furnished"
+            },
+            "required": false,
+            "description": "- Furnishing status filter\n- Options: `furnished`, `unfurnished`, `partly`",
+            "name": "furnishing",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Filter by property amenities as comma-separated values\n- Options: `central_ac`, `balcony`, `maids_room`, `shared_pool`, `shared_gym`, `covered_parking`, `pets_allowed`, `private_garden`, `private_pool`, `security`, `built_in_wardrobes`, `view_of_water`, `view_of_landmark`, `concierge`, `childrens_play_area`, `bbq_area`\n- Example: `balcony,shared_pool,covered_parking`",
+              "example": "balcony,shared_pool"
+            },
+            "required": false,
+            "description": "- Filter by property amenities as comma-separated values\n- Options: `central_ac`, `balcony`, `maids_room`, `shared_pool`, `shared_gym`, `covered_parking`, `pets_allowed`, `private_garden`, `private_pool`, `security`, `built_in_wardrobes`, `view_of_water`, `view_of_landmark`, `concierge`, `childrens_play_area`, `bbq_area`\n- Example: `balcony,shared_pool,covered_parking`",
+            "name": "amenities",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "newest",
+              "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+              "example": "newest"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of properties for rent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "property_id": "16266089",
+                        "property_type": "Apartment",
+                        "price": {
+                          "value": 20000,
+                          "currency": "AED",
+                          "period": "monthly",
+                          "is_hidden": false
+                        },
+                        "address": {
+                          "full_name": "Marina Tower, Dubai Marina, Dubai",
+                          "coordinates": {
+                            "lat": 25.0837707519531,
+                            "lon": 55.145076751709
+                          }
+                        },
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/2aee8d5d-303a-426f-b17c-c6241bcffc7f/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/d4b57dbd-e311-4710-878e-49ea04aceb7d/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/bee788f7-798c-4164-bb04-512bbc551541/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/94358193-dc88-4147-948a-c98329bc81dc/416x272.jpg"
+                        ],
+                        "agent_details": {
+                          "id": "365444",
+                          "name": "Sharie Ann Delizo",
+                          "is_super_agent": false,
+                          "image": "",
+                          "languages": []
+                        },
+                        "broker_id": "9676",
+                        "bedrooms": "1",
+                        "bathrooms": "2",
+                        "size": {
+                          "value": 768,
+                          "unit": "sqft"
+                        },
+                        "floor_plan_area": 768,
+                        "title": "Elegant Escapes - 1B in Marina, Partial Sea View",
+                        "property_url": "https://www.propertyfinder.ae/en/plp/rent/apartment-for-rent-dubai-dubai-marina-marina-tower-16266089.html"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-buy": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Search properties for sale",
+        "description": "Search residential properties available for purchase in UAE. Filter by location, property type, bedrooms, bathrooms, price range, completion status, amenities, and more. Returns parsed, structured data.",
+        "operationId": "search-buy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed properties\n- Example: `3` for 3-bedroom only",
+              "example": "0,1,2"
+            },
+            "required": false,
+            "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed properties\n- Example: `3` for 3-bedroom only",
+            "name": "bedrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Number of bathrooms as comma-separated values\n- Example: `1,2` for properties with 1 or 2 bathrooms\n- Example: `3` for 3-bathroom only",
+              "example": "1,2"
+            },
+            "required": false,
+            "description": "- Number of bathrooms as comma-separated values\n- Example: `1,2` for properties with 1 or 2 bathrooms\n- Example: `3` for 3-bathroom only",
+            "name": "bathrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum sale price in AED\n- Examples: `500000`, `1000000`, `2000000`",
+              "example": "500000"
+            },
+            "required": false,
+            "description": "- Minimum sale price in AED\n- Examples: `500000`, `1000000`, `2000000`",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum sale price in AED\n- Examples: `1000000`, `3000000`, `5000000`",
+              "example": "3000000"
+            },
+            "required": false,
+            "description": "- Maximum sale price in AED\n- Examples: `1000000`, `3000000`, `5000000`",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "off_plan",
+                "ready"
+              ],
+              "description": "- Property completion status\n- Options: `ready` (completed properties), `off_plan` (under construction)\n- Leave empty to show all properties",
+              "example": "ready"
+            },
+            "required": false,
+            "description": "- Property completion status\n- Options: `ready` (completed properties), `off_plan` (under construction)\n- Leave empty to show all properties",
+            "name": "completion_status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+              "example": "500"
+            },
+            "required": false,
+            "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+            "name": "area_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+              "example": "3000"
+            },
+            "required": false,
+            "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+            "name": "area_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "furnished",
+                "unfurnished",
+                "partly"
+              ],
+              "description": "- Furnishing status filter\n- Options: `furnished`, `unfurnished`, `partly`",
+              "example": "furnished"
+            },
+            "required": false,
+            "description": "- Furnishing status filter\n- Options: `furnished`, `unfurnished`, `partly`",
+            "name": "furnishing",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Filter by property amenities as comma-separated values\n- Options: `central_ac`, `balcony`, `maids_room`, `shared_pool`, `shared_gym`, `covered_parking`, `pets_allowed`, `private_garden`, `private_pool`, `security`, `built_in_wardrobes`, `view_of_water`, `view_of_landmark`, `concierge`, `childrens_play_area`, `bbq_area`\n- Example: `balcony,shared_pool,covered_parking`",
+              "example": "balcony,shared_pool"
+            },
+            "required": false,
+            "description": "- Filter by property amenities as comma-separated values\n- Options: `central_ac`, `balcony`, `maids_room`, `shared_pool`, `shared_gym`, `covered_parking`, `pets_allowed`, `private_garden`, `private_pool`, `security`, `built_in_wardrobes`, `view_of_water`, `view_of_landmark`, `concierge`, `childrens_play_area`, `bbq_area`\n- Example: `balcony,shared_pool,covered_parking`",
+            "name": "amenities",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "newest",
+              "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+              "example": "newest"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of properties for sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "property_id": "16266089",
+                        "property_type": "Apartment",
+                        "price": {
+                          "value": 20000,
+                          "currency": "AED",
+                          "period": "monthly",
+                          "is_hidden": false
+                        },
+                        "address": {
+                          "full_name": "Marina Tower, Dubai Marina, Dubai",
+                          "coordinates": {
+                            "lat": 25.0837707519531,
+                            "lon": 55.145076751709
+                          }
+                        },
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/2aee8d5d-303a-426f-b17c-c6241bcffc7f/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/d4b57dbd-e311-4710-878e-49ea04aceb7d/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/bee788f7-798c-4164-bb04-512bbc551541/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/94358193-dc88-4147-948a-c98329bc81dc/416x272.jpg"
+                        ],
+                        "agent_details": {
+                          "id": "365444",
+                          "name": "Sharie Ann Delizo",
+                          "is_super_agent": false,
+                          "image": "",
+                          "languages": []
+                        },
+                        "broker_id": "9676",
+                        "bedrooms": "1",
+                        "bathrooms": "2",
+                        "size": {
+                          "value": 768,
+                          "unit": "sqft"
+                        },
+                        "floor_plan_area": 768,
+                        "title": "Elegant Escapes - 1B in Marina, Partial Sea View",
+                        "property_url": "https://www.propertyfinder.ae/en/plp/rent/apartment-for-rent-dubai-dubai-marina-marina-tower-16266089.html"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-commercial-rent": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Search commercial properties for rent",
+        "description": "Search commercial properties available for rent in UAE. Filter by location, property type, price range, and area. Returns parsed, structured data.",
+        "operationId": "search-commercial-rent",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `86` (Business Bay)\n- Get IDs by searching location names first",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `86` (Business Bay)\n- Get IDs by searching location names first",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Type of commercial property to search\n- Common: `office-space`, `retail`, `warehouse`\n- All options: `office-space`, `retail`, `warehouse`, `shop`, `villa`, `show-room`, `full-floor`, `half-floor`, `whole-building`, `land`, `bulk-rent-unit`, `factory`, `labor-camp`, `staff-accommodation`, `business-centre`, `co-working-space`, `farm`",
+              "example": "villa"
+            },
+            "required": false,
+            "description": "- Type of commercial property to search\n- Common: `office-space`, `retail`, `warehouse`\n- All options: `office-space`, `retail`, `warehouse`, `shop`, `villa`, `show-room`, `full-floor`, `half-floor`, `whole-building`, `land`, `bulk-rent-unit`, `factory`, `labor-camp`, `staff-accommodation`, `business-centre`, `co-working-space`, `farm`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum annual rent price in AED\n- Examples: `50000`, `100000`, `500000`",
+              "example": "50000"
+            },
+            "required": false,
+            "description": "- Minimum annual rent price in AED\n- Examples: `50000`, `100000`, `500000`",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum annual rent price in AED\n- Examples: `100000`, `500000`, `1000000`",
+              "example": "500000"
+            },
+            "required": false,
+            "description": "- Maximum annual rent price in AED\n- Examples: `100000`, `500000`, `1000000`",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "yearly",
+                "monthly"
+              ],
+              "default": "yearly",
+              "description": "- Rent payment frequency\n- Options: `yearly`, `monthly`\n- Default: `monthly`",
+              "example": "monthly"
+            },
+            "required": false,
+            "description": "- Rent payment frequency\n- Options: `yearly`, `monthly`\n- Default: `monthly`",
+            "name": "rent_frequency",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+              "example": "1000"
+            },
+            "required": false,
+            "description": "- Minimum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+            "name": "area_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum property area in sqft\n- Examples: `5000`, `10000`, `20000`",
+              "example": "10000"
+            },
+            "required": false,
+            "description": "- Maximum property area in sqft\n- Examples: `5000`, `10000`, `20000`",
+            "name": "area_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "newest",
+              "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+              "example": "newest"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of commercial properties for rent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "property_id": "16266089",
+                        "property_type": "Apartment",
+                        "price": {
+                          "value": 20000,
+                          "currency": "AED",
+                          "period": "monthly",
+                          "is_hidden": false
+                        },
+                        "address": {
+                          "full_name": "Marina Tower, Dubai Marina, Dubai",
+                          "coordinates": {
+                            "lat": 25.0837707519531,
+                            "lon": 55.145076751709
+                          }
+                        },
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/2aee8d5d-303a-426f-b17c-c6241bcffc7f/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/d4b57dbd-e311-4710-878e-49ea04aceb7d/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/bee788f7-798c-4164-bb04-512bbc551541/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/94358193-dc88-4147-948a-c98329bc81dc/416x272.jpg"
+                        ],
+                        "agent_details": {
+                          "id": "365444",
+                          "name": "Sharie Ann Delizo",
+                          "is_super_agent": false,
+                          "image": "",
+                          "languages": []
+                        },
+                        "broker_id": "9676",
+                        "bedrooms": "1",
+                        "bathrooms": "2",
+                        "size": {
+                          "value": 768,
+                          "unit": "sqft"
+                        },
+                        "floor_plan_area": 768,
+                        "title": "Elegant Escapes - 1B in Marina, Partial Sea View",
+                        "property_url": "https://www.propertyfinder.ae/en/plp/rent/apartment-for-rent-dubai-dubai-marina-marina-tower-16266089.html"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-commercial-buy": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Search commercial properties for sale",
+        "description": "Search commercial properties available for purchase in UAE. Filter by location, property type, price range, and area. Returns parsed, structured data.",
+        "operationId": "search-commercial-buy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `86` (Business Bay)\n- Get IDs by searching location names first",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `86` (Business Bay)\n- Get IDs by searching location names first",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Type of commercial property to search\n- Common: `office-space`, `retail`, `warehouse`\n- All options: `office-space`, `retail`, `warehouse`, `shop`, `villa`, `show-room`, `full-floor`, `half-floor`, `whole-building`, `land`, `bulk-rent-unit`, `factory`, `labor-camp`, `staff-accommodation`, `business-centre`, `co-working-space`, `farm`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Type of commercial property to search\n- Common: `office-space`, `retail`, `warehouse`\n- All options: `office-space`, `retail`, `warehouse`, `shop`, `villa`, `show-room`, `full-floor`, `half-floor`, `whole-building`, `land`, `bulk-rent-unit`, `factory`, `labor-camp`, `staff-accommodation`, `business-centre`, `co-working-space`, `farm`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum sale price in AED\n- Examples: `1000000`, `5000000`, `10000000`",
+              "example": "1000000"
+            },
+            "required": false,
+            "description": "- Minimum sale price in AED\n- Examples: `1000000`, `5000000`, `10000000`",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum sale price in AED\n- Examples: `5000000`, `10000000`, `50000000`",
+              "example": "10000000"
+            },
+            "required": false,
+            "description": "- Maximum sale price in AED\n- Examples: `5000000`, `10000000`, `50000000`",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+              "example": "1000"
+            },
+            "required": false,
+            "description": "- Minimum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+            "name": "area_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum property area in sqft\n- Examples: `5000`, `10000`, `20000`",
+              "example": "10000"
+            },
+            "required": false,
+            "description": "- Maximum property area in sqft\n- Examples: `5000`, `10000`, `20000`",
+            "name": "area_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "newest",
+              "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+              "example": "newest"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `newest`, `featured`, `price_asc`, `price_desc`\n- Default: `newest`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of commercial properties for sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "property_id": "16266089",
+                        "property_type": "Apartment",
+                        "price": {
+                          "value": 20000,
+                          "currency": "AED",
+                          "period": "monthly",
+                          "is_hidden": false
+                        },
+                        "address": {
+                          "full_name": "Marina Tower, Dubai Marina, Dubai",
+                          "coordinates": {
+                            "lat": 25.0837707519531,
+                            "lon": 55.145076751709
+                          }
+                        },
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/2aee8d5d-303a-426f-b17c-c6241bcffc7f/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/d4b57dbd-e311-4710-878e-49ea04aceb7d/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/bee788f7-798c-4164-bb04-512bbc551541/416x272.jpg",
+                          "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/94358193-dc88-4147-948a-c98329bc81dc/416x272.jpg"
+                        ],
+                        "agent_details": {
+                          "id": "365444",
+                          "name": "Sharie Ann Delizo",
+                          "is_super_agent": false,
+                          "image": "",
+                          "languages": []
+                        },
+                        "broker_id": "9676",
+                        "bedrooms": "1",
+                        "bathrooms": "2",
+                        "size": {
+                          "value": 768,
+                          "unit": "sqft"
+                        },
+                        "floor_plan_area": 768,
+                        "title": "Elegant Escapes - 1B in Marina, Partial Sea View",
+                        "property_url": "https://www.propertyfinder.ae/en/plp/rent/apartment-for-rent-dubai-dubai-marina-marina-tower-16266089.html"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-new-projects": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Search off-plan and new development projects",
+        "description": "Search for new development projects and off-plan properties in UAE. Filter by location, property type, bedrooms, price range, and delivery date. Returns parsed, structured data.",
+        "operationId": "search-new-projects",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Get IDs by searching location names first",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Type of property to search\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed\n- Note: Bathrooms filter not available for new projects",
+              "example": "0,1,2"
+            },
+            "required": false,
+            "description": "- Number of bedrooms as comma-separated values\n- Use `0` for studio apartments\n- Example: `0,1,2` for studio, 1-bed and 2-bed\n- Note: Bathrooms filter not available for new projects",
+            "name": "bedrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum price in AED\n- Examples: `500000`, `1000000`, `2000000`",
+              "example": "500000"
+            },
+            "required": false,
+            "description": "- Minimum price in AED\n- Examples: `500000`, `1000000`, `2000000`",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum price in AED\n- Examples: `1000000`, `3000000`, `5000000`",
+              "example": "3000000"
+            },
+            "required": false,
+            "description": "- Maximum price in AED\n- Examples: `1000000`, `3000000`, `5000000`",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+              "example": "500"
+            },
+            "required": false,
+            "description": "- Minimum property area in sqft\n- Examples: `500`, `1000`, `2000`",
+            "name": "area_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+              "example": "3000"
+            },
+            "required": false,
+            "description": "- Maximum property area in sqft\n- Examples: `1000`, `2000`, `5000`",
+            "name": "area_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc",
+                "delivery_earliest",
+                "delivery_latest"
+              ],
+              "default": "featured",
+              "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`, `delivery_earliest`, `delivery_latest`\n- Default: `featured`",
+              "example": "featured"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`, `delivery_earliest`, `delivery_latest`\n- Default: `featured`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of new projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "listing_id": {
+                            "type": "string"
+                          },
+                          "location": {
+                            "nullable": true
+                          },
+                          "bedrooms": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "price_from": {
+                            "type": "number"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "delivery_date": {
+                            "type": "string"
+                          },
+                          "developer_name": {
+                            "type": "string"
+                          },
+                          "construction_phase": {
+                            "type": "string"
+                          },
+                          "sales_start_date": {
+                            "type": "string"
+                          },
+                          "effective_price": {
+                            "type": "number"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "min_size": {
+                            "nullable": true
+                          },
+                          "max_size": {
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "listing_id",
+                          "bedrooms",
+                          "price_from",
+                          "images",
+                          "delivery_date",
+                          "developer_name",
+                          "construction_phase",
+                          "sales_start_date",
+                          "effective_price",
+                          "property_type"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "name": "Residences Du Port Autograph Collection",
+                        "listing_id": "a759fec7-4d0f-4b6a-bda8-70dfc0096fd2",
+                        "location": {
+                          "full_name": "Residences Du Port, Dubai Marina, Dubai"
+                        },
+                        "bedrooms": [
+                          1,
+                          2
+                        ],
+                        "price_from": 2588000,
+                        "images": [
+                          "https://new-projects-media.propertyfinder.com/project/small.webp"
+                        ],
+                        "delivery_date": "2026-06-06T10:54:00Z",
+                        "developer_name": "The Devmark Group",
+                        "construction_phase": "under_construction",
+                        "sales_start_date": "2025-06-06T10:54:00Z",
+                        "effective_price": 2588000,
+                        "property_type": "apartment"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/property-details": {
+      "get": {
+        "tags": [
+          "Property Search"
+        ],
+        "summary": "Get property details",
+        "description": "Get detailed information about a specific property by ID.",
+        "operationId": "property-details",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Property ID to fetch details for\n- Example: `15825613`",
+              "example": "15825613"
+            },
+            "required": true,
+            "description": "- Property ID to fetch details for\n- Example: `15825613`",
+            "name": "property_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Property details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "property_id": {
+                          "type": "string"
+                        },
+                        "property_type": {
+                          "type": "string"
+                        },
+                        "price": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "number"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "period": {
+                              "type": "string"
+                            },
+                            "is_hidden": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "currency"
+                          ]
+                        },
+                        "address": {
+                          "type": "object",
+                          "properties": {
+                            "full_name": {
+                              "type": "string"
+                            },
+                            "coordinates": {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number"
+                                },
+                                "lon": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lon"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "full_name"
+                          ]
+                        },
+                        "location": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "full_name": {
+                              "type": "string"
+                            },
+                            "coordinates": {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number"
+                                },
+                                "lon": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lon"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "full_name"
+                          ]
+                        },
+                        "images": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "agent_details": {
+                          "nullable": true
+                        },
+                        "broker_id": {
+                          "type": "string"
+                        },
+                        "bedrooms": {
+                          "type": "string"
+                        },
+                        "bathrooms": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "number"
+                            },
+                            "unit": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "unit"
+                          ]
+                        },
+                        "floor_plan_area": {
+                          "type": "number"
+                        },
+                        "is_verified": {
+                          "type": "boolean"
+                        },
+                        "is_direct_from_developer": {
+                          "type": "boolean"
+                        },
+                        "is_new_construction": {
+                          "type": "boolean"
+                        },
+                        "is_available": {
+                          "type": "boolean"
+                        },
+                        "listed_date": {
+                          "type": "string"
+                        },
+                        "reference_number": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "location_tree": {
+                          "type": "array",
+                          "items": {
+                            "nullable": true
+                          }
+                        },
+                        "property_url": {
+                          "type": "string"
+                        },
+                        "share_url": {
+                          "type": "string"
+                        },
+                        "listing_type": {
+                          "type": "string"
+                        },
+                        "agent_name": {
+                          "type": "string"
+                        },
+                        "agent_id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": {
+                      "property_id": "16266089",
+                      "property_type": "Apartment",
+                      "price": {
+                        "value": 20000,
+                        "currency": "AED",
+                        "period": "monthly",
+                        "is_hidden": false
+                      },
+                      "address": {
+                        "full_name": "Marina Tower, Dubai Marina, Dubai",
+                        "coordinates": {
+                          "lat": 25.0837707519531,
+                          "lon": 55.145076751709
+                        }
+                      },
+                      "images": [
+                        "https://static.shared.propertyfinder.ae/media/images/listing/APY6G1E8KBFYKHWEKPD6PWYNJ4/2aee8d5d-303a-426f-b17c-c6241bcffc7f/416x272.jpg"
+                      ],
+                      "agent_details": {
+                        "id": "365444",
+                        "name": "Sharie Ann Delizo"
+                      },
+                      "broker_id": "9676",
+                      "bedrooms": "1",
+                      "bathrooms": "2",
+                      "size": {
+                        "value": 768,
+                        "unit": "sqft"
+                      },
+                      "floor_plan_area": 768,
+                      "title": "Elegant Escapes - 1B in Marina, Partial Sea View",
+                      "property_url": "https://www.propertyfinder.ae/en/plp/rent/apartment-for-rent-dubai-dubai-marina-marina-tower-16266089.html"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-agents": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Search real estate agents",
+        "description": "Search for real estate agents in UAE. Returns structured, simpler response data.",
+        "operationId": "search-agents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Location ID to filter agents\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+              "example": "50"
+            },
+            "required": false,
+            "description": "- Location ID to filter agents\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "residential_sale",
+                "residential_rent",
+                "commercial_sale",
+                "commercial_rent"
+              ],
+              "default": "residential_sale",
+              "description": "- Filter agents by specialization\n- `residential_sale`: Agents specializing in residential property sales\n- `residential_rent`: Agents specializing in residential rentals\n- `commercial_sale`: Agents specializing in commercial property sales\n- `commercial_rent`: Agents specializing in commercial rentals\n- Default: `residential_sale`",
+              "example": "residential_sale"
+            },
+            "required": false,
+            "description": "- Filter agents by specialization\n- `residential_sale`: Agents specializing in residential property sales\n- `residential_rent`: Agents specializing in residential rentals\n- `commercial_sale`: Agents specializing in commercial property sales\n- `commercial_rent`: Agents specializing in commercial rentals\n- Default: `residential_sale`",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "most_sales",
+                "most_rentals",
+                "featured"
+              ],
+              "default": "most_sales",
+              "description": "- Sort agents by performance\n- `most_sales`: Agents with most sales\n- `most_rentals`: Agents with most rentals\n- `featured`: Featured/trusted agents\n- Default: `most_sales`",
+              "example": "most_sales"
+            },
+            "required": false,
+            "description": "- Sort agents by performance\n- `most_sales`: Agents with most sales\n- `most_rentals`: Agents with most rentals\n- `featured`: Featured/trusted agents\n- Default: `most_sales`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of real estate agents (Filtered)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "image": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "string"
+                          },
+                          "nationality": {
+                            "type": "string"
+                          },
+                          "total_properties": {
+                            "type": "number"
+                          },
+                          "broker_name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "image",
+                          "position",
+                          "nationality",
+                          "total_properties",
+                          "broker_name"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "id": 309328,
+                        "name": "Syed Abdul Moiz",
+                        "image": "https://www.propertyfinder.ae/agent/0/170/200/MODE/d5051e/309328-7bd62o.jpg?ctr=ae",
+                        "position": "Property Consultant",
+                        "nationality": "Pakistan",
+                        "total_properties": 165,
+                        "broker_name": "EVA Real Estate LLC"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-agents-detailed": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Search real estate agents (Detailed)",
+        "description": "Search for real estate agents in UAE (Higher Plan). Returns full detailed raw response.",
+        "operationId": "search-agents-detailed",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Location ID to filter agents\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+              "example": "50"
+            },
+            "required": false,
+            "description": "- Location ID to filter agents\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "residential_sale",
+                "residential_rent",
+                "commercial_sale",
+                "commercial_rent"
+              ],
+              "default": "residential_sale",
+              "description": "- Filter agents by specialization\n- `residential_sale`: Agents specializing in residential property sales\n- `residential_rent`: Agents specializing in residential rentals\n- `commercial_sale`: Agents specializing in commercial property sales\n- `commercial_rent`: Agents specializing in commercial rentals\n- Default: `residential_sale`",
+              "example": "residential_sale"
+            },
+            "required": false,
+            "description": "- Filter agents by specialization\n- `residential_sale`: Agents specializing in residential property sales\n- `residential_rent`: Agents specializing in residential rentals\n- `commercial_sale`: Agents specializing in commercial property sales\n- `commercial_rent`: Agents specializing in commercial rentals\n- Default: `residential_sale`",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "most_sales",
+                "most_rentals",
+                "featured"
+              ],
+              "default": "most_sales",
+              "description": "- Sort agents by performance\n- `most_sales`: Agents with most sales\n- `most_rentals`: Agents with most rentals\n- `featured`: Featured/trusted agents\n- Default: `most_sales`",
+              "example": "most_sales"
+            },
+            "required": false,
+            "description": "- Sort agents by performance\n- `most_sales`: Agents with most sales\n- `most_rentals`: Agents with most rentals\n- `featured`: Featured/trusted agents\n- Default: `most_sales`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of real estate agents (Detailed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "nullable": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "id": 340139,
+                        "slug": "muhammad-abu-bakr",
+                        "name": "Muhammad Abu Bakr",
+                        "totalProperties": 81,
+                        "phone": "+971588244658",
+                        "position": "Managing Director",
+                        "nationality": {
+                          "code": "GB",
+                          "name": "United Kingdom"
+                        },
+                        "broker": {
+                          "id": 9852,
+                          "name": "DECISIVE LIVING REAL ESTATE L.L.C"
+                        },
+                        "languages": [
+                          {
+                            "id": 1,
+                            "name": "English"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-properties": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Get properties listed by an agent",
+        "description": "Get all properties listed by a specific real estate agent. Filter by property category (for sale, for rent, commercial). Returns parsed, structured data.",
+        "operationId": "agent-properties",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Agent ID from `/search-agent` endpoint\n- Find agent IDs by searching agents first",
+              "example": "229838"
+            },
+            "required": true,
+            "description": "- Agent ID from `/search-agent` endpoint\n- Find agent IDs by searching agents first",
+            "name": "agent_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "residential_sale",
+                "residential_rent",
+                "commercial_sale",
+                "commercial_rent"
+              ],
+              "description": "- Filter agent's properties by transaction type\n- `residential_sale`: Properties for sale\n- `residential_rent`: Properties for rent\n- `commercial_sale`: Commercial properties for sale\n- `commercial_rent`: Commercial properties for rent\n- Leave empty to show all",
+              "example": "residential_sale"
+            },
+            "required": false,
+            "description": "- Filter agent's properties by transaction type\n- `residential_sale`: Properties for sale\n- `residential_rent`: Properties for rent\n- `commercial_sale`: Commercial properties for sale\n- `commercial_rent`: Commercial properties for rent\n- Leave empty to show all",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "featured",
+              "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`\n- Default: `featured`",
+              "example": "featured"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`\n- Default: `featured`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Properties listed by the agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "listing_type": "property",
+                        "property_id": "16211384",
+                        "property_type": "Villa",
+                        "price": {
+                          "value": 3550000,
+                          "currency": "AED",
+                          "period": "sell",
+                          "is_hidden": false
+                        },
+                        "location": {
+                          "id": "1765",
+                          "full_name": "Golf Community, Al Zorah, Ajman"
+                        },
+                        "broker_id": "5497",
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/MTG981RA287YCH6PWZNKG6PNPG/bbbcc137-8ba1-4114-bfd3-bfda72ddb5c0/416x272.jpg"
+                        ],
+                        "size": {
+                          "value": 3800,
+                          "unit": "sqft"
+                        },
+                        "title": "Upscale comfort, private pool– Al Zorah- freehold",
+                        "bathrooms": "6",
+                        "bedrooms": "4",
+                        "share_url": "https://www.propertyfinder.ae/en/plp/buy/villa-for-sale-ajman-al-zorah-golf-community-16211384.html"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-brokers": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Search real estate brokerages",
+        "description": "Search for real estate brokerages and agencies in UAE. Returns structured, simpler response data.",
+        "operationId": "search-brokers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Location ID to filter brokers/agencies\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+              "example": "50"
+            },
+            "required": false,
+            "description": "- Location ID to filter brokers/agencies\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "featured",
+                "most_properties",
+                "most_agents"
+              ],
+              "default": "featured",
+              "description": "- Sort brokerages by\n- `featured`: Featured/top-ranked agencies\n- `most_properties`: Agencies with most listings\n- `most_agents`: Agencies with most agents\n- Default: `featured`",
+              "example": "featured"
+            },
+            "required": false,
+            "description": "- Sort brokerages by\n- `featured`: Featured/top-ranked agencies\n- `most_properties`: Agencies with most listings\n- `most_agents`: Agencies with most agents\n- Default: `featured`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of real estate brokerages (Filtered)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "total_properties": {
+                            "type": "number"
+                          },
+                          "logo": {
+                            "type": "string"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "location": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "total_properties",
+                          "logo",
+                          "address",
+                          "location"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "id": 4428,
+                        "name": "Elite Property Brokerage",
+                        "total_properties": 555,
+                        "logo": "https://www.propertyfinder.ae/broker/0/178/98/MODE/547989/4428-55abao.jpg?ctr=ae",
+                        "address": "Office 613, Building Onyx Tower 1, Barsha Heights (Tecom), Greens, Dubai",
+                        "location": "Dubai"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-brokers-detailed": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Search real estate brokerages (Detailed)",
+        "description": "Search for real estate brokerages and agencies in UAE. Returns full detailed raw response.",
+        "operationId": "search-brokers-detailed",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Location ID to filter brokers/agencies\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+              "example": "50"
+            },
+            "required": false,
+            "description": "- Location ID to filter brokers/agencies\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)\n- Leave empty for all locations",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "featured",
+                "most_properties",
+                "most_agents"
+              ],
+              "default": "featured",
+              "description": "- Sort brokerages by\n- `featured`: Featured/top-ranked agencies\n- `most_properties`: Agencies with most listings\n- `most_agents`: Agencies with most agents\n- Default: `featured`",
+              "example": "featured"
+            },
+            "required": false,
+            "description": "- Sort brokerages by\n- `featured`: Featured/top-ranked agencies\n- `most_properties`: Agencies with most listings\n- `most_agents`: Agencies with most agents\n- Default: `featured`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of real estate brokerages (Detailed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "nullable": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "id": 1012,
+                        "urlSlug": "mccone-properties-1012",
+                        "name": "McCone Properties",
+                        "totalProperties": 1320,
+                        "phone": "+97143806683",
+                        "address": "Office 305, Building Onyx Tower 2, The Greens, n/a, Dubai",
+                        "location": "Dubai",
+                        "description": "McCone Properties is a leading real estate agency..."
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/broker-properties": {
+      "get": {
+        "tags": [
+          "Agents & Brokers"
+        ],
+        "summary": "Get properties listed by a brokerage",
+        "description": "Get all properties listed by a specific real estate brokerage or agency. Filter by property category (for sale, for rent, commercial). Returns parsed structured data.",
+        "operationId": "broker-properties",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Broker/Agency ID from `/search-broker` endpoint\n- Find broker IDs by searching brokers first",
+              "example": "4428"
+            },
+            "required": true,
+            "description": "- Broker/Agency ID from `/search-broker` endpoint\n- Find broker IDs by searching brokers first",
+            "name": "broker_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "residential_sale",
+                "residential_rent",
+                "commercial_sale",
+                "commercial_rent"
+              ],
+              "description": "- Filter broker's properties by transaction type\n- `residential_sale`: Properties for sale\n- `residential_rent`: Properties for rent\n- `commercial_sale`: Commercial properties for sale\n- `commercial_rent`: Commercial properties for rent\n- Leave empty to show all",
+              "example": "residential_sale"
+            },
+            "required": false,
+            "description": "- Filter broker's properties by transaction type\n- `residential_sale`: Properties for sale\n- `residential_rent`: Properties for rent\n- `commercial_sale`: Commercial properties for sale\n- `commercial_rent`: Commercial properties for rent\n- Leave empty to show all",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "featured",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "featured",
+              "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`\n- Default: `featured`",
+              "example": "featured"
+            },
+            "required": false,
+            "description": "- Sort order for results\n- Options: `featured`, `newest`, `price_asc`, `price_desc`\n- Default: `featured`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Properties listed by the brokerage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "property_id": {
+                            "type": "string"
+                          },
+                          "property_type": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "is_hidden": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "currency"
+                            ]
+                          },
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "full_name"
+                            ]
+                          },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "full_name": {
+                                "type": "string"
+                              },
+                              "coordinates": {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lon": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lon"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "full_name"
+                            ]
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "agent_details": {
+                            "nullable": true
+                          },
+                          "broker_id": {
+                            "type": "string"
+                          },
+                          "bedrooms": {
+                            "type": "string"
+                          },
+                          "bathrooms": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number"
+                              },
+                              "unit": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "unit"
+                            ]
+                          },
+                          "floor_plan_area": {
+                            "type": "number"
+                          },
+                          "is_verified": {
+                            "type": "boolean"
+                          },
+                          "is_direct_from_developer": {
+                            "type": "boolean"
+                          },
+                          "is_new_construction": {
+                            "type": "boolean"
+                          },
+                          "is_available": {
+                            "type": "boolean"
+                          },
+                          "listed_date": {
+                            "type": "string"
+                          },
+                          "reference_number": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "location_tree": {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          "property_url": {
+                            "type": "string"
+                          },
+                          "share_url": {
+                            "type": "string"
+                          },
+                          "listing_type": {
+                            "type": "string"
+                          },
+                          "agent_name": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "listing_type": "property",
+                        "property_id": "16181926",
+                        "property_type": "Villa",
+                        "price": {
+                          "value": 180000000,
+                          "currency": "AED",
+                          "period": "sell",
+                          "is_hidden": false
+                        },
+                        "location": {
+                          "id": "4270",
+                          "full_name": "Signature Villas Frond J, Signature Villas, Palm Jumeirah, Dubai"
+                        },
+                        "images": [
+                          "https://static.shared.propertyfinder.ae/media/images/listing/QENWPA42A7STBTPPSGZ3KZDH00/848d14ea-fbfa-40e7-9b12-cfb860d22f7f/416x272.jpg"
+                        ],
+                        "agent_name": "Jake Jones",
+                        "agent_id": "192521",
+                        "broker_id": "4428",
+                        "bedrooms": "6",
+                        "bathrooms": "7",
+                        "share_url": "https://www.propertyfinder.ae/en/plp/buy/villa-for-sale-dubai-palm-jumeirah-signature-villas-signature-villas-frond-j-16181926.html",
+                        "title": "Palm Jumeirah Ultra Luxury Custom Built Villa!"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-transactions": {
+      "get": {
+        "tags": [
+          "Market Data"
+        ],
+        "summary": "Get historical property transactions",
+        "description": "Get historical property transaction data (sales and rentals) for a location. Useful for market analysis and price trends.",
+        "operationId": "get-transactions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)",
+              "example": "50"
+            },
+            "required": true,
+            "description": "- Location ID from `/autocomplete-location` endpoint\n- Example: `50` (Dubai Marina), `51` (Downtown Dubai)",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sold",
+                "rented"
+              ],
+              "description": "- Type of transaction history to view\n- `sold`: Properties that were sold\n- `rented`: Properties that were rented",
+              "example": "sold"
+            },
+            "required": true,
+            "description": "- Type of transaction history to view\n- `sold`: Properties that were sold\n- `rented`: Properties that were rented",
+            "name": "transaction_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apartment",
+                "villa",
+                "townhouse",
+                "penthouse",
+                "compound",
+                "duplex",
+                "full-floor",
+                "half-floor",
+                "whole-building",
+                "bulk-rent-unit",
+                "bungalow",
+                "hotel-apartment",
+                "office-space",
+                "retail",
+                "warehouse",
+                "shop",
+                "show-room",
+                "land",
+                "factory",
+                "labor-camp",
+                "staff-accommodation",
+                "business-centre",
+                "co-working-space",
+                "farm"
+              ],
+              "description": "- Filter transactions by property type\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+              "example": "apartment"
+            },
+            "required": false,
+            "description": "- Filter transactions by property type\n- Common: `apartment`, `villa`, `penthouse`\n- All options: `apartment`, `villa`, `townhouse`, `penthouse`, `compound`, `duplex`, `full-floor`, `half-floor`, `whole-building`, `bulk-rent-unit`, `bungalow`, `hotel-apartment`",
+            "name": "property_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "- Filter by number of bedrooms\n- Use `0` for studio apartments\n- Examples: `0`, `1`, `2`, `3`",
+              "example": "2"
+            },
+            "required": false,
+            "description": "- Filter by number of bedrooms\n- Use `0` for studio apartments\n- Examples: `0`, `1`, `2`, `3`",
+            "name": "bedrooms",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "high_price",
+                "low_price"
+              ],
+              "default": "newest",
+              "description": "- Sort transactions by\n- `newest`: Most recent transactions first\n- `oldest`: Oldest transactions first\n- `high_price`: Highest price first\n- `low_price`: Lowest price first\n- Default: `newest`",
+              "example": "newest"
+            },
+            "required": false,
+            "description": "- Sort transactions by\n- `newest`: Most recent transactions first\n- `oldest`: Oldest transactions first\n- `high_price`: Highest price first\n- `low_price`: Lowest price first\n- Default: `newest`",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1y",
+                "6m",
+                "3m",
+                "1m"
+              ],
+              "default": "1y",
+              "description": "- Time period for transactions\n- `1y`: Last 12 months\n- `6m`: Last 6 months\n- `3m`: Last 3 months\n- `1m`: Last month\n- Default: `1y`",
+              "example": "1y"
+            },
+            "required": false,
+            "description": "- Time period for transactions\n- `1y`: Last 12 months\n- `6m`: Last 6 months\n- `3m`: Last 3 months\n- `1m`: Last month\n- Default: `1y`",
+            "name": "period",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical transaction data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "bedrooms": 2,
+                        "high_level_location_name": "Dubai Marina",
+                        "id": "69e7ba45205fabffe07be5d7b8c127dc",
+                        "price": 1550000,
+                        "property_type": "Apartment",
+                        "transaction_date": "2026-02-07"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/real-estate-developer": {
+      "get": {
+        "tags": [
+          "Market Data"
+        ],
+        "summary": "List real estate developers",
+        "description": "Get a list of real estate developers in UAE by emirate. Returns developer profiles and their projects.",
+        "operationId": "real-estate-developer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RapidApiHostHeader"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dubai",
+                "abu-dhabi",
+                "sharjah",
+                "ajman",
+                "ras-al-khaimah",
+                "fujairah",
+                "umm-al-quwain",
+                "al-ain"
+              ],
+              "default": "dubai",
+              "description": "- Emirate to list developers from\n- Options: `dubai`, `abu-dhabi`, `sharjah`, `ajman`, `ras-al-khaimah`, `fujairah`, `umm-al-quwain`, `al-ain`\n- Default: `dubai`",
+              "example": "dubai"
+            },
+            "required": false,
+            "description": "- Emirate to list developers from\n- Options: `dubai`, `abu-dhabi`, `sharjah`, `ajman`, `ras-al-khaimah`, `fujairah`, `umm-al-quwain`, `al-ain`\n- Default: `dubai`",
+            "name": "location",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+              "example": "1"
+            },
+            "required": false,
+            "description": "- Page number for pagination\n- Default: `1`\n- Examples: `1`, `2`, `3`",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of real estate developers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "established_since": {
+                            "type": "string"
+                          },
+                          "num_projects_online": {
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "logo_url": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "description",
+                          "established_since",
+                          "num_projects_online",
+                          "id",
+                          "logo_url",
+                          "slug"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "example": {
+                    "success": true,
+                    "data": [
+                      {
+                        "name": "Emaar Properties",
+                        "description": "<p>Emaar, a real estate giant founded in 1997...</p>",
+                        "established_since": "1997-01-03T00:00:00Z",
+                        "num_projects_online": 212,
+                        "id": "79ca4333-9975-4672-b05f-bb7329de75e9",
+                        "logo_url": "https://new-projects-media.propertyfinder.com/developer/logo.png",
+                        "slug": "emaar-properties"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PropertyFinder API unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyFinderErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

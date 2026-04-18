@@ -246,16 +246,49 @@ export const useScenarioStore = create<ScenarioStore>()(
 
       startNewScenario: (city) => {
         const targetCity = city ?? useCriteriaStore.getState().cityConfig.slug;
+
+        // Save live criteria back to the currently active scenario before leaving it.
+        const prevActiveId = get().activeScenarioIdByCity[targetCity] ?? null;
+        if (prevActiveId) {
+          const liveCriteria = useCriteriaStore.getState().criteria;
+          set((s) => ({
+            scenarios: s.scenarios.map((sc) =>
+              sc.id === prevActiveId
+                ? { ...sc, criteria: structuredClone(liveCriteria) }
+                : sc,
+            ),
+          }));
+        }
+
+        // Create a real scenario entry immediately so it owns its own ID,
+        // criteria panel, chat history, and results from the start.
+        const id = generateId();
+        const name = nextScenarioName(get().scenarios, targetCity);
+        const newScenario: Scenario = {
+          id,
+          name,
+          city: targetCity,
+          createdAt: Date.now(),
+          criteria: [],
+          gridResolution: useCriteriaStore.getState().gridResolution,
+          scoreThreshold: 0,
+          scoreData: null,
+        };
+
+        set((s) => ({
+          scenarios: [...s.scenarios, newScenario],
+          activeScenarioIdByCity: {
+            ...s.activeScenarioIdByCity,
+            [targetCity]: id,
+          },
+        }));
+
+        // Reset the criteria store for the fresh scenario.
         const cs = useCriteriaStore.getState();
         cs.setCriteria([]);
         cs.setScoreData(null);
         cs.setScoreThreshold(0);
-        set((state) => ({
-          activeScenarioIdByCity: {
-            ...state.activeScenarioIdByCity,
-            [targetCity]: null,
-          },
-        }));
+        cs.setSelectedCellId(null);
       },
 
       getScenariosByCity: (city) => {

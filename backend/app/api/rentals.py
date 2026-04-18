@@ -1,0 +1,69 @@
+"""
+Rental search endpoint.
+
+Given an H3 cell id, derive its geographic area (center + radius + bbox) and
+delegate to the city's configured rental provider.
+"""
+from __future__ import annotations
+
+import h3
+from fastapi import APIRouter, HTTPException, Query
+
+from app.city_config import get_city
+from app.services.rentals import (
+    RentalSearchQuery,
+    RentalSearchResponse,
+    get_rental_provider,
+)
+
+router = APIRouter()
+
+# Any hex finer than ~500m would yield an empty search on most property APIs.
+# Floor the radius so clicking a res-9 hex (~175m edge) still returns listings.
+_MIN_RADIUS_M = 500.0
+
+
+def _hex_geometry(hex_id: str) -> tuple[float, float, tuple[float, float, float, float], float]:
+    center_lat, center_lng = h3.cell_to_latlng(hex_id)
+    boundary = h3.cell_to_boundary(hex_id)  # list[(lat, lng)]
+    lats = [pt[0] for pt in boundary]
+    lngs = [pt[1] for pt in boundary]
+    bbox = (min(lats), min(lngs), max(lats), max(lngs))
+    res = h3.get_resolution(hex_id)
+    edge_m = h3.average_hexagon_edge_length(res, unit="m")
+    radius_m = max(edge_m, _MIN_RADIUS_M)
+    return center_lat, center_lng, bbox, radius_m
+
+
+@router.get("/rentals/search", response_model=RentalSearchResponse)
+async def search_rentals(
+    city: str = Query(...),
+    hex_id: str = Query(...),
+    area_name: str | None = Query(default=None),
+    limit: int = Query(default=40, ge=1, le=200),
+):
+    city_config = get_city(city)
+    provider = get_rental_provider(city_config)
+    if provider is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No rental provider configured for {city_config.slug}",
+        )
+
+    try:
+        center_lat, center_lng, bbox, radius_m = _hex_geometry(hex_id)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid hex_id: {e}") from e
+
+    query = RentalSearchQuery(
+        city_slug=city_config.slug,
+        hex_id=hex_id,
+        center_lat=center_lat,
+        center_lng=center_lng,
+        radius_m=radius_m,
+        bbox=bbox,
+        area_name=area_name,
+        limit=limit,
+    )
+    listings = await provider.search(query)
+    return RentalSearchResponse(hex_id=hex_id, count=len(listings), listings=listings)

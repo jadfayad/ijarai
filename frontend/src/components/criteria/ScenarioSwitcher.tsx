@@ -95,7 +95,7 @@ export function ScenarioSwitcher({
 
   const avgScore = (scenarioId: string) => {
     const sc = scenarios.find((s) => s.id === scenarioId);
-    if (!sc || sc.scoreData.features.length === 0) return null;
+    if (!sc || !sc.scoreData || sc.scoreData.features.length === 0) return null;
     const sum = sc.scoreData.features.reduce(
       (acc, f) => acc + (f.properties.score ?? 0),
       0

@@ -305,4 +305,28 @@ export interface CityConfig {
   rent_default: number;
   default_destinations: DestinationConfig[];
   utility_avg_monthly?: number;
+  rental_provider?: string | null;
+}
+
+export interface RentalListing {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  price_period: string;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  size_sqft?: number | null;
+  lat: number;
+  lng: number;
+  thumbnail_url?: string | null;
+  external_url?: string | null;
+  property_type?: string | null;
+  source: string;
+}
+
+export interface RentalSearchResponse {
+  hex_id: string;
+  count: number;
+  listings: RentalListing[];
 }
