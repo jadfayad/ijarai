@@ -41,9 +41,10 @@ _NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 _HTTP_TIMEOUT = 30.0
 
 # Listing cache: (city_slug, hex_id, area_name_or_none, limit) → listings.
-_search_cache: TTLCache[tuple[str, str, str | None, int], list[RentalListing]] = TTLCache(
-    maxsize=256, ttl=3600
-)
+# Cache key = (city_slug, hex_id, area_name, limit, *filters). The filters
+# are part of the key so two searches at the same hex with different
+# budgets/bedrooms return distinct results.
+_search_cache: TTLCache[tuple, list[RentalListing]] = TTLCache(maxsize=256, ttl=3600)
 # location_id cache: lowercased area query → location_id.
 _autocomplete_cache: TTLCache[str, int | str | None] = TTLCache(maxsize=512, ttl=3600)
 # reverse-geocode cache: rounded (lat, lng) → area name.
@@ -267,22 +268,43 @@ class PropertyFinderProvider(RentalProvider):
         return location_id
 
     async def _search_rent(
-        self, client: httpx.AsyncClient, location_id: int | str, limit: int
+        self,
+        client: httpx.AsyncClient,
+        location_id: int | str,
+        query: RentalSearchQuery,
     ) -> list[dict[str, Any]]:
         url = f"https://{self._host}{self._search_path}"
-        params = {
+        params: dict[str, Any] = {
             "location_id": location_id,
             "sort": "newest",
             "page": 1,
         }
+        if query.property_type:
+            params["property_type"] = query.property_type
+        if query.bedrooms_csv:
+            params["bedrooms"] = query.bedrooms_csv
+        if query.area_min_sqft is not None:
+            params["area_min"] = int(query.area_min_sqft)
+        if query.area_max_sqft is not None:
+            params["area_max"] = int(query.area_max_sqft)
+        if query.furnishing and query.furnishing != "any":
+            params["furnishing"] = "unfurnished"
+        if query.amenities_csv:
+            params["amenities"] = query.amenities_csv
+        if query.price_max_monthly is not None and query.price_max_monthly > 0:
+            # Our budget criterion is monthly AED; ask PropertyFinder to
+            # match against monthly prices so the cap is applied 1:1.
+            params["price_max"] = int(query.price_max_monthly)
+            params["rent_frequency"] = "monthly"
+
         try:
             resp = await client.get(url, params=params, headers=self._headers())
             resp.raise_for_status()
             payload = resp.json()
         except httpx.HTTPStatusError as e:
             logger.warning(
-                "PropertyFinder search-rent %s: %s",
-                e.response.status_code, e.response.text[:400],
+                "PropertyFinder search-rent %s (params=%s): %s",
+                e.response.status_code, params, e.response.text[:400],
             )
             return []
         except Exception as e:  # noqa: BLE001
@@ -295,14 +317,20 @@ class PropertyFinderProvider(RentalProvider):
                 "PropertyFinder search-rent: no listings list found; top-level keys=%s",
                 list(payload.keys())[:10],
             )
-        return items[:limit]
+        return items[: query.limit]
 
     async def search(self, query: RentalSearchQuery) -> list[RentalListing]:
         if not self._api_key:
             logger.info("RAPIDAPI_KEY not set; returning empty rental results")
             return []
 
-        cache_key = (query.city_slug, query.hex_id, query.area_name, query.limit)
+        # Filters change results, so they must be part of the cache key.
+        cache_key = (
+            query.city_slug, query.hex_id, query.area_name, query.limit,
+            query.property_type, query.bedrooms_csv,
+            query.area_min_sqft, query.area_max_sqft,
+            query.furnishing, query.amenities_csv, query.price_max_monthly,
+        )
         if cache_key in _search_cache:
             return _search_cache[cache_key]
 
@@ -324,7 +352,7 @@ class PropertyFinderProvider(RentalProvider):
                 _search_cache[cache_key] = []
                 return []
 
-            raw_items = await self._search_rent(client, location_id, query.limit)
+            raw_items = await self._search_rent(client, location_id, query)
 
         listings: list[RentalListing] = []
         for raw in raw_items:

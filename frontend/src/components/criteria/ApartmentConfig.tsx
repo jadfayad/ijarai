@@ -19,6 +19,7 @@ const BEDROOM_OPTIONS = [
 const FURNISHED_OPTIONS: { value: FurnishedPreference; label: string }[] = [
   { value: "any", label: "Any" },
   { value: "furnished", label: "Furnished" },
+  { value: "partly", label: "Partly" },
   { value: "unfurnished", label: "Unfurnished" },
 ];
 

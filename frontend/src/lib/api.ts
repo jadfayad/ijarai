@@ -58,14 +58,34 @@ export async function fetchCityConfig(slug?: string): Promise<CityConfig> {
   return request<CityConfig>(`/api/city${params}`);
 }
 
+export interface RentalFilters {
+  property_type?: string;
+  bedrooms?: string;
+  area_min_sqft?: number;
+  area_max_sqft?: number;
+  furnishing?: string;
+  amenities?: string;
+  price_max_monthly?: number;
+}
+
 export async function searchRentalsInHex(
   citySlug: string,
   hexId: string,
   areaName?: string | null,
+  filters?: RentalFilters,
   signal?: AbortSignal,
 ): Promise<RentalSearchResponse> {
   const q = new URLSearchParams({ city: citySlug, hex_id: hexId });
   if (areaName) q.set("area_name", areaName);
+  if (filters) {
+    if (filters.property_type) q.set("property_type", filters.property_type);
+    if (filters.bedrooms) q.set("bedrooms", filters.bedrooms);
+    if (filters.area_min_sqft != null) q.set("area_min_sqft", String(filters.area_min_sqft));
+    if (filters.area_max_sqft != null) q.set("area_max_sqft", String(filters.area_max_sqft));
+    if (filters.furnishing) q.set("furnishing", filters.furnishing);
+    if (filters.amenities) q.set("amenities", filters.amenities);
+    if (filters.price_max_monthly != null) q.set("price_max_monthly", String(filters.price_max_monthly));
+  }
   return request<RentalSearchResponse>(`/api/rentals/search?${q.toString()}`, { signal });
 }
 

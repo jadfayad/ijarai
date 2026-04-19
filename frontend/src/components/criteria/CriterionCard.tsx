@@ -368,18 +368,21 @@ export function CriterionCard({ criterion }: Props) {
           : "border-white/[0.1] hover:border-white/[0.16]"
       }`}
     >
-      {/* Header row — minimal: icon, title, chevron; trash reveals on hover. */}
-      <div className="group/header w-full p-3.5 flex items-center gap-3">
+      {/* Header row — minimal: icon, title, chevron; trash reveals on hover.
+          Horizontal padding matches the expanded section below so expanding
+          doesn't shift content; vertical padding + icon padding are kept
+          tight so the collapsed row stays low-profile. */}
+      <div className="group/header w-full py-2 px-3.5 flex items-center gap-2.5">
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
           aria-label={expanded ? `Collapse ${criterion.label}` : `Expand ${criterion.label}`}
-          className="flex-1 min-w-0 flex items-center gap-3 text-left"
+          className="flex-1 min-w-0 flex items-center gap-2.5 text-left"
         >
           <div className="relative shrink-0">
             <div
-              className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-2 transition-colors duration-200`}
+              className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-1.5 transition-colors duration-200`}
             >
               {iconCfg.icon}
             </div>
@@ -387,11 +390,11 @@ export function CriterionCard({ criterion }: Props) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-white truncate">
+            <div className="text-[13px] font-medium text-white truncate leading-tight">
               {criterion.label}
             </div>
             {!expanded && (
-              <p className="text-[11px] text-white/40 truncate mt-0.5">
+              <p className="text-[11px] text-white/40 truncate leading-tight mt-0.5">
                 {summary ? `${summary} · ` : ""}
                 <span className="text-white/55">{weightLabel(criterion.weight)}</span>
               </p>
@@ -399,7 +402,7 @@ export function CriterionCard({ criterion }: Props) {
           </div>
 
           <ChevronDown
-            size={14}
+            size={13}
             className={`text-white/25 shrink-0 transition-transform duration-200 ${
               expanded ? "rotate-180" : ""
             }`}
@@ -409,7 +412,7 @@ export function CriterionCard({ criterion }: Props) {
           <TooltipTrigger
             onClick={handleRemove}
             aria-label={`Remove ${criterion.label}`}
-            className="text-white/20 hover:text-red-400 p-1.5 rounded-md hover:bg-red-500/10 transition-all duration-200 shrink-0 opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+            className="text-white/20 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-all duration-200 shrink-0 opacity-0 group-hover/header:opacity-100 focus:opacity-100"
           >
             <Trash2 size={13} />
           </TooltipTrigger>

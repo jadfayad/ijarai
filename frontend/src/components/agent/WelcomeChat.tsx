@@ -5,7 +5,7 @@ import {
   Sparkles,
   Send,
   Briefcase,
-  Users,
+  Heart,
   TreePine,
   MessageSquare,
   X,
@@ -32,12 +32,12 @@ const PERSONAS: Persona[] = [
       "I'm a young professional. Build scoring criteria for me: short commute to a central business district, a walkable neighborhood with cafes, gyms, and restaurants, and a reasonable rent budget for a 1-bedroom.",
   },
   {
-    id: "family-4",
-    icon: Users,
-    label: "Family of 4",
-    sub: "Schools, safety, green space",
+    id: "couple-commuters",
+    icon: Heart,
+    label: "Commuter couple",
+    sub: "Amazon + DXB, cafes, calm",
     prompt:
-      "I'm a family of 4. Build scoring criteria focused on good schools nearby, quiet family-friendly neighborhoods, safety, and walkable access to parks and green spaces.",
+      "We're a couple. My girlfriend works at Amazon's offices in Internet City and commutes by public transport — being close to her office is the top priority since she takes transit daily. I travel weekly from DXB Airport, so a reasonable drive to the airport matters too. We love nice coffee places and calm, quiet neighborhoods. Build scoring criteria that reflect this, weighting her commute the highest.",
   },
   {
     id: "quiet-parks",

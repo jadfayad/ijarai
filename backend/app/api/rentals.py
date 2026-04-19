@@ -41,6 +41,13 @@ async def search_rentals(
     hex_id: str = Query(...),
     area_name: str | None = Query(default=None),
     limit: int = Query(default=40, ge=1, le=200),
+    property_type: str | None = Query(default=None),
+    bedrooms: str | None = Query(default=None),
+    area_min_sqft: float | None = Query(default=None, ge=0),
+    area_max_sqft: float | None = Query(default=None, ge=0),
+    furnishing: str | None = Query(default=None),
+    amenities: str | None = Query(default=None),
+    price_max_monthly: float | None = Query(default=None, ge=0),
 ):
     city_config = get_city(city)
     provider = get_rental_provider(city_config)
@@ -64,6 +71,13 @@ async def search_rentals(
         bbox=bbox,
         area_name=area_name,
         limit=limit,
+        property_type=property_type,
+        bedrooms_csv=bedrooms,
+        area_min_sqft=area_min_sqft,
+        area_max_sqft=area_max_sqft,
+        furnishing=furnishing,
+        amenities_csv=amenities,
+        price_max_monthly=price_max_monthly,
     )
     listings = await provider.search(query)
     return RentalSearchResponse(hex_id=hex_id, count=len(listings), listings=listings)

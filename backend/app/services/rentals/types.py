@@ -45,6 +45,17 @@ class RentalSearchQuery(BaseModel):
     area_name: str | None = None
     limit: int = Field(default=40, ge=1, le=200)
 
+    # ── Filter derivatives of the user's criteria ──────────────────────
+    # Populated by the API route from the apartment-profile + budget
+    # criteria so the upstream search mirrors what the user configured.
+    property_type: str | None = None
+    bedrooms_csv: str | None = None  # e.g. "0,1,2" (studio + 1BR + 2BR)
+    area_min_sqft: float | None = None
+    area_max_sqft: float | None = None
+    furnishing: str | None = None  # "furnished" | "unfurnished" | "partly"
+    amenities_csv: str | None = None  # PropertyFinder amenity slugs
+    price_max_monthly: float | None = None  # AED/month
+
 
 class RentalSearchResponse(BaseModel):
     hex_id: str

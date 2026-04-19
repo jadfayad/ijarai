@@ -109,7 +109,7 @@ export interface HazardParams {
   hazards: HazardType[];
 }
 
-export type FurnishedPreference = "furnished" | "unfurnished" | "any";
+export type FurnishedPreference = "furnished" | "unfurnished" | "partly" | "any";
 
 export interface ApartmentParams {
   min_surface_m2?: number | null;
