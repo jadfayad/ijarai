@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.city_config import get_city
 from app.services.rentals import (
+    RentalListing,
     RentalSearchQuery,
     RentalSearchResponse,
     get_rental_provider,
@@ -33,6 +34,52 @@ def _hex_geometry(hex_id: str) -> tuple[float, float, tuple[float, float, float,
     edge_m = h3.average_hexagon_edge_length(res, unit="m")
     radius_m = max(edge_m, _MIN_RADIUS_M)
     return center_lat, center_lng, bbox, radius_m
+
+
+def _listings_in_hex(listings: list[RentalListing], hex_id: str) -> list[RentalListing]:
+    """Return only listings whose coordinates fall within the given H3 cell."""
+    res = h3.get_resolution(hex_id)
+    return [l for l in listings if h3.latlng_to_cell(l.lat, l.lng, res) == hex_id]
+
+
+async def _expand_to_neighbours(
+    hex_id: str,
+    query: RentalSearchQuery,
+    provider,
+    initial: list[RentalListing],
+) -> list[RentalListing]:
+    """Search ring-1 neighbours and return listings confirmed inside hex_id."""
+    combined: dict[str, RentalListing] = {l.id: l for l in initial}
+
+    for nbr_hex in set(h3.grid_disk(hex_id, 1)) - {hex_id}:
+        nbr_lat, nbr_lng, nbr_bbox, nbr_radius = _hex_geometry(nbr_hex)
+        nbr_query = query.model_copy(update={
+            "hex_id": nbr_hex,
+            "center_lat": nbr_lat,
+            "center_lng": nbr_lng,
+            "bbox": nbr_bbox,
+            "radius_m": nbr_radius,
+            "area_name": None,  # let the provider reverse-geocode the neighbour's centre
+        })
+        try:
+            for listing in await provider.search(nbr_query):
+                combined.setdefault(listing.id, listing)
+        except Exception:
+            continue
+
+        pool = list(combined.values())
+        if pool and len(_listings_in_hex(pool, hex_id)) / len(pool) >= 0.5:
+            break  # threshold met — stop early
+
+    in_hex = _listings_in_hex(list(combined.values()), hex_id)
+    if in_hex:
+        return in_hex
+
+    # Nothing landed in the original hex — return listings confirmed inside any neighbour.
+    res = h3.get_resolution(hex_id)
+    all_searched = set(h3.grid_disk(hex_id, 1))
+    nearby = [l for l in combined.values() if h3.latlng_to_cell(l.lat, l.lng, res) in all_searched]
+    return nearby if nearby else initial
 
 
 @router.get("/rentals/search", response_model=RentalSearchResponse)
@@ -82,4 +129,11 @@ async def search_rentals(
         price_max_monthly=price_max_monthly,
     )
     listings = await provider.search(query)
+
+    # If less than half the results are geographically inside the clicked hex,
+    # search the 6 immediate neighbours and return the listings that do land inside.
+    in_hex = _listings_in_hex(listings, hex_id)
+    if listings and len(in_hex) / len(listings) < 0.5:
+        listings = await _expand_to_neighbours(hex_id, query, provider, listings)
+
     return RentalSearchResponse(hex_id=hex_id, count=len(listings), listings=listings)
