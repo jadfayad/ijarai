@@ -11,6 +11,7 @@ import { useCriteriaStore } from "@/stores/criteria-store";
 
 const SQFT_PER_M2 = 10.7639;
 const BEDROOM_CAP = 6;
+const BATHROOM_CAP = 5;
 
 /**
  * Turn the user's apartment-profile + budget criteria into PropertyFinder
@@ -27,7 +28,7 @@ function deriveFilters(criteria: CriterionConfig[]): RentalFilters {
     if (c.type === "apartment") {
       const p = c.params as ApartmentParams;
 
-      filters.property_type = "apartment";
+      if (p.property_type) filters.property_type = p.property_type;
 
       const minB = p.min_bedrooms ?? null;
       const maxB = p.max_bedrooms ?? null;
@@ -41,6 +42,18 @@ function deriveFilters(criteria: CriterionConfig[]): RentalFilters {
         }
       }
 
+      const minBath = p.min_bathrooms ?? null;
+      const maxBath = p.max_bathrooms ?? null;
+      if (minBath != null || maxBath != null) {
+        const lo = Math.max(1, minBath ?? 1);
+        const hi = Math.min(BATHROOM_CAP, maxBath ?? BATHROOM_CAP);
+        if (hi >= lo) {
+          const range: number[] = [];
+          for (let i = lo; i <= hi; i++) range.push(i);
+          filters.bathrooms = range.join(",");
+        }
+      }
+
       if (p.min_surface_m2 != null) {
         filters.area_min_sqft = Math.round(p.min_surface_m2 * SQFT_PER_M2);
       }
@@ -48,16 +61,11 @@ function deriveFilters(criteria: CriterionConfig[]): RentalFilters {
         filters.area_max_sqft = Math.round(p.max_surface_m2 * SQFT_PER_M2);
       }
 
-      // Pass any explicit furnishing choice ("furnished" | "partly" |
-      // "unfurnished") through to PropertyFinder; only "any" suppresses
-      // the filter. Leaving this open-ended means future values flow
-      // without needing a code change on both ends.
       if (p.furnished && p.furnished !== "any") {
         filters.furnishing = p.furnished;
       }
 
-      if (p.parking) amenities.push("covered_parking");
-      if (p.outdoor_space) amenities.push("balcony");
+      if (p.amenities?.length) amenities.push(...p.amenities);
     } else if (c.type === "budget") {
       const p = c.params as BudgetParams;
       if (p.max_monthly_rent > 0) {

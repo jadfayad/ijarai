@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CellPopup } from "./CellPopup";
 import { MapLegend } from "./MapLegend";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
@@ -144,11 +143,7 @@ export function MapView() {
         .filter((d) => d.lat !== 0 || d.lng !== 0),
     [criteria]
   );
-  const [popupInfo, setPopupInfo] = useState<{
-    x: number;
-    y: number;
-    properties: Record<string, unknown>;
-  } | null>(null);
+  const [selectedCellProperties, setSelectedCellProperties] = useState<Record<string, unknown> | null>(null);
   const [areaName, setAreaName] = useState<string | null>(null);
   /** World-coord center of the clicked cell. Drives the "evidence" overlay. */
   const [clickedCenter, setClickedCenter] = useState<[number, number] | null>(
@@ -262,7 +257,7 @@ export function MapView() {
             : [r, g, b, 40];
         },
         getLineColor: (d: (typeof data)[0]) =>
-          d.cell_id === selectedCellId ? [255, 255, 255, 235] : [0, 0, 0, 0],
+          d.cell_id === selectedCellId ? [96, 165, 250, 255] : [0, 0, 0, 0],
         getLineWidth: (d: (typeof data)[0]) =>
           d.cell_id === selectedCellId ? 2 : 0,
         lineWidthUnits: "pixels",
@@ -385,6 +380,7 @@ export function MapView() {
     return layers;
   }, [clickedCenter, criteria]);
 
+  const clearRentals = useRentalStore((s) => s.clear);
   const rentalListings = useRentalStore((s) => s.listings);
   const selectedListingId = useRentalStore((s) => s.selectedListingId);
   const selectListing = useRentalStore((s) => s.selectListing);
@@ -448,12 +444,11 @@ export function MapView() {
         (info.object.score as number) < scoreThreshold;
       if (info.object && !hiddenByThreshold) {
         const cellId = info.object.cell_id as string;
+        if (cellId !== selectedCellId) {
+          clearRentals();
+        }
         setSelectedCellId(cellId);
-        setPopupInfo({
-          x: info.x ?? 0,
-          y: info.y ?? 0,
-          properties: info.object,
-        });
+        setSelectedCellProperties(info.object);
         const center = (info.object.center ?? info.coordinate) as
           | [number, number]
           | undefined;
@@ -483,13 +478,22 @@ export function MapView() {
         }
       } else {
         setSelectedCellId(null);
-        setPopupInfo(null);
+        setSelectedCellProperties(null);
         setAreaName(null);
         setClickedCenter(null);
+        clearRentals();
       }
     },
-    [setSelectedCellId, scoreThreshold]
+    [setSelectedCellId, scoreThreshold, selectedCellId, clearRentals]
   );
+
+  const handleCellClose = useCallback(() => {
+    setSelectedCellId(null);
+    setSelectedCellProperties(null);
+    setAreaName(null);
+    setClickedCenter(null);
+    clearRentals();
+  }, [setSelectedCellId, clearRentals]);
 
   return (
     <div
@@ -537,24 +541,12 @@ export function MapView() {
         </Map>
       </DeckGL>
 
-      {popupInfo && (
-        <CellPopup
-          x={popupInfo.x}
-          y={popupInfo.y}
-          cellId={popupInfo.properties.cell_id as string}
-          properties={popupInfo.properties}
-          areaName={areaName}
-          criterionLabels={scoreData?.criterion_labels}
-          onClose={() => {
-            setPopupInfo(null);
-            setSelectedCellId(null);
-            setAreaName(null);
-            setClickedCenter(null);
-          }}
-        />
-      )}
-
-      <RentalListCard />
+      <RentalListCard
+        cellProperties={selectedCellProperties}
+        areaName={areaName}
+        criterionLabels={scoreData?.criterion_labels}
+        onCellClose={handleCellClose}
+      />
 
 
       {scoreData && (

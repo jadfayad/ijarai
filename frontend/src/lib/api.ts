@@ -61,6 +61,7 @@ export async function fetchCityConfig(slug?: string): Promise<CityConfig> {
 export interface RentalFilters {
   property_type?: string;
   bedrooms?: string;
+  bathrooms?: string;
   area_min_sqft?: number;
   area_max_sqft?: number;
   furnishing?: string;
@@ -80,6 +81,7 @@ export async function searchRentalsInHex(
   if (filters) {
     if (filters.property_type) q.set("property_type", filters.property_type);
     if (filters.bedrooms) q.set("bedrooms", filters.bedrooms);
+    if (filters.bathrooms) q.set("bathrooms", filters.bathrooms);
     if (filters.area_min_sqft != null) q.set("area_min_sqft", String(filters.area_min_sqft));
     if (filters.area_max_sqft != null) q.set("area_max_sqft", String(filters.area_max_sqft));
     if (filters.furnishing) q.set("furnishing", filters.furnishing);

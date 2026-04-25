@@ -152,16 +152,33 @@ def build_typed_criterion(
         params_out = {"hazards": hz}
     elif type_ == "apartment":
         furnished = params_in.get("furnished", "any")
-        if furnished not in ("furnished", "unfurnished", "any"):
+        if furnished not in ("furnished", "unfurnished", "partly", "any"):
             furnished = "any"
+        valid_amenities = {
+            "central_ac", "balcony", "maids_room", "shared_pool", "shared_gym",
+            "covered_parking", "pets_allowed", "private_garden", "private_pool",
+            "security", "built_in_wardrobes", "view_of_water", "view_of_landmark",
+            "concierge", "childrens_play_area", "bbq_area",
+        }
+        valid_property_types = {
+            "apartment", "villa", "townhouse", "penthouse", "compound",
+            "duplex", "full-floor", "half-floor", "whole-building",
+            "hotel-apartment", "bungalow",
+        }
+        raw_amenities = params_in.get("amenities") or []
+        property_type = params_in.get("property_type", "apartment")
+        if property_type not in valid_property_types:
+            property_type = "apartment"
         params_out = {
             "min_surface_m2": params_in.get("min_surface_m2"),
             "max_surface_m2": params_in.get("max_surface_m2"),
             "min_bedrooms": params_in.get("min_bedrooms"),
             "max_bedrooms": params_in.get("max_bedrooms"),
+            "min_bathrooms": params_in.get("min_bathrooms"),
+            "max_bathrooms": params_in.get("max_bathrooms"),
             "furnished": furnished,
-            "parking": params_in.get("parking"),
-            "outdoor_space": params_in.get("outdoor_space"),
+            "property_type": property_type,
+            "amenities": [a for a in raw_amenities if a in valid_amenities],
         }
     else:
         # Defensive — should be unreachable given the type check above.

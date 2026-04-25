@@ -57,9 +57,11 @@ class ApartmentParams(BaseModel):
     max_surface_m2: float | None = None
     min_bedrooms: int | None = None
     max_bedrooms: int | None = None
+    min_bathrooms: int | None = None
+    max_bathrooms: int | None = None
     furnished: Literal["furnished", "unfurnished", "partly", "any"] = "any"
-    parking: bool | None = None
-    outdoor_space: bool | None = None
+    property_type: str = "apartment"
+    amenities: list[str] = Field(default_factory=list)
 
 
 class AiCriterionParams(BaseModel):

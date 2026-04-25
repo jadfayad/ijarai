@@ -111,14 +111,27 @@ export interface HazardParams {
 
 export type FurnishedPreference = "furnished" | "unfurnished" | "partly" | "any";
 
+export type PropertyType =
+  | "apartment" | "villa" | "townhouse" | "penthouse"
+  | "compound" | "duplex" | "full-floor" | "half-floor"
+  | "whole-building" | "hotel-apartment" | "bungalow";
+
+export type AmenitySlug =
+  | "central_ac" | "balcony" | "maids_room" | "shared_pool" | "shared_gym"
+  | "covered_parking" | "pets_allowed" | "private_garden" | "private_pool"
+  | "security" | "built_in_wardrobes" | "view_of_water" | "view_of_landmark"
+  | "concierge" | "childrens_play_area" | "bbq_area";
+
 export interface ApartmentParams {
   min_surface_m2?: number | null;
   max_surface_m2?: number | null;
   min_bedrooms?: number | null;
   max_bedrooms?: number | null;
+  min_bathrooms?: number | null;
+  max_bathrooms?: number | null;
   furnished: FurnishedPreference;
-  parking?: boolean | null;
-  outdoor_space?: boolean | null;
+  property_type?: PropertyType;
+  amenities: AmenitySlug[];
 }
 
 export interface AiZoneScore {

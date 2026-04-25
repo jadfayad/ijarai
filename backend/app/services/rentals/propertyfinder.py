@@ -283,12 +283,14 @@ class PropertyFinderProvider(RentalProvider):
             params["property_type"] = query.property_type
         if query.bedrooms_csv:
             params["bedrooms"] = query.bedrooms_csv
+        if query.bathrooms_csv:
+            params["bathrooms"] = query.bathrooms_csv
         if query.area_min_sqft is not None:
             params["area_min"] = int(query.area_min_sqft)
         if query.area_max_sqft is not None:
             params["area_max"] = int(query.area_max_sqft)
         if query.furnishing and query.furnishing != "any":
-            params["furnishing"] = "unfurnished"
+            params["furnishing"] = query.furnishing
         if query.amenities_csv:
             params["amenities"] = query.amenities_csv
         if query.price_max_monthly is not None and query.price_max_monthly > 0:

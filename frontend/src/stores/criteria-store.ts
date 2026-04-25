@@ -290,7 +290,7 @@ export function createApartmentCriterion(
     description: "Size, bedrooms, and furnishing requirements",
     weight: 5,
     enabled: true,
-    params: { furnished: "any" },
+    params: { furnished: "any", property_type: "apartment", amenities: [] },
     icon: "home",
     origin,
   };

@@ -50,6 +50,7 @@ class RentalSearchQuery(BaseModel):
     # criteria so the upstream search mirrors what the user configured.
     property_type: str | None = None
     bedrooms_csv: str | None = None  # e.g. "0,1,2" (studio + 1BR + 2BR)
+    bathrooms_csv: str | None = None  # e.g. "1,2,3"
     area_min_sqft: float | None = None
     area_max_sqft: float | None = None
     furnishing: str | None = None  # "furnished" | "unfurnished" | "partly"

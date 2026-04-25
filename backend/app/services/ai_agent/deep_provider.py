@@ -205,12 +205,17 @@ Apartment profile (does NOT affect the heatmap — stored as search context):
                "max_surface_m2": N or null,
                "min_bedrooms": N or null,   // 0 = studio
                "max_bedrooms": N or null,
-               "furnished": "furnished" | "unfurnished" | "any",
-               "parking": true | false | null,
-               "outdoor_space": true | false | null
+               "min_bathrooms": N or null,
+               "max_bathrooms": N or null,
+               "furnished": "furnished" | "unfurnished" | "partly" | "any",
+               "property_type": "apartment"|"villa"|"townhouse"|"penthouse"|"compound"|"duplex"|"hotel-apartment",
+               "amenities": ["covered_parking","balcony","shared_pool","private_pool","shared_gym",
+                             "central_ac","pets_allowed","private_garden","maids_room","security",
+                             "built_in_wardrobes","view_of_water","view_of_landmark","concierge",
+                             "childrens_play_area","bbq_area"]  // subset of this list
              }
   Emit this whenever the user mentions apartment size, number of rooms,
-  furnishing preference, parking, or outdoor space requirements.
+  furnishing preference, bathrooms, parking, amenities, or property type.
 
 ### emit_ai_criterion(prompt, strategy, zones|pois, metric_label, weight, reasoning)
 Fallback for aspects no typed criterion covers (e.g. "near vegan restaurants",
