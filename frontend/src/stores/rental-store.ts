@@ -93,6 +93,28 @@ interface RentalStore {
 // request instead of racing to populate the store out of order.
 let _abortController: AbortController | null = null;
 
+// Session-scoped LRU cache keyed by hex + filters. Evicts the oldest entry
+// once the cap is reached so memory stays bounded (~600 KB worst case).
+const _CACHE_MAX = 30;
+const _cache = new Map<string, RentalListing[]>();
+
+function _cacheKey(hexId: string, filters: RentalFilters): string {
+  const stable = Object.fromEntries(
+    Object.entries(filters)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+  return `${hexId}::${JSON.stringify(stable)}`;
+}
+
+function _cacheSet(key: string, listings: RentalListing[]): void {
+  _cache.delete(key); // re-insert at end to mark as most-recently used
+  _cache.set(key, listings);
+  if (_cache.size > _CACHE_MAX) {
+    _cache.delete(_cache.keys().next().value!); // evict oldest
+  }
+}
+
 export const useRentalStore = create<RentalStore>((set) => ({
   hexId: null,
   listings: [],
@@ -111,6 +133,17 @@ export const useRentalStore = create<RentalStore>((set) => ({
 
     try {
       const filters = deriveFilters(useCriteriaStore.getState().criteria);
+      const key = _cacheKey(hexId, filters);
+      const cached = _cache.get(key);
+
+      if (cached) {
+        _cacheSet(key, cached); // promote to most-recently used
+        if (_abortController !== controller) return;
+        set({ listings: cached, loading: false });
+        _abortController = null;
+        return;
+      }
+
       const data = await searchRentalsInHex(
         citySlug,
         hexId,
@@ -119,6 +152,7 @@ export const useRentalStore = create<RentalStore>((set) => ({
         controller.signal,
       );
       if (_abortController !== controller) return;
+      _cacheSet(key, data.listings);
       set({ listings: data.listings });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;

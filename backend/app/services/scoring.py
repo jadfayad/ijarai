@@ -220,7 +220,10 @@ async def compute_scores(
                 cid: (v - lo) / (hi - lo) for cid, v in scores.items()
             }
         else:
-            normalized_scores[key] = {cid: 1.0 for cid in scores}
+            # All cells share the same raw score — preserve it rather than
+            # mapping everything to 1.0 (which would show as "excellent" even
+            # when every cell scored 0 due to missing data).
+            normalized_scores[key] = {cid: lo for cid in scores}
 
     _check_cancel(cancel)
 

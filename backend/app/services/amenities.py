@@ -13,6 +13,11 @@ from app.utils.geo import to_meters
 
 _poi_cache: TTLCache[str, list[dict]] = TTLCache(maxsize=64, ttl=3600)
 
+_OVERPASS_ENDPOINTS = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+]
+
 CATEGORY_TO_OSM: dict[str, str] = {
     "gym": '["leisure"="fitness_centre"]',
     "cafe": '["amenity"="cafe"]',
@@ -62,22 +67,25 @@ async def _fetch_pois(city: CityConfig, category: str) -> list[dict]:
     out center;
     """
 
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                "https://overpass-api.de/api/interpreter",
-                data={"data": query},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception:
+    data: dict | None = None
+    async with httpx.AsyncClient(timeout=30) as client:
+        for endpoint in _OVERPASS_ENDPOINTS:
+            try:
+                resp = await client.post(endpoint, data={"data": query})
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except Exception:
+                continue
+
+    if data is None:
         return []
 
     pois = []
     for el in data.get("elements", []):
         lat = el.get("lat") or el.get("center", {}).get("lat")
         lon = el.get("lon") or el.get("center", {}).get("lon")
-        if lat and lon:
+        if lat is not None and lon is not None:
             pois.append({"lat": lat, "lng": lon})
 
     _poi_cache[cache_key] = pois
