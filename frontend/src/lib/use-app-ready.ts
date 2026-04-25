@@ -24,17 +24,12 @@ function isScenarioHydrated(): boolean {
   return useScenarioStore.persist?.hasHydrated?.() ?? false;
 }
 
-/** Minimum time (ms) the loading screen stays up, even if everything is
- *  ready sooner. Keeps the brand moment visible instead of flashing. */
-const MIN_LOADING_MS = 2000;
-
 export function useAppReady(): boolean {
   const cityLoaded = useCriteriaStore((s) => s.cityLoaded);
   // Start false during SSR so the loading screen is rendered in initial HTML;
   // the client effects below flip these on once hydration actually completes.
   const [agentHydrated, setAgentHydrated] = useState(false);
   const [scenarioHydrated, setScenarioHydrated] = useState(false);
-  const [minDelayPassed, setMinDelayPassed] = useState(false);
 
   useEffect(() => {
     if (isAgentHydrated()) {
@@ -59,10 +54,5 @@ export function useAppReady(): boolean {
     });
   }, []);
 
-  useEffect(() => {
-    const id = setTimeout(() => setMinDelayPassed(true), MIN_LOADING_MS);
-    return () => clearTimeout(id);
-  }, []);
-
-  return cityLoaded && agentHydrated && scenarioHydrated && minDelayPassed;
+  return cityLoaded && agentHydrated && scenarioHydrated;
 }

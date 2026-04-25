@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
+import { TravelOverlay } from "@/components/ui/travel-overlay";
 import { Home } from "lucide-react";
 import Link from "next/link";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default function RootLayout({
           <span className="text-sm font-semibold tracking-tight">IJAR.AI</span>
         </Link>
         <TooltipProvider>{children}</TooltipProvider>
+        <TravelOverlay />
         <Toaster />
       </body>
     </html>
