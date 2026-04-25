@@ -85,6 +85,7 @@ interface RentalStore {
   error: string | null;
   selectedListingId: string | null;
   searchForHex: (citySlug: string, hexId: string, areaName?: string | null) => Promise<void>;
+  hasCachedResult: (hexId: string) => boolean;
   selectListing: (id: string | null) => void;
   clear: () => void;
 }
@@ -163,6 +164,11 @@ export const useRentalStore = create<RentalStore>((set) => ({
         set({ loading: false });
       }
     }
+  },
+
+  hasCachedResult: (hexId) => {
+    const filters = deriveFilters(useCriteriaStore.getState().criteria);
+    return _cache.has(_cacheKey(hexId, filters));
   },
 
   selectListing: (id) => set({ selectedListingId: id }),

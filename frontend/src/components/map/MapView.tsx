@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
+import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -385,6 +386,19 @@ export function MapView() {
   const selectedListingId = useRentalStore((s) => s.selectedListingId);
   const selectListing = useRentalStore((s) => s.selectListing);
 
+  const { chatOpen } = useCurrentCityAgentSlice();
+  const setChatOpen = useAgentStore((s) => s.setChatOpen);
+
+  // Close rental panel when chat opens, and vice-versa.
+  useEffect(() => {
+    if (!chatOpen) return;
+    setSelectedCellProperties(null);
+    setSelectedCellId(null);
+    setAreaName(null);
+    setClickedCenter(null);
+    clearRentals();
+  }, [chatOpen, setSelectedCellId, clearRentals]);
+
   const rentalPinsLayer = useMemo(() => {
     if (!rentalListings.length) return null;
     return new ScatterplotLayer({
@@ -449,6 +463,7 @@ export function MapView() {
         }
         setSelectedCellId(cellId);
         setSelectedCellProperties(info.object);
+        setChatOpen(false);
         const center = (info.object.center ?? info.coordinate) as
           | [number, number]
           | undefined;

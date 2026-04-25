@@ -29,6 +29,11 @@ _transit_cache: TTLCache[tuple[str, tuple[str, ...]], list[tuple[float, float]]]
     TTLCache(maxsize=16, ttl=3600)
 )
 
+_OVERPASS_ENDPOINTS = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+]
+
 # Walking-distance proximity window. Stops further than this contribute 0 to the
 # proximity term; density within it saturates at DENSITY_CAP stops.
 PROXIMITY_RADIUS_M = 800.0
@@ -59,24 +64,16 @@ async def _fetch_stops(
 
     query = "[out:json][timeout:25];\n(\n" + "\n".join(parts) + "\n);\nout;"
 
-    # Overpass's public server 504s often under load. Retry a couple of
-    # times with short backoff before giving up; a transient failure
-    # should not cache an empty list for an hour.
     data: dict | None = None
     async with httpx.AsyncClient(timeout=35) as client:
-        for attempt in range(3):
+        for endpoint in _OVERPASS_ENDPOINTS:
             try:
-                resp = await client.post(
-                    "https://overpass-api.de/api/interpreter",
-                    data={"data": query},
-                )
+                resp = await client.post(endpoint, data={"data": query})
                 resp.raise_for_status()
                 data = resp.json()
                 break
             except Exception:
-                if attempt == 2:
-                    return []
-                await asyncio.sleep(1.5 * (attempt + 1))
+                continue
 
     if data is None:
         return []

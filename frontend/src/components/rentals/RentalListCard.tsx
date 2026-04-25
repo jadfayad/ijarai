@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, Bath, Ruler, ExternalLink, X, AlertTriangle, Home, ChevronDown } from "lucide-react";
 
 import { useRentalStore } from "@/stores/rental-store";
@@ -95,22 +95,49 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
   const clear = useRentalStore((s) => s.clear);
   const searchForHex = useRentalStore((s) => s.searchForHex);
 
+  const hasCachedResult = useRentalStore((s) => s.hasCachedResult);
+
   const currencySymbol = useCriteriaStore((s) => s.cityConfig.currency_symbol);
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const rentalProvider = useCriteriaStore((s) => s.cityConfig.rental_provider);
+  const criteria = useCriteriaStore((s) => s.criteria);
+
+  // Fingerprint of apartment + budget criteria — used to detect staleness.
+  const criteriaFingerprint = useMemo(
+    () =>
+      JSON.stringify(
+        criteria
+          .filter((c) => (c.type === "apartment" || c.type === "budget") && c.enabled)
+          .map((c) => ({ type: c.type, params: c.params })),
+      ),
+    [criteria],
+  );
 
   const [breakdownExpanded, setBreakdownExpanded] = useState(true);
+  // Fingerprint captured at the time of the last search for this cell.
+  const [searchFingerprint, setSearchFingerprint] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const cellId = cellProperties?.cell_id as string | undefined;
+
+  // When a new cell opens: reset fingerprint, then auto-search if cache hit.
+  useEffect(() => {
+    setSearchFingerprint(null);
+    setBreakdownExpanded(true);
+    if (!cellId || !rentalProvider || !citySlug) return;
+    if (hasCachedResult(cellId)) {
+      setSearchFingerprint(criteriaFingerprint);
+      searchForHex(citySlug, cellId, areaName);
+    }
+    // Intentionally keyed only on cellId — we want this to fire on cell change,
+    // not on every criteria tweak (that's handled by criteriaStale below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cellId]);
 
   // Auto-collapse breakdown once results arrive.
   useEffect(() => {
     if (listings.length > 0) setBreakdownExpanded(false);
   }, [listings.length]);
-
-  // Re-expand when a new cell is selected.
-  useEffect(() => {
-    setBreakdownExpanded(true);
-  }, [cellProperties]);
 
   useEffect(() => {
     if (!selectedListingId) return;
@@ -119,8 +146,6 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
   }, [selectedListingId]);
 
   if (!cellProperties) return null;
-
-  const cellId = cellProperties.cell_id as string | undefined;
   const score = cellProperties.score as number | undefined;
   const pct = score !== undefined ? Math.round(score * 100) : null;
   const scoreColor =
@@ -133,11 +158,18 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
 
   const isSearchingThisCell = loading && rentalHexId === cellId;
   const hasSearched = rentalHexId === cellId;
-  const showRentalButton = !!rentalProvider && !!cellId && !isSearchingThisCell && !hasSearched;
+  // Show button when: never searched, OR criteria changed since last search.
+  const criteriaStale = searchFingerprint !== null && searchFingerprint !== criteriaFingerprint;
+  const showRentalButton = !!rentalProvider && !!cellId && !isSearchingThisCell && (!hasSearched || criteriaStale);
 
   const handleClose = () => {
     clear();
     onCellClose?.();
+  };
+
+  const handleSearch = () => {
+    setSearchFingerprint(criteriaFingerprint);
+    searchForHex(citySlug, cellId!, areaName);
   };
 
   return (
@@ -206,7 +238,7 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
 
               {showRentalButton && (
                 <button
-                  onClick={() => searchForHex(citySlug, cellId!, areaName)}
+                  onClick={handleSearch}
                   className="w-full mt-1 flex items-center justify-center gap-2 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/80 hover:text-white text-[12px] font-medium transition-all duration-200"
                 >
                   <Home size={13} />
