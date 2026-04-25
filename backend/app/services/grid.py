@@ -17,7 +17,7 @@ from app.grid_config import (
     cell_size_to_h3_res,
 )
 
-_GRID_VERSION = 4
+_GRID_VERSION = 5
 _grid_cache: dict[tuple[str, int], dict] = {}
 
 
@@ -38,10 +38,19 @@ def generate_grid(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_s
     ])
     all_cells = h3.h3shape_to_cells(boundary, h3_res)
 
+    def _is_land(lat: float, lng: float) -> bool:
+        if globe.is_land(lat, lng):
+            return True
+        for box in city.land_override_bounds:
+            if (box["min_lat"] <= lat <= box["max_lat"]
+                    and box["min_lng"] <= lng <= box["max_lng"]):
+                return True
+        return False
+
     features = []
     for cell_id in sorted(all_cells):
         lat, lng = h3.cell_to_latlng(cell_id)
-        if not globe.is_land(lat, lng):
+        if not _is_land(lat, lng):
             continue
         features.append(
             {

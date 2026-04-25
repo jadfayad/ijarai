@@ -42,6 +42,9 @@ class CityConfig:
     default_destinations: tuple[Destination, ...] = field(default_factory=tuple)
     data_dir_name: str | None = None
     rental_provider: str | None = None
+    # Bounding boxes for reclaimed/man-made land not present in global_land_mask.
+    # Cells whose centre falls inside any of these boxes pass the land filter.
+    land_override_bounds: tuple[dict[str, float], ...] = field(default_factory=tuple)
 
     @property
     def data_dir(self) -> Path:
@@ -75,6 +78,10 @@ CITIES: dict[str, CityConfig] = {
             Destination(label="", lat=25.2048, lng=55.2708, icon="map-pin"),
         ),
         rental_provider="propertyfinder",
+        # Palm Jumeirah is a man-made island absent from global_land_mask.
+        land_override_bounds=(
+            {"min_lat": 25.085, "max_lat": 25.160, "min_lng": 55.090, "max_lng": 55.200},
+        ),
     ),
     "san-francisco": CityConfig(
         slug="san-francisco",

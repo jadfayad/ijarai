@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MapLegend } from "./MapLegend";
+import { ScoringOverlay } from "./ScoringOverlay";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import { RentalListCard } from "@/components/rentals/RentalListCard";
@@ -693,8 +694,8 @@ export function MapView() {
         />
       )}
 
-      <FloatingChat />
-      <WelcomeChat />
+      {!loading && <FloatingChat />}
+      {!loading && <WelcomeChat />}
 
       {scoreData && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 min-w-[340px] max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -727,108 +728,77 @@ export function MapView() {
         </div>
       )}
 
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-        <div className="pointer-events-auto flex items-stretch gap-2.5">
-          <Select
-            value={gridResolution}
-            onValueChange={(v) => setGridResolution(v as GridResolution)}
-          >
-            <SelectTrigger className="!h-11 min-w-[160px] rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] text-sm font-medium shadow-lg shadow-black/20 hover:bg-[rgba(24,24,40,0.9)] hover:border-white/[0.2] transition-all duration-200 px-3.5 gap-2">
-              <SelectValue>
-                <span className="flex items-center gap-2">
-                  {RESOLUTION_ICONS[gridResolution]}
-                  {GRID_RESOLUTION_CONFIG[gridResolution].label}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent
-              side="top"
-              sideOffset={8}
-              className="bg-[rgba(16,16,28,0.95)] backdrop-blur-2xl border border-white/[0.12] rounded-xl p-1 min-w-[200px]"
+      {!loading && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="pointer-events-auto flex items-stretch gap-2.5">
+            <Select
+              value={gridResolution}
+              onValueChange={(v) => setGridResolution(v as GridResolution)}
             >
-              {(
-                Object.entries(GRID_RESOLUTION_CONFIG) as [
-                  GridResolution,
-                  (typeof GRID_RESOLUTION_CONFIG)[GridResolution],
-                ][]
-              ).map(([key, cfg]) => (
-                <SelectItem
-                  key={key}
-                  value={key}
-                  className="rounded-lg px-2.5 py-2 text-sm cursor-pointer"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span className="text-white/40">
-                      {RESOLUTION_ICONS[key as GridResolution]}
-                    </span>
-                    <span className="flex flex-col">
-                      <span className="font-medium leading-tight">
-                        {cfg.label}
-                      </span>
-                      <span className="text-[11px] text-white/35 leading-tight">
-                        {cfg.description}
-                      </span>
-                    </span>
+              <SelectTrigger className="!h-11 min-w-[160px] rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] text-sm font-medium shadow-lg shadow-black/20 hover:bg-[rgba(24,24,40,0.9)] hover:border-white/[0.2] transition-all duration-200 px-3.5 gap-2">
+                <SelectValue>
+                  <span className="flex items-center gap-2">
+                    {RESOLUTION_ICONS[gridResolution]}
+                    {GRID_RESOLUTION_CONFIG[gridResolution].label}
                   </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent
+                side="top"
+                sideOffset={8}
+                className="bg-[rgba(16,16,28,0.95)] backdrop-blur-2xl border border-white/[0.12] rounded-xl p-1 min-w-[200px]"
+              >
+                {(
+                  Object.entries(GRID_RESOLUTION_CONFIG) as [
+                    GridResolution,
+                    (typeof GRID_RESOLUTION_CONFIG)[GridResolution],
+                  ][]
+                ).map(([key, cfg]) => (
+                  <SelectItem
+                    key={key}
+                    value={key}
+                    className="rounded-lg px-2.5 py-2 text-sm cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-white/40">
+                        {RESOLUTION_ICONS[key as GridResolution]}
+                      </span>
+                      <span className="flex flex-col">
+                        <span className="font-medium leading-tight">
+                          {cfg.label}
+                        </span>
+                        <span className="text-[11px] text-white/35 leading-tight">
+                          {cfg.description}
+                        </span>
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {loading ? (
-            <>
+            {!hasActiveCriteria ? (
+              <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 text-sm font-medium text-white/35 cursor-not-allowed select-none">
+                <Sparkles size={14} className="text-white/25" />
+                Enable criteria first
+              </div>
+            ) : (
               <Button
-                className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary shadow-lg shadow-primary/20 transition-all duration-200 border-0 text-white pointer-events-none"
+                className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/85 shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 border-0 text-white"
                 size="lg"
-                disabled
+                onClick={generate}
               >
                 <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                  Computing...
+                  <Sparkles size={15} />
+                  Generate Heatmap
                 </span>
               </Button>
-              <Button
-                className="h-11 w-11 p-0 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 hover:bg-white/[0.12] hover:border-white/[0.2] transition-all duration-200 text-white/50 hover:text-white"
-                size="icon"
-                onClick={cancelGeneration}
-              >
-                <Square size={14} className="fill-current" />
-              </Button>
-            </>
-          ) : !hasActiveCriteria ? (
-            <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 text-sm font-medium text-white/35 cursor-not-allowed select-none">
-              <Sparkles size={14} className="text-white/25" />
-              Enable criteria first
-            </div>
-          ) : (
-            <Button
-              className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/85 shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 border-0 text-white"
-              size="lg"
-              onClick={generate}
-            >
-              <span className="flex items-center gap-2">
-                <Sparkles size={15} />
-                Generate Heatmap
-              </span>
-            </Button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      <ScoringOverlay />
     </div>
   );
 }
