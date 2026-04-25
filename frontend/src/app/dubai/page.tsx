@@ -9,6 +9,7 @@ import { useTravelStore } from "@/stores/travel-store";
 
 export default function DubaiPage() {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
+  const loading = useCriteriaStore((s) => s.loading);
   const ready = useAppReady();
   const endTravel = useTravelStore((s) => s.endTravel);
 
@@ -25,7 +26,7 @@ export default function DubaiPage() {
       <div className="absolute inset-0">
         <MapView />
       </div>
-      {ready && <CriteriaPanel />}
+      {ready && !loading && <CriteriaPanel />}
     </main>
   );
 }

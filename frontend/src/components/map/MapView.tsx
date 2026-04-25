@@ -23,7 +23,6 @@ import {
   LayoutGrid,
   Maximize,
   Filter,
-  Square,
 } from "lucide-react";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
@@ -142,7 +141,6 @@ export function MapView() {
     setGridResolution,
     loading,
     generate,
-    cancelGeneration,
   } = useCriteriaStore();
 
   const cityView = useMemo(
@@ -529,12 +527,12 @@ export function MapView() {
   }, [rentalListings, selectedListingId, selectListing]);
 
   const allLayers = useMemo(
-    () => [
+    () => loading ? [] : [
       ...layers,
       ...evidenceLayers,
       ...(rentalPinsLayer ? [rentalPinsLayer] : []),
     ],
-    [layers, evidenceLayers, rentalPinsLayer],
+    [loading, layers, evidenceLayers, rentalPinsLayer],
   );
 
   const visibleCount = useMemo(() => {
@@ -653,7 +651,7 @@ export function MapView() {
           mapStyle="mapbox://styles/mapbox/dark-v11"
           reuseMaps
         >
-          {destinations.map((d) => {
+          {!loading && destinations.map((d) => {
             const Icon = ICON_MAP[d.icon] ?? MapPin;
             return (
               <Marker
@@ -678,15 +676,16 @@ export function MapView() {
         </Map>
       </DeckGL>
 
-      <RentalListCard
-        cellProperties={selectedCellProperties}
-        areaName={areaName}
-        criterionLabels={scoreData?.criterion_labels}
-        onCellClose={handleCellClose}
-      />
+      {!loading && (
+        <RentalListCard
+          cellProperties={selectedCellProperties}
+          areaName={areaName}
+          criterionLabels={scoreData?.criterion_labels}
+          onCellClose={handleCellClose}
+        />
+      )}
 
-
-      {scoreData && (
+      {!loading && scoreData && (
         <MapLegend
           visibleCount={visibleCount}
           totalCount={totalCount}
@@ -697,7 +696,7 @@ export function MapView() {
       {!loading && <FloatingChat />}
       {!loading && <WelcomeChat />}
 
-      {scoreData && (
+      {!loading && scoreData && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 min-w-[340px] max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-[rgba(12,12,20,0.8)] backdrop-blur-2xl rounded-2xl px-6 py-4 shadow-2xl shadow-black/30 border border-white/[0.1]">
             <div className="flex items-center justify-between mb-3">
