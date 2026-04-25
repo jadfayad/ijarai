@@ -343,3 +343,27 @@ export interface RentalSearchResponse {
   count: number;
   listings: RentalListing[];
 }
+
+export interface AmenityPOI {
+  lat: number;
+  lng: number;
+  category: string;
+}
+
+export interface TransitPOI {
+  lat: number;
+  lng: number;
+  mode: string;
+}
+
+export interface HealthcarePOI {
+  lat: number;
+  lng: number;
+  facility_type: string;
+}
+
+export interface CellEvidence {
+  amenities: AmenityPOI[];
+  transit: TransitPOI[];
+  healthcare: HealthcarePOI[];
+}

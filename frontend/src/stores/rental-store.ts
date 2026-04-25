@@ -84,7 +84,8 @@ interface RentalStore {
   loading: boolean;
   error: string | null;
   selectedListingId: string | null;
-  searchForHex: (citySlug: string, hexId: string, areaName?: string | null) => Promise<void>;
+  expanded: boolean;
+  searchForHex: (citySlug: string, hexId: string, areaName?: string | null, expandNeighbours?: boolean) => Promise<void>;
   hasCachedResult: (hexId: string) => boolean;
   selectListing: (id: string | null) => void;
   clear: () => void;
@@ -122,8 +123,9 @@ export const useRentalStore = create<RentalStore>((set) => ({
   loading: false,
   error: null,
   selectedListingId: null,
+  expanded: false,
 
-  searchForHex: async (citySlug, hexId, areaName) => {
+  searchForHex: async (citySlug, hexId, areaName, expandNeighbours = false) => {
     if (_abortController) {
       _abortController.abort();
     }
@@ -134,13 +136,14 @@ export const useRentalStore = create<RentalStore>((set) => ({
 
     try {
       const filters = deriveFilters(useCriteriaStore.getState().criteria);
+      if (expandNeighbours) filters.expand_neighbours = true;
       const key = _cacheKey(hexId, filters);
       const cached = _cache.get(key);
 
       if (cached) {
         _cacheSet(key, cached); // promote to most-recently used
         if (_abortController !== controller) return;
-        set({ listings: cached, loading: false });
+        set({ listings: cached, loading: false, expanded: expandNeighbours });
         _abortController = null;
         return;
       }
@@ -154,7 +157,7 @@ export const useRentalStore = create<RentalStore>((set) => ({
       );
       if (_abortController !== controller) return;
       _cacheSet(key, data.listings);
-      set({ listings: data.listings });
+      set({ listings: data.listings, expanded: expandNeighbours });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       set({ error: err instanceof Error ? err.message : "Failed to load rentals" });
@@ -178,6 +181,6 @@ export const useRentalStore = create<RentalStore>((set) => ({
       _abortController.abort();
       _abortController = null;
     }
-    set({ hexId: null, listings: [], loading: false, error: null, selectedListingId: null });
+    set({ hexId: null, listings: [], loading: false, error: null, selectedListingId: null, expanded: false });
   },
 }));

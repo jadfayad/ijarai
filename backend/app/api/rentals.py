@@ -96,6 +96,7 @@ async def search_rentals(
     furnishing: str | None = Query(default=None),
     amenities: str | None = Query(default=None),
     price_max_monthly: float | None = Query(default=None, ge=0),
+    expand_neighbours: bool = Query(default=False),
 ):
     city_config = get_city(city)
     provider = get_rental_provider(city_config)
@@ -130,10 +131,10 @@ async def search_rentals(
     )
     listings = await provider.search(query)
 
-    # If less than half the results are geographically inside the clicked hex,
-    # search the 6 immediate neighbours and return the listings that do land inside.
+    # Expand to ring-1 neighbours when forced (user clicked "Expand Search") or
+    # when less than half the results are geographically inside the clicked hex.
     in_hex = _listings_in_hex(listings, hex_id)
-    if listings and len(in_hex) / len(listings) < 0.5:
+    if expand_neighbours or (listings and len(in_hex) / len(listings) < 0.5):
         listings = await _expand_to_neighbours(hex_id, query, provider, listings)
 
     return RentalSearchResponse(hex_id=hex_id, count=len(listings), listings=listings)

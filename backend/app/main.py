@@ -7,6 +7,7 @@ from app.api.scoring import router as scoring_router
 from app.api.geocode import router as geocode_router
 from app.api.agent import router as agent_router
 from app.api.rentals import router as rentals_router
+from app.api.cell_evidence import router as cell_evidence_router
 from app.city_config import get_city, get_active_city
 from app.models.schemas import CityConfigResponse
 from app.services.static_data import get_city_average_utility_cost
@@ -25,6 +26,7 @@ app.include_router(scoring_router, prefix="/api")
 app.include_router(geocode_router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
 app.include_router(rentals_router, prefix="/api")
+app.include_router(cell_evidence_router, prefix="/api")
 
 
 @app.get("/health")

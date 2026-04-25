@@ -28,6 +28,7 @@ import {
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
+import { fetchCellEvidence } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -41,7 +42,7 @@ import { MapLegend } from "./MapLegend";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import { RentalListCard } from "@/components/rentals/RentalListCard";
-import type { RentalListing } from "@/lib/types";
+import type { RentalListing, CellEvidence } from "@/lib/types";
 import {
   GRID_RESOLUTION_CONFIG,
   type AiParams,
@@ -70,6 +71,35 @@ const ICON_MAP: Record<string, typeof MapPin> = {
 };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+
+const AMENITY_COLOR: Record<string, [number, number, number, number]> = {
+  park:          [74,  222, 128, 230],
+  beach:         [56,  189, 248, 230],
+  cafe:          [251, 146,  60, 230],
+  coffee:        [251, 146,  60, 230],
+  restaurant:    [253, 186, 116, 230],
+  gym:           [167, 139, 250, 230],
+  pool:          [34,  211, 238, 230],
+  swimming_pool: [34,  211, 238, 230],
+  supermarket:   [45,  212, 191, 230],
+  pharmacy:      [244, 114, 182, 230],
+  hospital:      [248, 113, 113, 230],
+  school:        [250, 204,  21, 230],
+  mosque:        [129, 140, 248, 230],
+};
+
+const TRANSIT_COLOR: Record<string, [number, number, number, number]> = {
+  train: [96,  165, 250, 230],
+  bus:   [103, 232, 249, 230],
+};
+
+const HEALTHCARE_COLOR: Record<string, [number, number, number, number]> = {
+  hospital: [248, 113, 113, 230],
+  clinic:   [251, 146,  60, 230],
+  pharmacy: [244, 114, 182, 230],
+};
+
+const DEFAULT_POI_COLOR: [number, number, number, number] = [251, 191, 36, 230];
 
 const COLOR_RAMP: [number, number, number][] = [
   [215, 25, 28],
@@ -147,9 +177,9 @@ export function MapView() {
   const [selectedCellProperties, setSelectedCellProperties] = useState<Record<string, unknown> | null>(null);
   const [areaName, setAreaName] = useState<string | null>(null);
   /** World-coord center of the clicked cell. Drives the "evidence" overlay. */
-  const [clickedCenter, setClickedCenter] = useState<[number, number] | null>(
-    null
-  );
+  const [clickedCenter, setClickedCenter] = useState<[number, number] | null>(null);
+  const [cellEvidence, setCellEvidence] = useState<CellEvidence | null>(null);
+  const evidenceAbortRef = useRef<AbortController | null>(null);
 
   const scoreRange = useMemo(() => {
     if (!scoreData?.features?.length) return { min: 0, max: 1 };
@@ -378,8 +408,74 @@ export function MapView() {
       );
     }
 
+    if (cellEvidence?.amenities.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "evidence-amenities",
+          data: cellEvidence.amenities,
+          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
+          getRadius: 7,
+          radiusUnits: "pixels",
+          radiusMinPixels: 4,
+          radiusMaxPixels: 10,
+          getFillColor: (d: { category: string }) =>
+            AMENITY_COLOR[d.category] ?? DEFAULT_POI_COLOR,
+          getLineColor: [255, 255, 255, 160],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          filled: true,
+          pickable: false,
+          updateTriggers: { getFillColor: [] },
+        }),
+      );
+    }
+
+    if (cellEvidence?.transit.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "evidence-transit",
+          data: cellEvidence.transit,
+          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
+          getRadius: 7,
+          radiusUnits: "pixels",
+          radiusMinPixels: 4,
+          radiusMaxPixels: 10,
+          getFillColor: (d: { mode: string }) =>
+            TRANSIT_COLOR[d.mode] ?? DEFAULT_POI_COLOR,
+          getLineColor: [255, 255, 255, 160],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          filled: true,
+          pickable: false,
+          updateTriggers: { getFillColor: [] },
+        }),
+      );
+    }
+
+    if (cellEvidence?.healthcare.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "evidence-healthcare",
+          data: cellEvidence.healthcare,
+          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
+          getRadius: 8,
+          radiusUnits: "pixels",
+          radiusMinPixels: 5,
+          radiusMaxPixels: 12,
+          getFillColor: (d: { facility_type: string }) =>
+            HEALTHCARE_COLOR[d.facility_type] ?? DEFAULT_POI_COLOR,
+          getLineColor: [255, 255, 255, 160],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          filled: true,
+          pickable: false,
+          updateTriggers: { getFillColor: [] },
+        }),
+      );
+    }
+
     return layers;
-  }, [clickedCenter, criteria]);
+  }, [clickedCenter, criteria, cellEvidence]);
 
   const clearRentals = useRentalStore((s) => s.clear);
   const rentalListings = useRentalStore((s) => s.listings);
@@ -396,6 +492,8 @@ export function MapView() {
     setSelectedCellId(null);
     setAreaName(null);
     setClickedCenter(null);
+    setCellEvidence(null);
+    evidenceAbortRef.current?.abort();
     clearRentals();
   }, [chatOpen, setSelectedCellId, clearRentals]);
 
@@ -464,11 +562,30 @@ export function MapView() {
         setSelectedCellId(cellId);
         setSelectedCellProperties(info.object);
         setChatOpen(false);
+
         const center = (info.object.center ?? info.coordinate) as
           | [number, number]
           | undefined;
         if (center && center.length >= 2) {
           setClickedCenter([center[0], center[1]]);
+
+          // Fetch nearby OSM POIs for geo-specific active criteria.
+          evidenceAbortRef.current?.abort();
+          const abortCtrl = new AbortController();
+          evidenceAbortRef.current = abortCtrl;
+          setCellEvidence(null);
+
+          const [lng, lat] = center;
+          const geoSpecificCriteria = criteria
+            .filter((c) => c.enabled && ["amenities", "transit", "healthcare"].includes(c.type))
+            .map((c) => ({ type: c.type, params: c.params as Record<string, unknown> }));
+
+          if (geoSpecificCriteria.length > 0) {
+            const cellSizeM = GRID_RESOLUTION_CONFIG[gridResolution].cell_size_m;
+            fetchCellEvidence(cityConfig.slug, lat, lng, cellSizeM, geoSpecificCriteria, abortCtrl.signal)
+              .then(setCellEvidence)
+              .catch(() => {});
+          }
         }
 
         const zoneName = info.object.zone_name as string | undefined;
@@ -496,10 +613,12 @@ export function MapView() {
         setSelectedCellProperties(null);
         setAreaName(null);
         setClickedCenter(null);
+        setCellEvidence(null);
+        evidenceAbortRef.current?.abort();
         clearRentals();
       }
     },
-    [setSelectedCellId, scoreThreshold, selectedCellId, clearRentals]
+    [setSelectedCellId, scoreThreshold, selectedCellId, clearRentals, criteria, gridResolution, cityConfig.slug]
   );
 
   const handleCellClose = useCallback(() => {
@@ -507,6 +626,8 @@ export function MapView() {
     setSelectedCellProperties(null);
     setAreaName(null);
     setClickedCenter(null);
+    setCellEvidence(null);
+    evidenceAbortRef.current?.abort();
     clearRentals();
   }, [setSelectedCellId, clearRentals]);
 

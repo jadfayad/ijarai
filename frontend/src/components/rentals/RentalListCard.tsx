@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BedDouble, Bath, Ruler, ExternalLink, X, AlertTriangle, Home, ChevronDown } from "lucide-react";
+import { BedDouble, Bath, Ruler, ExternalLink, X, AlertTriangle, Home, ChevronDown, Expand } from "lucide-react";
 
 import { useRentalStore } from "@/stores/rental-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
@@ -76,6 +76,8 @@ function formatPrice(listing: RentalListing): string {
   return `${currency} ${value}${period}`.trim();
 }
 
+const EXPAND_THRESHOLD = 4;
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -94,6 +96,7 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
   const selectListing = useRentalStore((s) => s.selectListing);
   const clear = useRentalStore((s) => s.clear);
   const searchForHex = useRentalStore((s) => s.searchForHex);
+  const expanded = useRentalStore((s) => s.expanded);
 
   const hasCachedResult = useRentalStore((s) => s.hasCachedResult);
 
@@ -171,6 +174,19 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
     setSearchFingerprint(criteriaFingerprint);
     searchForHex(citySlug, cellId!, areaName);
   };
+
+  const handleExpandSearch = () => {
+    setSearchFingerprint(criteriaFingerprint);
+    searchForHex(citySlug, cellId!, areaName, true);
+  };
+
+  const showExpandButton =
+    !!rentalProvider &&
+    hasSearched &&
+    !loading &&
+    !error &&
+    !expanded &&
+    listings.length < EXPAND_THRESHOLD;
 
   return (
     <div className="absolute top-14 right-4 z-30 w-[360px] max-h-[calc(100vh-7rem)] bg-[rgba(14,14,24,0.92)] backdrop-blur-2xl border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
@@ -266,12 +282,34 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
           </div>
         )}
 
+        {showExpandButton && listings.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-4 text-center">
+            <p className="text-[11.5px] text-white/35">No listings found in this cell.</p>
+            <button
+              onClick={handleExpandSearch}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/60 hover:text-white/90 text-[11.5px] font-medium transition-all duration-200"
+            >
+              <Expand size={12} />
+              Expand search to nearby cells
+            </button>
+          </div>
+        )}
+
         {!loading && !error && listings.length > 0 && (
           <>
             <div className="flex items-center gap-1.5 px-1 pb-1">
               <Home size={12} className="text-white/40" />
               <span className="text-[11px] font-semibold text-white/60">Rentals</span>
               <span className="text-[11px] text-white/35 tabular-nums">{listings.length}</span>
+              {showExpandButton && (
+                <button
+                  onClick={handleExpandSearch}
+                  className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/55 hover:text-white/80 text-[10.5px] font-medium transition-all duration-200"
+                >
+                  <Expand size={10} />
+                  Expand search
+                </button>
+              )}
             </div>
 
             {listings.map((listing) => {

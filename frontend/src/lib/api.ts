@@ -7,6 +7,7 @@ import type {
   AgentResearchResponse,
   AgentStreamEvent,
   RentalSearchResponse,
+  CellEvidence,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -67,6 +68,7 @@ export interface RentalFilters {
   furnishing?: string;
   amenities?: string;
   price_max_monthly?: number;
+  expand_neighbours?: boolean;
 }
 
 export async function searchRentalsInHex(
@@ -87,8 +89,29 @@ export async function searchRentalsInHex(
     if (filters.furnishing) q.set("furnishing", filters.furnishing);
     if (filters.amenities) q.set("amenities", filters.amenities);
     if (filters.price_max_monthly != null) q.set("price_max_monthly", String(filters.price_max_monthly));
+    if (filters.expand_neighbours) q.set("expand_neighbours", "true");
   }
   return request<RentalSearchResponse>(`/api/rentals/search?${q.toString()}`, { signal });
+}
+
+export interface CellEvidenceCriterion {
+  type: string;
+  params: Record<string, unknown>;
+}
+
+export async function fetchCellEvidence(
+  city: string,
+  lat: number,
+  lng: number,
+  cellSizeM: number,
+  criteria: CellEvidenceCriterion[],
+  signal?: AbortSignal,
+): Promise<CellEvidence> {
+  return request<CellEvidence>("/api/cell-evidence", {
+    method: "POST",
+    body: JSON.stringify({ city, lat, lng, cell_size_m: cellSizeM, criteria }),
+    signal,
+  });
 }
 
 export async function agentResearch(
