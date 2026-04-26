@@ -42,7 +42,9 @@ import { ScoringOverlay } from "./ScoringOverlay";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import { RentalListCard } from "@/components/rentals/RentalListCard";
-import type { RentalListing, CellEvidence } from "@/lib/types";
+import { RentalPriceMarker } from "@/components/map/RentalPriceMarker";
+import { POIMarker } from "@/components/map/POIMarker";
+import type { CellEvidence } from "@/lib/types";
 import {
   GRID_RESOLUTION_CONFIG,
   type AiParams,
@@ -71,35 +73,6 @@ const ICON_MAP: Record<string, typeof MapPin> = {
 };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-
-const AMENITY_COLOR: Record<string, [number, number, number, number]> = {
-  park:          [74,  222, 128, 230],
-  beach:         [56,  189, 248, 230],
-  cafe:          [251, 146,  60, 230],
-  coffee:        [251, 146,  60, 230],
-  restaurant:    [253, 186, 116, 230],
-  gym:           [167, 139, 250, 230],
-  pool:          [34,  211, 238, 230],
-  swimming_pool: [34,  211, 238, 230],
-  supermarket:   [45,  212, 191, 230],
-  pharmacy:      [244, 114, 182, 230],
-  hospital:      [248, 113, 113, 230],
-  school:        [250, 204,  21, 230],
-  mosque:        [129, 140, 248, 230],
-};
-
-const TRANSIT_COLOR: Record<string, [number, number, number, number]> = {
-  train: [96,  165, 250, 230],
-  bus:   [103, 232, 249, 230],
-};
-
-const HEALTHCARE_COLOR: Record<string, [number, number, number, number]> = {
-  hospital: [248, 113, 113, 230],
-  clinic:   [251, 146,  60, 230],
-  pharmacy: [244, 114, 182, 230],
-};
-
-const DEFAULT_POI_COLOR: [number, number, number, number] = [251, 191, 36, 230];
 
 const COLOR_RAMP: [number, number, number][] = [
   [215, 25, 28],
@@ -281,10 +254,12 @@ export function MapView() {
           if (d.weight < scoreThreshold) return [0, 0, 0, 0];
           const [r, g, b] = scoreToColor(d.weight, scoreRange.min, scoreRange.max);
           if (!selectedCellId) return [r, g, b, 216];
-          // Spotlight the selected cell; others fade into the background.
+          // Spotlight via the blue border (see getLineColor); keep the fill
+          // semi-transparent on the selected cell so POI markers rendered
+          // inside it remain readable. Surrounding cells fade further.
           return d.cell_id === selectedCellId
-            ? [r, g, b, 255]
-            : [r, g, b, 40];
+            ? [r, g, b, 150]
+            : [r, g, b, 30];
         },
         getLineColor: (d: (typeof data)[0]) =>
           d.cell_id === selectedCellId ? [96, 165, 250, 255] : [0, 0, 0, 0],
@@ -407,74 +382,8 @@ export function MapView() {
       );
     }
 
-    if (cellEvidence?.amenities.length) {
-      layers.push(
-        new ScatterplotLayer({
-          id: "evidence-amenities",
-          data: cellEvidence.amenities,
-          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
-          getRadius: 7,
-          radiusUnits: "pixels",
-          radiusMinPixels: 4,
-          radiusMaxPixels: 10,
-          getFillColor: (d: { category: string }) =>
-            AMENITY_COLOR[d.category] ?? DEFAULT_POI_COLOR,
-          getLineColor: [255, 255, 255, 160],
-          stroked: true,
-          lineWidthMinPixels: 1.5,
-          filled: true,
-          pickable: false,
-          updateTriggers: { getFillColor: [] },
-        }),
-      );
-    }
-
-    if (cellEvidence?.transit.length) {
-      layers.push(
-        new ScatterplotLayer({
-          id: "evidence-transit",
-          data: cellEvidence.transit,
-          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
-          getRadius: 7,
-          radiusUnits: "pixels",
-          radiusMinPixels: 4,
-          radiusMaxPixels: 10,
-          getFillColor: (d: { mode: string }) =>
-            TRANSIT_COLOR[d.mode] ?? DEFAULT_POI_COLOR,
-          getLineColor: [255, 255, 255, 160],
-          stroked: true,
-          lineWidthMinPixels: 1.5,
-          filled: true,
-          pickable: false,
-          updateTriggers: { getFillColor: [] },
-        }),
-      );
-    }
-
-    if (cellEvidence?.healthcare.length) {
-      layers.push(
-        new ScatterplotLayer({
-          id: "evidence-healthcare",
-          data: cellEvidence.healthcare,
-          getPosition: (d: { lat: number; lng: number }) => [d.lng, d.lat],
-          getRadius: 8,
-          radiusUnits: "pixels",
-          radiusMinPixels: 5,
-          radiusMaxPixels: 12,
-          getFillColor: (d: { facility_type: string }) =>
-            HEALTHCARE_COLOR[d.facility_type] ?? DEFAULT_POI_COLOR,
-          getLineColor: [255, 255, 255, 160],
-          stroked: true,
-          lineWidthMinPixels: 1.5,
-          filled: true,
-          pickable: false,
-          updateTriggers: { getFillColor: [] },
-        }),
-      );
-    }
-
     return layers;
-  }, [clickedCenter, criteria, cellEvidence]);
+  }, [clickedCenter, criteria]);
 
   const clearRentals = useRentalStore((s) => s.clear);
   const rentalListings = useRentalStore((s) => s.listings);
@@ -496,43 +405,12 @@ export function MapView() {
     clearRentals();
   }, [chatOpen, setSelectedCellId, clearRentals]);
 
-  const rentalPinsLayer = useMemo(() => {
-    if (!rentalListings.length) return null;
-    return new ScatterplotLayer({
-      id: "rental-pins",
-      data: rentalListings,
-      getPosition: (d: RentalListing) => [d.lng, d.lat],
-      getRadius: (d: RentalListing) =>
-        d.id === selectedListingId ? 10 : 7,
-      radiusUnits: "pixels",
-      getFillColor: (d: RentalListing) =>
-        d.id === selectedListingId ? [96, 165, 250, 245] : [255, 255, 255, 235],
-      getLineColor: (d: RentalListing) =>
-        d.id === selectedListingId ? [255, 255, 255, 255] : [10, 10, 20, 160],
-      getLineWidth: 1.5,
-      lineWidthUnits: "pixels",
-      stroked: true,
-      filled: true,
-      pickable: true,
-      onClick: (info) => {
-        const obj = info.object as RentalListing | undefined;
-        if (obj) selectListing(obj.id);
-      },
-      updateTriggers: {
-        getRadius: [selectedListingId],
-        getFillColor: [selectedListingId],
-        getLineColor: [selectedListingId],
-      },
-    });
-  }, [rentalListings, selectedListingId, selectListing]);
-
   const allLayers = useMemo(
     () => loading ? [] : [
       ...layers,
       ...evidenceLayers,
-      ...(rentalPinsLayer ? [rentalPinsLayer] : []),
     ],
-    [loading, layers, evidenceLayers, rentalPinsLayer],
+    [loading, layers, evidenceLayers],
   );
 
   const visibleCount = useMemo(() => {
@@ -643,7 +521,10 @@ export function MapView() {
         onClick={handleClick}
         getTooltip={({ object }: { object?: Record<string, unknown> }) => {
           if (!object) return null;
-          return `Score: ${((object.score as number) * 100).toFixed(0)}%`;
+          if (typeof object.score === "number") {
+            return `Score: ${((object.score as number) * 100).toFixed(0)}%`;
+          }
+          return null;
         }}
       >
         <Map
@@ -673,6 +554,73 @@ export function MapView() {
               </Marker>
             );
           })}
+          {!loading && cellEvidence?.amenities.map((p, i) => (
+            <Marker
+              key={`am-${i}-${p.lat}-${p.lng}`}
+              longitude={p.lng}
+              latitude={p.lat}
+              anchor="center"
+            >
+              <POIMarker
+                lat={p.lat}
+                lng={p.lng}
+                category={p.category}
+                kind="amenity"
+                name={p.name ?? null}
+                distance_m={p.distance_m}
+              />
+            </Marker>
+          ))}
+          {!loading && cellEvidence?.transit.map((p, i) => (
+            <Marker
+              key={`tr-${i}-${p.lat}-${p.lng}`}
+              longitude={p.lng}
+              latitude={p.lat}
+              anchor="center"
+            >
+              <POIMarker
+                lat={p.lat}
+                lng={p.lng}
+                category={p.mode}
+                kind="transit"
+                name={p.name ?? null}
+                distance_m={p.distance_m}
+              />
+            </Marker>
+          ))}
+          {!loading && cellEvidence?.healthcare.map((p, i) => (
+            <Marker
+              key={`hc-${i}-${p.lat}-${p.lng}`}
+              longitude={p.lng}
+              latitude={p.lat}
+              anchor="center"
+            >
+              <POIMarker
+                lat={p.lat}
+                lng={p.lng}
+                category={p.facility_type}
+                kind="healthcare"
+                name={p.name ?? null}
+                distance_m={p.distance_m}
+              />
+            </Marker>
+          ))}
+          {!loading && rentalListings.map((listing) => (
+            <Marker
+              key={listing.id}
+              longitude={listing.lng}
+              latitude={listing.lat}
+              anchor="bottom"
+            >
+              <RentalPriceMarker
+                listing={listing}
+                selected={listing.id === selectedListingId}
+                onSelect={() =>
+                  selectListing(listing.id === selectedListingId ? null : listing.id)
+                }
+              />
+            </Marker>
+          ))}
         </Map>
       </DeckGL>
 

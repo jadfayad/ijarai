@@ -64,7 +64,7 @@ async def _fetch_pois(city: CityConfig, category: str) -> list[dict]:
       node{osm_tag}({bbox});
       way{osm_tag}({bbox});
     );
-    out center;
+    out tags center;
     """
 
     data: dict | None = None
@@ -86,7 +86,9 @@ async def _fetch_pois(city: CityConfig, category: str) -> list[dict]:
         lat = el.get("lat") or el.get("center", {}).get("lat")
         lon = el.get("lon") or el.get("center", {}).get("lon")
         if lat is not None and lon is not None:
-            pois.append({"lat": lat, "lng": lon})
+            tags = el.get("tags", {}) or {}
+            name = tags.get("name") or tags.get("name:en")
+            pois.append({"lat": lat, "lng": lon, "name": name})
 
     _poi_cache[cache_key] = pois
     return pois

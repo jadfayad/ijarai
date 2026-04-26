@@ -9,6 +9,7 @@ healthcare) are handled; commute and AI are covered elsewhere in the UI.
 from __future__ import annotations
 
 import asyncio
+import math
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -77,8 +78,15 @@ async def get_cell_evidence(req: CellEvidenceRequest):
         for cat, pois in zip(new, results):
             for poi in pois:
                 px, py = to_meters(poi["lat"], poi["lng"], mid_lat)
-                if (cx - px) ** 2 + (cy - py) ** 2 <= amenity_r2:
-                    amenities.append({"lat": poi["lat"], "lng": poi["lng"], "category": cat})
+                d2 = (cx - px) ** 2 + (cy - py) ** 2
+                if d2 <= amenity_r2:
+                    amenities.append({
+                        "lat": poi["lat"],
+                        "lng": poi["lng"],
+                        "category": cat,
+                        "name": poi.get("name"),
+                        "distance_m": round(math.sqrt(d2)),
+                    })
 
     async def _gather_transit(modes: list[str]) -> None:
         new = [m for m in modes if m in MODE_TO_OSM and m not in seen_transit]
@@ -87,10 +95,17 @@ async def get_cell_evidence(req: CellEvidenceRequest):
         seen_transit.update(new)
         results = await asyncio.gather(*[_fetch_stops(city, (m,)) for m in new])
         for mode, stops in zip(new, results):
-            for slat, slng in stops:
+            for slat, slng, sname in stops:
                 sx, sy = to_meters(slat, slng, mid_lat)
-                if (cx - sx) ** 2 + (cy - sy) ** 2 <= transit_r2:
-                    transit.append({"lat": slat, "lng": slng, "mode": mode})
+                d2 = (cx - sx) ** 2 + (cy - sy) ** 2
+                if d2 <= transit_r2:
+                    transit.append({
+                        "lat": slat,
+                        "lng": slng,
+                        "mode": mode,
+                        "name": sname,
+                        "distance_m": round(math.sqrt(d2)),
+                    })
 
     async def _gather_healthcare(ftypes: list[str]) -> None:
         new = [f for f in ftypes if f in FACILITY_TO_OSM and f not in seen_healthcare]
@@ -98,12 +113,19 @@ async def get_cell_evidence(req: CellEvidenceRequest):
             return
         seen_healthcare.update(new)
         facilities = await _fetch_facilities(city, tuple(sorted(new)))
-        for flat, flng, fweight in facilities:
+        for flat, flng, fweight, fname in facilities:
             fx, fy = to_meters(flat, flng, mid_lat)
-            if (cx - fx) ** 2 + (cy - fy) ** 2 <= healthcare_r2:
+            d2 = (cx - fx) ** 2 + (cy - fy) ** 2
+            if d2 <= healthcare_r2:
                 ftype = _WEIGHT_TO_FACILITY_TYPE.get(fweight, "clinic")
                 if ftype in new:
-                    healthcare.append({"lat": flat, "lng": flng, "facility_type": ftype})
+                    healthcare.append({
+                        "lat": flat,
+                        "lng": flng,
+                        "facility_type": ftype,
+                        "name": fname,
+                        "distance_m": round(math.sqrt(d2)),
+                    })
 
     tasks = []
     for crit in req.criteria:

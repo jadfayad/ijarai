@@ -348,18 +348,24 @@ export interface AmenityPOI {
   lat: number;
   lng: number;
   category: string;
+  name?: string | null;
+  distance_m?: number;
 }
 
 export interface TransitPOI {
   lat: number;
   lng: number;
   mode: string;
+  name?: string | null;
+  distance_m?: number;
 }
 
 export interface HealthcarePOI {
   lat: number;
   lng: number;
   facility_type: string;
+  name?: string | null;
+  distance_m?: number;
 }
 
 export interface CellEvidence {

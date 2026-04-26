@@ -32,7 +32,7 @@ FACILITY_WEIGHT: dict[str, float] = {
 }
 
 _healthcare_cache: TTLCache[
-    tuple[str, tuple[str, ...]], list[tuple[float, float, float]]
+    tuple[str, tuple[str, ...]], list[tuple[float, float, float, str | None]]
 ] = TTLCache(maxsize=16, ttl=3600)
 
 # Decay window for nearest-facility proximity (beyond this the facility
@@ -44,8 +44,8 @@ DENSITY_CAP_WEIGHTED = 5.0
 
 async def _fetch_facilities(
     city: CityConfig, facility_types: tuple[str, ...]
-) -> list[tuple[float, float, float]]:
-    """Return a list of (lat, lng, weight) for each facility of the requested types."""
+) -> list[tuple[float, float, float, str | None]]:
+    """Return a list of (lat, lng, weight, name) for each facility of the requested types."""
     cache_key = (city.slug, facility_types)
     if cache_key in _healthcare_cache:
         return _healthcare_cache[cache_key]
@@ -91,7 +91,7 @@ async def _fetch_facilities(
     if data is None:
         return []
 
-    facilities: list[tuple[float, float, float]] = []
+    facilities: list[tuple[float, float, float, str | None]] = []
     for el in data.get("elements", []):
         tags = el.get("tags", {})
         amenity = tags.get("amenity")
@@ -101,8 +101,9 @@ async def _fetch_facilities(
         lon = el.get("lon") or el.get("center", {}).get("lon")
         if lat is None or lon is None:
             continue
+        name = tags.get("name") or tags.get("name:en")
         facilities.append(
-            (float(lat), float(lon), FACILITY_WEIGHT.get(amenity, 1.0))
+            (float(lat), float(lon), FACILITY_WEIGHT.get(amenity, 1.0), name)
         )
 
     _healthcare_cache[cache_key] = facilities
@@ -149,12 +150,12 @@ async def score_healthcare(
     mid_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2
 
     xy = np.array(
-        [to_meters(lat, lng, mid_lat) for lat, lng, _ in facilities], dtype=float,
+        [to_meters(lat, lng, mid_lat) for lat, lng, _, _ in facilities], dtype=float,
     )
-    weights = np.array([w for _, _, w in facilities], dtype=float)
+    weights = np.array([w for _, _, w, _ in facilities], dtype=float)
     # Second tree over only hospitals/clinics for the distance metric.
     clinical_xy = np.array(
-        [to_meters(lat, lng, mid_lat) for lat, lng, w in facilities if w >= 1.0],
+        [to_meters(lat, lng, mid_lat) for lat, lng, w, _ in facilities if w >= 1.0],
         dtype=float,
     )
     tree = KDTree(xy)

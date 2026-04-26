@@ -25,9 +25,9 @@ MODE_TO_OSM: dict[str, str] = {
     "bus": '["highway"="bus_stop"]',
 }
 
-_transit_cache: TTLCache[tuple[str, tuple[str, ...]], list[tuple[float, float]]] = (
-    TTLCache(maxsize=16, ttl=3600)
-)
+_transit_cache: TTLCache[
+    tuple[str, tuple[str, ...]], list[tuple[float, float, str | None]]
+] = TTLCache(maxsize=16, ttl=3600)
 
 _OVERPASS_ENDPOINTS = [
     "https://overpass.kumi.systems/api/interpreter",
@@ -42,7 +42,7 @@ DENSITY_CAP = 10
 
 async def _fetch_stops(
     city: CityConfig, modes: tuple[str, ...]
-) -> list[tuple[float, float]]:
+) -> list[tuple[float, float, str | None]]:
     cache_key = (city.slug, modes)
     if cache_key in _transit_cache:
         return _transit_cache[cache_key]
@@ -62,7 +62,7 @@ async def _fetch_stops(
     if not parts:
         return []
 
-    query = "[out:json][timeout:25];\n(\n" + "\n".join(parts) + "\n);\nout;"
+    query = "[out:json][timeout:25];\n(\n" + "\n".join(parts) + "\n);\nout tags;"
 
     data: dict | None = None
     async with httpx.AsyncClient(timeout=35) as client:
@@ -78,12 +78,14 @@ async def _fetch_stops(
     if data is None:
         return []
 
-    stops: list[tuple[float, float]] = []
+    stops: list[tuple[float, float, str | None]] = []
     for el in data.get("elements", []):
         lat = el.get("lat")
         lon = el.get("lon")
         if lat is not None and lon is not None:
-            stops.append((float(lat), float(lon)))
+            tags = el.get("tags", {}) or {}
+            name = tags.get("name") or tags.get("name:en")
+            stops.append((float(lat), float(lon), name))
 
     _transit_cache[cache_key] = stops
     return stops
@@ -118,7 +120,7 @@ async def score_transit(
     mid_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2
 
     stop_xy = np.array(
-        [to_meters(lat, lng, mid_lat) for lat, lng in stops], dtype=float,
+        [to_meters(lat, lng, mid_lat) for lat, lng, _ in stops], dtype=float,
     )
     tree = KDTree(stop_xy)
 

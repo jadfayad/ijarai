@@ -5,7 +5,7 @@ import { BedDouble, Bath, Ruler, ExternalLink, X, AlertTriangle, Home, ChevronDo
 
 import { useRentalStore } from "@/stores/rental-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
-import type { RentalListing } from "@/lib/types";
+import { formatRentalPrice } from "@/lib/format";
 
 // ── Score breakdown helpers ──────────────────────────────────────────────────
 
@@ -64,17 +64,6 @@ function ScoreBar({ label, value, metric }: { label: string; value: number; metr
 }
 
 // ── Rental listing helpers ───────────────────────────────────────────────────
-
-function formatPrice(listing: RentalListing): string {
-  const value = Math.round(listing.price).toLocaleString();
-  const currency = listing.currency || "";
-  const period = listing.price_period?.toLowerCase().startsWith("month")
-    ? "/mo"
-    : listing.price_period?.toLowerCase().startsWith("year")
-      ? "/yr"
-      : "";
-  return `${currency} ${value}${period}`.trim();
-}
 
 const EXPAND_THRESHOLD = 4;
 
@@ -343,7 +332,7 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
                     <div className="min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-[13px] font-semibold text-white truncate tabular-nums">
-                          {formatPrice(listing)}
+                          {formatRentalPrice(listing)}
                         </span>
                         {listing.external_url && (
                           <a

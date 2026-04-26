@@ -281,3 +281,16 @@
 .map-root.cell-focused .mapboxgl-map {
   filter: grayscale(0.55) brightness(0.65) contrast(1.05);
 }
+
+/* The deck.gl canvas inside <DeckGL> is positioned absolutely with z-index 1
+ * (and pointer-events: auto), which would paint *over* Mapbox HTML markers
+ * (commute pins, POI icons, rental price chips) and steal hover/click events.
+ * Lift markers above the deck canvas so they remain visible *and* hoverable.
+ * !important guards against Mapbox's own marker z-index defaults. */
+.map-root .mapboxgl-marker,
+.mapboxgl-marker {
+  z-index: 50 !important;
+}
+.map-root .mapboxgl-popup {
+  z-index: 60 !important;
+}
