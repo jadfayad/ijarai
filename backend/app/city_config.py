@@ -45,6 +45,9 @@ class CityConfig:
     # Bounding boxes for reclaimed/man-made land not present in global_land_mask.
     # Cells whose centre falls inside any of these boxes pass the land filter.
     land_override_bounds: tuple[dict[str, float], ...] = field(default_factory=tuple)
+    # Closed polygons (tuple of (lat, lng) vertices, CW or CCW) for reclaimed land.
+    # Cells whose centre falls inside any polygon also pass the land filter.
+    land_override_polygons: tuple[tuple[tuple[float, float], ...], ...] = field(default_factory=tuple)
 
     @property
     def data_dir(self) -> Path:
@@ -79,8 +82,27 @@ CITIES: dict[str, CityConfig] = {
         ),
         rental_provider="propertyfinder",
         # Palm Jumeirah is a man-made island absent from global_land_mask.
-        land_override_bounds=(
-            {"min_lat": 25.085, "max_lat": 25.160, "min_lng": 55.090, "max_lng": 55.200},
+        # Polygon covers the trunk + fronds fan only — intentionally excludes
+        # the open lagoon behind the crescent to avoid spurious water cells.
+        land_override_polygons=(
+            (
+                (25.082, 55.127),  # SW trunk at mainland (south)
+                (25.082, 55.143),  # SE trunk at mainland (south)
+                (25.108, 55.144),  # NE trunk top
+                (25.115, 55.158),  # E inner fronds
+                (25.123, 55.170),  # E outer frond tips
+                (25.131, 55.168),  # NE frond tips
+                (25.140, 55.160),  # NNE fronds
+                (25.146, 55.147),  # NNE arc
+                (25.148, 55.133),  # N tip (northernmost frond)
+                (25.146, 55.120),  # NNW arc
+                (25.140, 55.107),  # NNW fronds
+                (25.131, 55.099),  # NW frond tips
+                (25.123, 55.097),  # W outer frond tips
+                (25.115, 55.108),  # W inner fronds
+                (25.108, 55.122),  # NW trunk top
+                (25.082, 55.127),  # back to start
+            ),
         ),
     ),
     "san-francisco": CityConfig(

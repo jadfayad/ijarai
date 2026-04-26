@@ -17,7 +17,7 @@ from app.grid_config import (
     cell_size_to_h3_res,
 )
 
-_GRID_VERSION = 5
+_GRID_VERSION = 8
 _grid_cache: dict[tuple[str, int], dict] = {}
 
 
@@ -38,12 +38,30 @@ def generate_grid(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_s
     ])
     all_cells = h3.h3shape_to_cells(boundary, h3_res)
 
+    def _point_in_polygon(lat: float, lng: float, poly: tuple[tuple[float, float], ...]) -> bool:
+        """Ray-casting point-in-polygon test (polygon vertices are (lat, lng))."""
+        inside = False
+        n = len(poly)
+        j = n - 1
+        for i in range(n):
+            lat_i, lng_i = poly[i]
+            lat_j, lng_j = poly[j]
+            if ((lng_i > lng) != (lng_j > lng)) and (
+                lat < (lat_j - lat_i) * (lng - lng_i) / (lng_j - lng_i) + lat_i
+            ):
+                inside = not inside
+            j = i
+        return inside
+
     def _is_land(lat: float, lng: float) -> bool:
         if globe.is_land(lat, lng):
             return True
         for box in city.land_override_bounds:
             if (box["min_lat"] <= lat <= box["max_lat"]
                     and box["min_lng"] <= lng <= box["max_lng"]):
+                return True
+        for poly in city.land_override_polygons:
+            if _point_in_polygon(lat, lng, poly):
                 return True
         return False
 
