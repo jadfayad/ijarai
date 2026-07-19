@@ -1,0 +1,6 @@
+{
+  "currency": "CAD",
+  "city_average_monthly": 110,
+  "notes": "Hydro-Quebec residential Rate D (electricity + electric heating dominant) for a 1-2 BR apartment, annualized to a monthly average; winter months run higher. Water is covered by municipal taxes, not billed to tenants. Internet ~CAD 60 not included. Refine with Hydro-Quebec published Rate D tiers when curating.",
+  "zones": []
+}

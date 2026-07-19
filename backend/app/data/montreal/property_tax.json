@@ -1,0 +1,6 @@
+{
+  "notes": "Ville de Montreal residential property tax (taxe fonciere) is roughly 0.7-0.8% of the municipal assessment (role foncier) per year, varying by borough and combining the agglomeration + borough + city rates. Stub uses a flat city rate; refine with the annual Ville de Montreal taux de taxation by borough when curating.",
+  "currency": "CAD",
+  "city_annual_rate_fraction": 0.0075,
+  "zones": []
+}

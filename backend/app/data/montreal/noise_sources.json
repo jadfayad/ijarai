@@ -1,0 +1,13 @@
+[
+  { "center": [45.540, -73.640], "radius_km": 1.0, "intensity": 0.7, "label": "Autoroute 40 (Metropolitaine) — Cartierville/Ahuntsic" },
+  { "center": [45.545, -73.590], "radius_km": 1.0, "intensity": 0.75, "label": "Autoroute 40 (Metropolitaine) — Saint-Michel" },
+  { "center": [45.575, -73.545], "radius_km": 1.0, "intensity": 0.7, "label": "Autoroute 40 (Metropolitaine) — Saint-Leonard/Anjou" },
+  { "center": [45.605, -73.520], "radius_km": 1.1, "intensity": 0.65, "label": "Autoroute 40 — Pointe-aux-Trembles corridor" },
+  { "center": [45.495, -73.630], "radius_km": 0.9, "intensity": 0.7, "label": "Autoroute 15 (Decarie) — trench" },
+  { "center": [45.470, -73.640], "radius_km": 0.9, "intensity": 0.65, "label": "Autoroute 15 / echangeur Turcot" },
+  { "center": [45.495, -73.575], "radius_km": 0.8, "intensity": 0.65, "label": "Autoroute 720 (Ville-Marie) — downtown" },
+  { "center": [45.590, -73.560], "radius_km": 0.9, "intensity": 0.6, "label": "Autoroute 25 — east corridor" },
+  { "center": [45.471, -73.741], "radius_km": 2.2, "intensity": 0.7, "label": "YUL Montreal-Trudeau Airport — aircraft noise" },
+  { "center": [45.460, -73.610], "radius_km": 0.8, "intensity": 0.5, "label": "CN rail — Turcot / Saint-Henri yards" },
+  { "center": [45.540, -73.560], "radius_km": 0.7, "intensity": 0.45, "label": "Port of Montreal — Hochelaga waterfront" }
+]

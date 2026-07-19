@@ -198,6 +198,30 @@ export function SanFranciscoSkyline({ className }: { className?: string }) {
   );
 }
 
+export function MontrealSkyline({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 100" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      {/* Mount Royal with its illuminated cross (left) */}
+      <path d="M8,100 Q28,58 48,62 L48,100 Z" opacity="0.4" />
+      <rect x="26" y="34" width="1.6" height="18" />
+      <rect x="22.5" y="40" width="8.5" height="1.6" />
+      {/* Downtown towers (centre) */}
+      <path d="M60,100 L60,52 L64,52 L64,46 L67,46 L67,52 L71,52 L71,100 Z" />
+      <path d="M76,100 L76,44 L80,44 L80,100 Z" />
+      {/* 1000 de la Gauchetière — pointed roof */}
+      <path d="M86,100 L86,40 L88,40 L88,30 L91,22 L94,30 L94,40 L96,40 L96,100 Z" />
+      {/* 1250 René-Lévesque — pyramidal crown */}
+      <path d="M101,100 L101,38 L104,38 L104,32 L107,26 L110,32 L110,38 L113,38 L113,100 Z" />
+      <path d="M118,100 L118,48 L122,48 L122,42 L125,42 L125,48 L129,48 L129,100 Z" />
+      <path d="M134,100 L134,54 L138,54 L138,100 Z" />
+      {/* Olympic Stadium — leaning tower + arena ring (right) */}
+      <path d="M158,100 L158,58 Q166,36 184,18 L187,22 Q170,40 163,58 L163,100 Z" />
+      <ellipse cx="156" cy="88" rx="15" ry="5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="0" y="98" width="200" height="2" />
+    </svg>
+  );
+}
+
 export const skylines: Record<string, React.FC<{ className?: string }>> = {
   dubai: DubaiSkyline,
   "new-york": NewYorkSkyline,
@@ -207,6 +231,7 @@ export const skylines: Record<string, React.FC<{ className?: string }>> = {
   tokyo: TokyoSkyline,
   sydney: SydneySkyline,
   paris: ParisSkyline,
+  montreal: MontrealSkyline,
   toronto: TorontoSkyline,
   "san-francisco": SanFranciscoSkyline,
 };

@@ -48,6 +48,11 @@ class CityConfig:
     # Closed polygons (tuple of (lat, lng) vertices, CW or CCW) for reclaimed land.
     # Cells whose centre falls inside any polygon also pass the land filter.
     land_override_polygons: tuple[tuple[tuple[float, float], ...], ...] = field(default_factory=tuple)
+    # Optional land-boundary polygons. When non-empty, a cell is kept ONLY if its
+    # centre falls inside one of them — used where global_land_mask fails on inland
+    # water (e.g. rivers around an island city) and a bounding box alone would place
+    # cells on the water. Leave empty to rely on the land mask.
+    include_polygons: tuple[tuple[tuple[float, float], ...], ...] = field(default_factory=tuple)
 
     @property
     def data_dir(self) -> Path:
@@ -156,6 +161,62 @@ CITIES: dict[str, CityConfig] = {
             Destination(label="", lat=48.8566, lng=2.3522, icon="briefcase"),
             Destination(label="CDG Airport", lat=49.0097, lng=2.5479, icon="plane"),
             Destination(label="", lat=48.8566, lng=2.3522, icon="map-pin"),
+        ),
+    ),
+    "montreal": CityConfig(
+        slug="montreal",
+        name="Montreal",
+        country_code="ca",
+        # Island of Montreal + immediate approaches. Real land in global_land_mask,
+        # so no land_override_* needed.
+        bounds={
+            "min_lat": 45.40,
+            "max_lat": 45.70,
+            "min_lng": -73.98,
+            "max_lng": -73.47,
+        },
+        center_lat=45.5019,
+        center_lng=-73.5674,
+        timezone_offset_hours=-5,  # EST (fixed-offset convention, like SF/Paris)
+        default_zoom=12,
+        currency_code="CAD",
+        currency_symbol="$",
+        rent_min=600,
+        rent_max=4000,
+        rent_step=100,
+        rent_default=1500,
+        default_destinations=(
+            Destination(label="", lat=45.5019, lng=-73.5674, icon="briefcase"),
+            Destination(label="YUL Airport", lat=45.4706, lng=-73.7408, icon="plane"),
+            Destination(label="", lat=45.5019, lng=-73.5674, icon="map-pin"),
+        ),
+        # rental_provider intentionally unset — no live rentals yet (parity with SF/Paris).
+        # global_land_mask treats the St. Lawrence / Rivière des Prairies as land,
+        # so restrict cells to the Island of Montreal outline (clockwise (lat, lng)).
+        # Scopes the city to the island proper — excludes Laval and the South Shore.
+        include_polygons=(
+            (
+                (45.408, -73.955),  # W tip — Sainte-Anne-de-Bellevue
+                (45.428, -73.850),  # SW — Baie-D'Urfé / Beaconsfield (Lac Saint-Louis)
+                (45.432, -73.760),  # Dorval / Pointe-Claire
+                (45.420, -73.690),  # Lachine
+                (45.408, -73.650),  # LaSalle (south, along the rapids)
+                (45.452, -73.575),  # Verdun waterfront
+                (45.458, -73.552),  # Nuns' Island (Île des Sœurs)
+                (45.505, -73.545),  # Old Port / Cité-du-Havre
+                (45.545, -73.518),  # Hochelaga-Maisonneuve
+                (45.590, -73.500),  # Mercier-Est
+                (45.635, -73.485),  # Pointe-aux-Trembles
+                (45.700, -73.478),  # E tip — Bout-de-l'Île
+                (45.690, -73.520),  # NE — Rivière-des-Prairies (north shore)
+                (45.640, -73.585),  # Montréal-Nord
+                (45.590, -73.660),  # Ahuntsic
+                (45.560, -73.730),  # Cartierville
+                (45.540, -73.800),  # Pierrefonds-East (Rivière des Prairies)
+                (45.518, -73.880),  # Pierrefonds-West / Île-Bizard side
+                (45.470, -73.940),  # Senneville (NW)
+                (45.408, -73.955),  # back to W tip
+            ),
         ),
     ),
 }

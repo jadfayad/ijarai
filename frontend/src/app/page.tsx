@@ -18,6 +18,7 @@ const cities = [
   { name: "Tokyo", slug: "tokyo", country: "Japan", available: false },
   { name: "Sydney", slug: "sydney", country: "Australia", available: false },
   { name: "Paris", slug: "paris", country: "France", available: true },
+  { name: "Montreal", slug: "montreal", country: "Canada", available: true },
   { name: "Toronto", slug: "toronto", country: "Canada", available: false },
 ];
 

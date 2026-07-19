@@ -54,6 +54,12 @@ def generate_grid(city: CityConfig, cell_size_m: int = DEFAULT_RESOLUTION.cell_s
         return inside
 
     def _is_land(lat: float, lng: float) -> bool:
+        # When include_polygons is set, the cell must fall inside the city's land
+        # boundary — this handles inland water (rivers) that the mask misses.
+        if city.include_polygons and not any(
+            _point_in_polygon(lat, lng, poly) for poly in city.include_polygons
+        ):
+            return False
         if globe.is_land(lat, lng):
             return True
         for box in city.land_override_bounds:

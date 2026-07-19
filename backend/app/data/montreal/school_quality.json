@@ -1,0 +1,23 @@
+{
+  "notes": "Approximate neighbourhood-level primary/secondary ratings (1-10), informed by Quebec Ministere de l'Education (MEQ) results and Fraser Institute Quebec school rankings. Montreal spans the CSSDM (French public), EMSB (English public), and many private colleges; ratings are zone aggregates. Replace with per-school MEQ/Fraser data keyed to carte scolaire sectors when curating.",
+  "zones": {
+    "outremont": { "center": [45.518, -73.610], "radius_km": 0.9, "score_primary": 8.5, "score_secondary": 8.5 },
+    "westmount": { "center": [45.483, -73.600], "radius_km": 0.9, "score_primary": 9.0, "score_secondary": 9.0 },
+    "notre_dame_de_grace": { "center": [45.472, -73.615], "radius_km": 1.2, "score_primary": 7.5, "score_secondary": 7.5 },
+    "cote_des_neiges": { "center": [45.492, -73.622], "radius_km": 1.2, "score_primary": 7.0, "score_secondary": 7.5 },
+    "cote_saint_luc_hampstead": { "center": [45.475, -73.660], "radius_km": 1.2, "score_primary": 8.0, "score_secondary": 8.0 },
+    "plateau_mont_royal": { "center": [45.524, -73.583], "radius_km": 1.1, "score_primary": 7.5, "score_secondary": 7.0 },
+    "rosemont_la_petite_patrie": { "center": [45.540, -73.590], "radius_km": 1.3, "score_primary": 7.0, "score_secondary": 6.5 },
+    "ile_des_soeurs": { "center": [45.458, -73.552], "radius_km": 0.8, "score_primary": 8.0, "score_secondary": 8.0 },
+    "verdun": { "center": [45.458, -73.571], "radius_km": 1.0, "score_primary": 6.5, "score_secondary": 6.5 },
+    "ahuntsic_cartierville": { "center": [45.555, -73.665], "radius_km": 1.5, "score_primary": 7.0, "score_secondary": 6.5 },
+    "saint_michel": { "center": [45.560, -73.610], "radius_km": 1.1, "score_primary": 5.5, "score_secondary": 5.0 },
+    "montreal_nord": { "center": [45.600, -73.630], "radius_km": 1.3, "score_primary": 5.5, "score_secondary": 5.0 },
+    "saint_leonard": { "center": [45.585, -73.590], "radius_km": 1.2, "score_primary": 6.5, "score_secondary": 6.5 },
+    "pointe_claire": { "center": [45.448, -73.795], "radius_km": 1.4, "score_primary": 8.0, "score_secondary": 8.0 },
+    "dollard_des_ormeaux": { "center": [45.494, -73.824], "radius_km": 1.5, "score_primary": 8.0, "score_secondary": 8.0 },
+    "beaconsfield_kirkland": { "center": [45.457, -73.855], "radius_km": 1.5, "score_primary": 8.5, "score_secondary": 8.5 },
+    "pierrefonds_roxboro": { "center": [45.500, -73.860], "radius_km": 1.6, "score_primary": 7.0, "score_secondary": 6.5 },
+    "pointe_aux_trembles": { "center": [45.655, -73.500], "radius_km": 1.6, "score_primary": 6.5, "score_secondary": 6.0 }
+  }
+}

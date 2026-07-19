@@ -1,0 +1,46 @@
+{
+  "notes": "Flood polygons approximate the zones inondables along the Riviere des Prairies (north shore of the island) — the areas hit by the 2017 and 2019 spring floods (Pierrefonds-Roxboro, Ahuntsic-Cartierville, Riviere-des-Prairies/Pointe-aux-Trembles). Wildfire is not relevant to Montreal. Refine against the CMM / Ville de Montreal zones inondables (0-20 an and 20-100 an) geospatial layers when curating.",
+  "flood_zones": [
+    {
+      "id": "pierrefonds_roxboro_riverfront",
+      "risk_score": 0.6,
+      "polygon": [
+        [45.510, -73.885],
+        [45.525, -73.885],
+        [45.525, -73.815],
+        [45.510, -73.815]
+      ]
+    },
+    {
+      "id": "ahuntsic_cartierville_riverfront",
+      "risk_score": 0.45,
+      "polygon": [
+        [45.552, -73.720],
+        [45.565, -73.720],
+        [45.565, -73.650],
+        [45.552, -73.650]
+      ]
+    },
+    {
+      "id": "riviere_des_prairies_east",
+      "risk_score": 0.5,
+      "polygon": [
+        [45.628, -73.590],
+        [45.648, -73.590],
+        [45.648, -73.500],
+        [45.628, -73.500]
+      ]
+    },
+    {
+      "id": "pointe_aux_trembles_shore",
+      "risk_score": 0.4,
+      "polygon": [
+        [45.660, -73.510],
+        [45.685, -73.510],
+        [45.685, -73.478],
+        [45.660, -73.478]
+      ]
+    }
+  ],
+  "wildfire_zones": []
+}
