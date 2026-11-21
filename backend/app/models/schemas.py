@@ -219,17 +219,6 @@ class ScoreResponse(BaseModel):
     criterion_status: dict[str, str] = Field(default_factory=dict)
 
 
-class GeocodeRequest(BaseModel):
-    address: str
-    city: str = "dubai"
-
-
-class GeocodeResponse(BaseModel):
-    lat: float
-    lng: float
-    display_name: str
-
-
 class DestinationConfig(BaseModel):
     label: str
     lat: float

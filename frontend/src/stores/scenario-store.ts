@@ -33,7 +33,6 @@ interface ScenarioStore {
   restoreScenario: (scenario: Scenario, wasActive: boolean) => void;
   renameScenario: (id: string, name: string) => void;
   startNewScenario: (city?: string) => void;
-  getScenariosByCity: (city: string) => Scenario[];
 }
 
 function generateId(): string {
@@ -306,10 +305,6 @@ export const useScenarioStore = create<ScenarioStore>()(
         cs.setScoreData(null);
         cs.setScoreThreshold(0);
         cs.setSelectedCellId(null);
-      },
-
-      getScenariosByCity: (city) => {
-        return get().scenarios.filter((s) => s.city === city);
       },
     }),
     {

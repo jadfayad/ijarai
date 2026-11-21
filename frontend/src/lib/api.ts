@@ -2,7 +2,6 @@ import type {
   ScoreRequest,
   ScoreResponse,
   ScoreProgressEvent,
-  GeocodeResult,
   CityConfig,
   AgentResearchRequest,
   AgentResearchResponse,
@@ -134,13 +133,6 @@ export async function cancelScoring(jobId: string): Promise<void> {
   }
 }
 
-export async function geocodeAddress(address: string, city?: string): Promise<GeocodeResult> {
-  return request<GeocodeResult>("/api/geocode", {
-    method: "POST",
-    body: JSON.stringify({ address, ...(city && { city }) }),
-  });
-}
-
 export async function healthCheck(): Promise<{ status: string }> {
   return request("/health");
 }
@@ -201,17 +193,6 @@ export async function fetchCellEvidence(
   return request<CellEvidence>("/api/cell-evidence", {
     method: "POST",
     body: JSON.stringify({ city, lat, lng, cell_size_m: cellSizeM, criteria }),
-    signal,
-  });
-}
-
-export async function agentResearch(
-  body: AgentResearchRequest,
-  signal?: AbortSignal,
-): Promise<AgentResearchResponse> {
-  return request<AgentResearchResponse>("/api/agent/research", {
-    method: "POST",
-    body: JSON.stringify(body),
     signal,
   });
 }

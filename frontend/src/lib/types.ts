@@ -327,12 +327,6 @@ export interface Scenario {
   scoreData: ScoreResponse | null;
 }
 
-export interface GeocodeResult {
-  lat: number;
-  lng: number;
-  display_name: string;
-}
-
 export interface DestinationConfig {
   label: string;
   lat: number;
