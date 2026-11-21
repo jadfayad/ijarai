@@ -89,10 +89,10 @@ export function CriteriaPanel() {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
                 {backendOk === null
-                  ? "Checking backend…"
+                  ? "Checking connection…"
                   : backendOk
-                    ? "Backend connected"
-                    : "Backend offline — start the server on port 8000"}
+                    ? "Connected"
+                    : "Can't reach the server"}
               </TooltipContent>
             </Tooltip>
             <button
@@ -118,8 +118,8 @@ export function CriteriaPanel() {
             {backendOk === false && (
               <div className="text-xs text-red-300 bg-red-500/10 backdrop-blur-sm rounded-xl p-3 border border-red-500/20 flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 mt-1" />
-                Backend is not reachable. Make sure the Python server is
-                running on port 8000.
+                We can&apos;t reach the server right now. Scores and the
+                assistant are unavailable until the connection is back.
               </div>
             )}
 

@@ -419,7 +419,7 @@ export const useAgentStore = create<AgentStore>()(
                     endTurn(
                       turnId,
                       agentMessage(
-                        `Sorry, I encountered an error: ${event.data.message}. Please try again.`,
+                        `${event.data.message} Please try again.`,
                       ),
                     );
                     break;
@@ -445,7 +445,7 @@ export const useAgentStore = create<AgentStore>()(
             endTurn(
               turnId,
               agentMessage(
-                `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
+                err instanceof Error ? err.message : "Something went wrong. Please try again.",
               ),
             );
           }

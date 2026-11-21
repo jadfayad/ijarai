@@ -12,15 +12,68 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+/**
+ * Error raised for any failed API call. `message` is always safe to show to
+ * end users; `code`/`retryable` mirror the backend envelope
+ * {code, message, retryable} (see backend/app/errors.py).
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = "ApiError";
   }
+}
+
+const FRIENDLY: Record<string, string> = {
+  network: "Can't reach the server. Check your connection and try again.",
+  busy: "We're handling a lot of requests right now. Please try again in a moment.",
+  server_error: "Something went wrong on our side. Please try again.",
+  timeout: "That took too long. Please try again.",
+  upstream_error: "A data provider didn't respond. Please try again.",
+  unavailable: "The service is temporarily unavailable. Please try again shortly.",
+};
+
+async function toApiError(res: Response): Promise<ApiError> {
+  let code = res.status >= 500 ? "server_error" : "error";
+  let message = "";
+  let retryable = res.status >= 500 || res.status === 429;
+  try {
+    const body = await res.json();
+    if (typeof body?.code === "string") code = body.code;
+    if (typeof body?.message === "string") message = body.message;
+    else if (typeof body?.detail === "string") message = body.detail;
+    if (typeof body?.retryable === "boolean") retryable = body.retryable;
+  } catch {
+    // Non-JSON body (proxy error page etc.) — fall back to status-based text.
+  }
+  if (res.status === 429) code = "busy";
+  // Server-side messages for 5xx/rate limits are not user-facing copy.
+  const friendly = FRIENDLY[code];
+  const shown = friendly && (res.status >= 500 || res.status === 429) ? friendly : message || friendly || "Request failed. Please try again.";
+  return new ApiError(shown, res.status, code, retryable);
+}
+
+/** fetch() that maps network failures to ApiError and lets aborts through untouched. */
+async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${API_URL}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError(FRIENDLY.network, 0, "network", true);
+  }
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await apiFetch(path, options);
+  if (!res.ok) throw await toApiError(res);
   return res.json();
 }
 
@@ -132,17 +185,13 @@ export async function agentResearchStream(
   onEvent: (event: AgentStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/agent/research/stream`, {
+  const res = await apiFetch("/api/agent/research/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal,
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
-  }
+  if (!res.ok) throw await toApiError(res);
 
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No response body");
