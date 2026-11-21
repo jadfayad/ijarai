@@ -6,6 +6,7 @@ import { CriteriaPanel } from "@/components/criteria/CriteriaPanel";
 import { MapView } from "@/components/map/MapView";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useAppReady } from "@/lib/use-app-ready";
+import { useUrlState } from "@/lib/use-url-state";
 import { useTravelStore } from "@/stores/travel-store";
 import { useRentalStore } from "@/stores/rental-store";
 import { useAgentStore } from "@/stores/agent-store";
@@ -16,6 +17,7 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
   const cityError = useCriteriaStore((s) => s.cityError);
   const ready = useAppReady();
+  useUrlState(slug, ready);
   const endTravel = useTravelStore((s) => s.endTravel);
 
   const clearRentals = useRentalStore((s) => s.clear);
