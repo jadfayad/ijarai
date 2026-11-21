@@ -78,8 +78,8 @@ const SINGLETON_CRITERIA = [
     type: "amenities",
     label: "Nearby Amenities",
     icon: <Trees size={14} />,
-    iconBg: "bg-emerald-500/10",
-    iconText: "text-emerald-400",
+    iconBg: "bg-success/10",
+    iconText: "text-success",
     create: () => createAmenityCriterion(),
   },
   {
@@ -87,8 +87,8 @@ const SINGLETON_CRITERIA = [
     type: "budget",
     label: "Budget / Rent",
     icon: <Wallet size={14} />,
-    iconBg: "bg-amber-500/10",
-    iconText: "text-amber-400",
+    iconBg: "bg-warning/10",
+    iconText: "text-warning",
     create: () => createBudgetCriterion(),
   },
   {
@@ -132,8 +132,8 @@ const SINGLETON_CRITERIA = [
     type: "green_spaces",
     label: "Green Space",
     icon: <TreePine size={14} />,
-    iconBg: "bg-green-500/10",
-    iconText: "text-green-400",
+    iconBg: "bg-success/10",
+    iconText: "text-success",
     create: () => createGreenSpacesCriterion(),
   },
   {
@@ -186,8 +186,8 @@ const SINGLETON_CRITERIA = [
     type: "healthcare",
     label: "Healthcare Access",
     icon: <Hospital size={14} />,
-    iconBg: "bg-red-500/10",
-    iconText: "text-red-400",
+    iconBg: "bg-destructive/10",
+    iconText: "text-destructive",
     create: () => createHealthcareCriterion(),
   },
   {
@@ -204,8 +204,8 @@ const SINGLETON_CRITERIA = [
     type: "hazard",
     label: "Hazard Safety",
     icon: <Flame size={14} />,
-    iconBg: "bg-amber-500/10",
-    iconText: "text-amber-400",
+    iconBg: "bg-warning/10",
+    iconText: "text-warning",
     create: () => createHazardCriterion(),
   },
 ] as const;
@@ -301,8 +301,8 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
 
   const triggerClass =
     variant === "compact"
-      ? "inline-flex items-center justify-center rounded-md w-6 h-6 text-white/35 hover:text-white/80 hover:bg-white/[0.08] transition-all duration-200 shrink-0"
-      : "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/[0.1] text-white/30 hover:text-white/50 hover:border-white/[0.18] hover:bg-white/[0.03] transition-all duration-200 text-xs font-medium";
+      ? "inline-flex items-center justify-center rounded-md w-6 h-6 text-fg-muted hover:text-fg-secondary hover:bg-surface-strong transition-all duration-200 shrink-0"
+      : "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-fg-muted hover:text-fg-muted hover:border-border-strong hover:bg-surface transition-all duration-200 text-body font-medium";
 
   return (
     <div className={variant === "compact" ? "inline-block" : "w-full"}>
@@ -321,11 +321,11 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
         <div
           ref={menuRef}
           style={menuStyle}
-          className="z-[100] bg-[rgba(16,16,28,0.95)] backdrop-blur-2xl rounded-xl border border-white/[0.1] shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+          className="z-[100] bg-overlay backdrop-blur-2xl rounded-xl border border-border shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
         >
           <>
               <div className="p-3">
-                <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
+                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
                   Apartment
                 </div>
                 {(() => {
@@ -333,18 +333,18 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                   return existing ? (
                     <button
                       onClick={() => handleEditExisting(existing.id)}
-                      className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg text-white/30 hover:bg-white/[0.04] hover:text-white/50 transition-all duration-150"
+                      className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg text-fg-muted hover:bg-surface hover:text-fg-muted transition-all duration-150"
                     >
                       <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} opacity-50 p-1.5 rounded-md`}>
                         {APARTMENT_CRITERION.icon}
                       </span>
                       <span className="flex-1 text-left">{APARTMENT_CRITERION.label}</span>
-                      <span className="text-[10px] text-white/25 italic">Added · Edit</span>
+                      <span className="text-caption text-fg-subtle italic">Added · Edit</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => { addCriterion(APARTMENT_CRITERION.create()); setOpen(false); }}
-                      className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
+                      className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
                     >
                       <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} p-1.5 rounded-md`}>
                         {APARTMENT_CRITERION.icon}
@@ -355,9 +355,9 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                 })()}
               </div>
 
-              <div className="h-px bg-white/[0.06] mx-3" />
+              <div className="h-px bg-surface-raised mx-3" />
               <div className="p-3">
-                <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
+                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
                   Commute
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -365,9 +365,9 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                     <button
                       key={p.preset}
                       onClick={() => handleAddCommute(p.preset)}
-                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
+                      className="flex items-center gap-2 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
                     >
-                      <span className="text-white/40">
+                      <span className="text-fg-muted">
                         {COMMUTE_ICONS[p.icon]}
                       </span>
                       {p.label}
@@ -376,9 +376,9 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.06] mx-3" />
+              <div className="h-px bg-surface-raised mx-3" />
               <div className="p-3">
-                <div className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">
+                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
                   Other
                 </div>
                 <div className="space-y-0.5">
@@ -387,19 +387,19 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                       <button
                         key={s.id}
                         onClick={() => handleEditExisting(s.existing!.id)}
-                        className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg text-white/30 hover:bg-white/[0.04] hover:text-white/50 transition-all duration-150"
+                        className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg text-fg-muted hover:bg-surface hover:text-fg-muted transition-all duration-150"
                       >
                         <span className={`${s.iconBg} ${s.iconText} opacity-50 p-1.5 rounded-md`}>
                           {s.icon}
                         </span>
                         <span className="flex-1 text-left">{s.label}</span>
-                        <span className="text-[10px] text-white/25 italic">Added · Edit</span>
+                        <span className="text-caption text-fg-subtle italic">Added · Edit</span>
                       </button>
                     ) : (
                       <button
                         key={s.id}
                         onClick={() => handleAddSingleton(s)}
-                        className="w-full flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all duration-150"
+                        className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
                       >
                         <span className={`${s.iconBg} ${s.iconText} p-1.5 rounded-md`}>
                           {s.icon}
@@ -411,7 +411,7 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.06] mx-3" />
+              <div className="h-px bg-surface-raised mx-3" />
               <div className="p-3">
                 <button
                   onClick={(e) => {
@@ -420,16 +420,16 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
                     // One assistant: hand off to it rather than a separate AI flow.
                     openAssistant(true);
                   }}
-                  className="w-full flex items-center gap-2.5 text-xs px-3 py-2.5 rounded-lg bg-gradient-to-r from-violet-500/[0.08] to-blue-500/[0.08] border border-violet-500/[0.12] hover:border-violet-500/[0.22] hover:from-violet-500/[0.12] hover:to-blue-500/[0.12] text-white/60 hover:text-white/80 transition-all duration-200 group"
+                  className="w-full flex items-center gap-2.5 text-body px-3 py-2.5 rounded-lg bg-gradient-to-r from-violet-500/[0.08] to-blue-500/[0.08] border border-violet-500/[0.12] hover:border-violet-500/[0.22] hover:from-violet-500/[0.12] hover:to-blue-500/[0.12] text-fg-muted hover:text-fg-secondary transition-all duration-200 group"
                 >
                   <span className="bg-violet-500/15 text-violet-400 p-1.5 rounded-md group-hover:scale-110 transition-transform duration-200">
                     <Sparkles size={14} />
                   </span>
                   <span className="flex flex-col items-start">
-                    <span className="font-medium text-white/70 group-hover:text-white/90">
+                    <span className="font-medium text-fg-secondary group-hover:text-fg">
                       Describe a preference
                     </span>
-                    <span className="text-[10px] text-white/30">
+                    <span className="text-caption text-fg-muted">
                       Ask the assistant to set up criteria
                     </span>
                   </span>

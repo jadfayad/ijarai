@@ -38,18 +38,18 @@ export function RightDock({ area, onCloseArea }: { area: ReactNode | null; onClo
   if (!tab) return null;
 
   const tabClass = (active: boolean) =>
-    `flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+    `flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-title font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
       active
-        ? "bg-white/[0.1] text-white"
-        : "text-white/60 hover:text-white hover:bg-white/[0.05] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white/60"
+        ? "bg-surface-strong text-fg"
+        : "text-fg-muted hover:text-fg hover:bg-surface-raised disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
     }`;
 
   return (
     <aside
       aria-label="Details"
-      className="absolute inset-y-0 right-0 z-30 flex w-[min(400px,100%)] flex-col border-l border-white/[0.1] bg-[rgb(14,14,24)] shadow-2xl shadow-black/50 lg:static lg:z-auto lg:shadow-none animate-in fade-in slide-in-from-right-4 duration-200 motion-reduce:animate-none"
+      className="absolute inset-y-0 right-0 z-30 flex w-[min(400px,100%)] flex-col border-l border-border bg-overlay-solid shadow-2xl shadow-black/50 lg:static lg:z-auto lg:shadow-none animate-in fade-in slide-in-from-right-4 duration-200 motion-reduce:animate-none"
     >
-      <div className="flex items-center gap-1 border-b border-white/[0.08] px-2 py-2" role="tablist" aria-label="Panel">
+      <div className="flex items-center gap-1 border-b border-border px-2 py-2" role="tablist" aria-label="Panel">
         <button
           type="button"
           role="tab"
@@ -83,7 +83,7 @@ export function RightDock({ area, onCloseArea }: { area: ReactNode | null; onClo
             setChatOpen(false);
             onCloseArea();
           }}
-          className="rounded-lg p-1.5 text-white/60 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-strong hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <X size={16} />
         </button>

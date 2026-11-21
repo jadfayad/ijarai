@@ -38,7 +38,7 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
           : "fresh";
 
   const base =
-    "flex h-11 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium shadow-lg shadow-black/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    "flex h-11 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-title font-medium shadow-lg shadow-black/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
   if (state === "running") {
     const total = progress?.labels.length ?? 0;
@@ -52,13 +52,13 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
     const pct = progress?.phase === "assembling" ? 100 : total > 0 ? Math.round((done / total) * 100) : 5;
     return (
       <div
-        className={`${base} min-w-[220px] border border-white/[0.12] bg-[rgba(16,16,28,0.92)] pr-1.5 text-white`}
+        className={`${base} min-w-[220px] border border-border bg-overlay pr-1.5 text-fg`}
         role="status"
         aria-live="polite"
       >
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="text-sm">{label}</span>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.1]">
+          <span className="text-title">{label}</span>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-strong">
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
               style={{ width: `${pct}%` }}
@@ -69,7 +69,7 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
           type="button"
           onClick={cancel}
           aria-label="Stop scoring"
-          className="ml-1 rounded-lg p-2 text-white/70 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="ml-1 rounded-lg p-2 text-fg-secondary hover:bg-surface-strong hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Square size={14} fill="currentColor" />
         </button>
@@ -79,7 +79,7 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
 
   if (state === "empty") {
     return (
-      <div className={`${base} cursor-not-allowed select-none border border-white/[0.12] bg-[rgba(16,16,28,0.85)] text-white/60`}>
+      <div className={`${base} cursor-not-allowed select-none border border-border bg-overlay text-fg-muted`}>
         <Sparkles size={14} aria-hidden />
         {emptyReason}
       </div>
@@ -91,7 +91,7 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
       <button
         type="button"
         onClick={generate}
-        className={`${base} border border-amber-300/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25`}
+        className={`${base} border border-warning/40 bg-warning/15 text-fg hover:bg-warning/25`}
       >
         <RefreshCw size={14} aria-hidden />
         <span>
@@ -107,9 +107,9 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
         type="button"
         onClick={generate}
         title="Re-run scoring"
-        className={`${base} border border-white/[0.12] bg-[rgba(16,16,28,0.85)] text-white/70 hover:text-white`}
+        className={`${base} border border-border bg-overlay text-fg-secondary hover:text-fg`}
       >
-        <Check size={14} aria-hidden className="text-emerald-400" />
+        <Check size={14} aria-hidden className="text-success" />
         Up to date
       </button>
     );
@@ -119,7 +119,7 @@ export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean
     <button
       type="button"
       onClick={generate}
-      className={`${base} bg-primary px-6 font-semibold text-white shadow-primary/20 hover:bg-primary/85`}
+      className={`${base} bg-primary px-6 font-semibold text-primary-foreground shadow-primary/20 hover:bg-primary/85`}
     >
       <Sparkles size={15} aria-hidden />
       Generate heatmap

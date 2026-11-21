@@ -481,11 +481,11 @@ export function MapView() {
                 anchor="bottom"
               >
                 <div className="flex flex-col items-center group">
-                  <div className="bg-primary text-white rounded-full p-2 shadow-lg shadow-primary/40 ring-2 ring-white/25 transition-transform duration-200 group-hover:scale-110">
+                  <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg shadow-primary/40 ring-2 ring-border-strong transition-transform duration-200 group-hover:scale-110">
                     <Icon size={16} />
                   </div>
                   {d.label && (
-                    <span className="mt-1.5 px-2.5 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-medium text-white shadow-lg border border-white/[0.1] whitespace-nowrap max-w-[150px] truncate">
+                    <span className="mt-1.5 px-2.5 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-caption font-medium text-fg shadow-lg border border-border whitespace-nowrap max-w-[150px] truncate">
                       {d.label}
                     </span>
                   )}
@@ -567,7 +567,7 @@ export function MapView() {
           stacking floating cards on top of each other. */}
       <div className="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex flex-wrap items-end justify-between gap-3">
         {scoreData ? (
-          <div className="pointer-events-auto w-[260px] rounded-xl border border-white/[0.1] bg-[rgba(12,12,20,0.88)] px-3.5 py-3 shadow-2xl shadow-black/30 backdrop-blur-2xl">
+          <div className="pointer-events-auto w-[260px] rounded-xl border border-border bg-overlay px-3.5 py-3 shadow-2xl shadow-black/30 backdrop-blur-2xl">
             <MapLegend
               visibleCount={visibleCount}
               totalCount={totalCount}
@@ -579,13 +579,13 @@ export function MapView() {
                   status: st as "no_variation" | "empty",
                 }))}
             />
-            <div className="mt-3 border-t border-white/[0.08] pt-3">
+            <div className="mt-3 border-t border-border pt-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs font-medium text-white/60">
+                <span className="flex items-center gap-1.5 text-body font-medium text-fg-muted">
                   <Filter size={12} aria-hidden />
                   Hide areas below
                 </span>
-                <span className="text-xs font-semibold tabular-nums text-white">
+                <span className="text-body font-semibold tabular-nums text-fg">
                   {Math.round(scoreThreshold * 100)}%
                 </span>
               </div>
@@ -610,7 +610,7 @@ export function MapView() {
               value={gridResolution}
               onValueChange={(v) => setGridResolution(v as GridResolution)}
             >
-              <SelectTrigger className="!h-11 min-w-[160px] rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] text-sm font-medium shadow-lg shadow-black/20 hover:bg-[rgba(24,24,40,0.9)] hover:border-white/[0.2] transition-all duration-200 px-3.5 gap-2">
+              <SelectTrigger className="!h-11 min-w-[160px] rounded-xl bg-overlay backdrop-blur-2xl border border-border text-title font-medium shadow-lg shadow-black/20 hover:bg-overlay hover:border-border-strong transition-all duration-200 px-3.5 gap-2">
                 <SelectValue>
                   <span className="flex items-center gap-2">
                     {RESOLUTION_ICONS[gridResolution]}
@@ -621,7 +621,7 @@ export function MapView() {
               <SelectContent
                 side="top"
                 sideOffset={8}
-                className="bg-[rgba(16,16,28,0.95)] backdrop-blur-2xl border border-white/[0.12] rounded-xl p-1 min-w-[200px]"
+                className="bg-overlay backdrop-blur-2xl border border-border rounded-xl p-1 min-w-[200px]"
               >
                 {(
                   Object.entries(GRID_RESOLUTION_CONFIG) as [
@@ -632,17 +632,17 @@ export function MapView() {
                   <SelectItem
                     key={key}
                     value={key}
-                    className="rounded-lg px-2.5 py-2 text-sm cursor-pointer"
+                    className="rounded-lg px-2.5 py-2 text-title cursor-pointer"
                   >
                     <span className="flex items-center gap-2.5">
-                      <span className="text-white/40">
+                      <span className="text-fg-muted">
                         {RESOLUTION_ICONS[key as GridResolution]}
                       </span>
                       <span className="flex flex-col">
                         <span className="font-medium leading-tight">
                           {cfg.label}
                         </span>
-                        <span className="text-[11px] text-white/35 leading-tight">
+                        <span className="text-label text-fg-muted leading-tight">
                           {cfg.description}
                         </span>
                       </span>

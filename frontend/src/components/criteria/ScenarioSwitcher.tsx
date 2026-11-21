@@ -150,10 +150,10 @@ export function ScenarioSwitcher({
         ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
         aria-label="Switch scenario"
-        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all duration-150 border ${
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-label font-medium transition-all duration-150 border ${
           open
-            ? "bg-white/[0.08] border-white/[0.14] text-white"
-            : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:bg-white/[0.07] hover:border-white/[0.14] hover:text-white/90"
+            ? "bg-surface-strong border-border-strong text-fg"
+            : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:border-border-strong hover:text-fg"
         }`}
       >
         <Layers size={10} className="text-primary/70 shrink-0" />
@@ -166,7 +166,7 @@ export function ScenarioSwitcher({
         </span>
         <ChevronDown
           size={10}
-          className={`text-white/35 shrink-0 transition-transform duration-200 ${
+          className={`text-fg-muted shrink-0 transition-transform duration-200 ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -177,24 +177,24 @@ export function ScenarioSwitcher({
         onClick={() => setOpen((v) => !v)}
         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 border ${
           open
-            ? "bg-white/[0.08] border-white/[0.14] text-white"
-            : "bg-white/[0.04] border-white/[0.08] text-white/70 hover:bg-white/[0.06] hover:border-white/[0.12] hover:text-white"
+            ? "bg-surface-strong border-border-strong text-fg"
+            : "bg-surface border-border text-fg-secondary hover:bg-surface-raised hover:border-border hover:text-fg"
         }`}
       >
         <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
           <Layers size={13} className="text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">
+          <p className="text-body font-medium truncate">
             {active ? active.name : "No scenario"}
           </p>
           {active && activeScore !== null && (
-            <p className="text-[10px] text-white/35 font-mono tabular-nums">
+            <p className="text-caption text-fg-muted font-mono tabular-nums">
               Avg {activeScore}% · {relativeTime(active.createdAt)}
             </p>
           )}
           {!active && (
-            <p className="text-[10px] text-white/25">
+            <p className="text-caption text-fg-subtle">
               {scenarios.length === 0
                 ? "Generate to create one"
                 : `${scenarios.length} saved`}
@@ -203,7 +203,7 @@ export function ScenarioSwitcher({
         </div>
         <ChevronDown
           size={14}
-          className={`text-white/30 shrink-0 transition-transform duration-200 ${
+          className={`text-fg-muted shrink-0 transition-transform duration-200 ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -219,16 +219,16 @@ export function ScenarioSwitcher({
           <div
             ref={menuRef}
             style={menuPos}
-            className="z-[100] bg-[rgba(16,16,28,0.96)] backdrop-blur-2xl rounded-xl border border-white/[0.12] shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+            className="z-[100] bg-overlay backdrop-blur-2xl rounded-xl border border-border shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
           >
             {scenarios.length === 0 ? (
               <div className="px-4 py-6 text-center">
                 <FileStack
                   size={24}
-                  className="text-white/15 mx-auto mb-2"
+                  className="text-fg-subtle mx-auto mb-2"
                 />
-                <p className="text-xs text-white/30">No scenarios yet</p>
-                <p className="text-[10px] text-white/20 mt-0.5">
+                <p className="text-body text-fg-muted">No scenarios yet</p>
+                <p className="text-caption text-fg-subtle mt-0.5">
                   Generate scores to save your first scenario
                 </p>
               </div>
@@ -243,8 +243,8 @@ export function ScenarioSwitcher({
                       key={sc.id}
                       className={`group flex items-center gap-2.5 px-3 py-2 mx-1 rounded-lg cursor-pointer transition-all duration-150 ${
                         isActive
-                          ? "bg-primary/10 text-white"
-                          : "text-white/60 hover:bg-white/[0.06] hover:text-white/80"
+                          ? "bg-primary/10 text-fg"
+                          : "text-fg-muted hover:bg-surface-raised hover:text-fg-secondary"
                       }`}
                       onClick={() => {
                         if (editingId !== sc.id) {
@@ -256,8 +256,8 @@ export function ScenarioSwitcher({
                       <div
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                           isActive
-                            ? "bg-primary shadow-[0_0_4px_rgba(var(--primary-rgb,99,102,241),0.5)]"
-                            : "bg-white/15"
+                            ? "bg-primary shadow-[0_0_4px] shadow-primary/50"
+                            : "bg-fg-subtle/50"
                         }`}
                       />
 
@@ -272,15 +272,15 @@ export function ScenarioSwitcher({
                               if (e.key === "Enter") commitRename();
                               if (e.key === "Escape") setEditingId(null);
                             }}
-                            className="bg-white/[0.06] border border-white/[0.1] rounded-md px-2 py-0.5 text-xs text-white outline-none w-full"
+                            className="bg-surface-raised border border-border rounded-md px-2 py-0.5 text-body text-fg outline-none w-full"
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
                           <>
-                            <p className="text-xs font-medium truncate">
+                            <p className="text-body font-medium truncate">
                               {sc.name}
                             </p>
-                            <p className="text-[10px] text-white/30 font-mono tabular-nums">
+                            <p className="text-caption text-fg-muted font-mono tabular-nums">
                               {score !== null && `${score}% · `}
                               {relativeTime(sc.createdAt)}
                             </p>
@@ -296,7 +296,7 @@ export function ScenarioSwitcher({
                               setEditingId(sc.id);
                               setEditValue(sc.name);
                             }}
-                            className="p-1 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-all"
+                            className="p-1 rounded-md text-fg-muted hover:text-fg-muted hover:bg-surface-strong transition-all"
                           >
                             <Pencil size={11} />
                           </button>
@@ -316,7 +316,7 @@ export function ScenarioSwitcher({
                               });
                             }}
                             aria-label={`Delete ${sc.name}`}
-                            className="p-1 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            className="p-1 rounded-md text-fg-muted hover:text-destructive hover:bg-destructive/10 transition-all"
                           >
                             <X size={11} />
                           </button>
@@ -328,13 +328,13 @@ export function ScenarioSwitcher({
               </div>
             )}
 
-            <div className="border-t border-white/[0.08] p-1">
+            <div className="border-t border-border p-1">
               <button
                 onClick={() => {
                   startNewScenario();
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all duration-150"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-body text-fg-muted hover:text-fg-secondary hover:bg-surface-raised transition-all duration-150"
               >
                 <Plus size={13} />
                 New scenario

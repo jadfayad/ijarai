@@ -19,10 +19,10 @@ export function BudgetConfig({ criterion }: Props) {
   return (
     <div className="space-y-2 pt-1">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-white/35 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           {includeUtilities ? "Max Monthly Cost" : "Max Monthly Rent"}
         </span>
-        <span className="text-sm font-mono font-semibold tabular-nums text-amber-400">
+        <span className="text-title font-mono font-semibold tabular-nums text-warning">
           {currency_symbol}{params.max_monthly_rent.toLocaleString()}
         </span>
       </div>
@@ -38,7 +38,7 @@ export function BudgetConfig({ criterion }: Props) {
           });
         }}
       />
-      <div className="flex justify-between text-[10px] text-white/20">
+      <div className="flex justify-between text-caption text-fg-subtle">
         <span>{rent_min.toLocaleString()}</span>
         <span>{rent_max.toLocaleString()}</span>
       </div>
@@ -52,11 +52,11 @@ export function BudgetConfig({ criterion }: Props) {
                 params: { ...params, include_utilities: e.target.checked },
               })
             }
-            className="h-3.5 w-3.5 rounded border-white/20 bg-white/[0.04] text-primary focus:ring-1 focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
+            className="h-3.5 w-3.5 rounded border-border-strong bg-surface text-primary focus:ring-1 focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
           />
-          <span className="text-[11px] text-white/50 group-hover:text-white/70 transition-colors">
+          <span className="text-label text-fg-muted group-hover:text-fg-secondary transition-colors">
             Include estimated utilities
-            <span className="text-white/25 ml-1">
+            <span className="text-fg-subtle ml-1">
               (~{currency_symbol}
               {Math.round(utilityAvg).toLocaleString()}/mo)
             </span>

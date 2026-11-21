@@ -40,9 +40,9 @@ export function RentalPriceMarker({ listing, selected, onSelect }: Props) {
       <div
         className={[
           "rounded-full border whitespace-nowrap shadow-lg shadow-black/40 transition-all duration-150",
-          "px-2.5 py-0.5 text-[11px] font-semibold tabular-nums leading-tight",
+          "px-2.5 py-0.5 text-label font-semibold tabular-nums leading-tight",
           selected
-            ? "bg-blue-400 text-white border-white/40 ring-2 ring-white/40"
+            ? "bg-primary text-white border-white/40 ring-2 ring-white/40"
             : "bg-white/95 text-zinc-900 border-white/30 hover:bg-white",
         ].join(" ")}
       >
@@ -53,8 +53,8 @@ export function RentalPriceMarker({ listing, selected, onSelect }: Props) {
               {listing.bedrooms != null && (
                 <span
                   className={[
-                    "flex items-center gap-0.5 text-[10px] font-medium",
-                    selected ? "text-white/90" : "text-zinc-500",
+                    "flex items-center gap-0.5 text-caption font-medium",
+                    selected ? "text-fg" : "text-zinc-500",
                   ].join(" ")}
                 >
                   <BedDouble size={10} />
@@ -65,8 +65,8 @@ export function RentalPriceMarker({ listing, selected, onSelect }: Props) {
             {listing.title && (
               <span
                 className={[
-                  "text-[10px] font-medium max-w-[160px] truncate",
-                  selected ? "text-white/85" : "text-zinc-600",
+                  "text-caption font-medium max-w-[160px] truncate",
+                  selected ? "text-fg" : "text-zinc-600",
                 ].join(" ")}
               >
                 {listing.title}
@@ -80,7 +80,7 @@ export function RentalPriceMarker({ listing, selected, onSelect }: Props) {
       <div
         className={[
           "w-px h-2 -mt-px",
-          selected ? "bg-blue-400" : "bg-white/80",
+          selected ? "bg-primary" : "bg-white/80",
         ].join(" ")}
         aria-hidden
       />
@@ -88,7 +88,7 @@ export function RentalPriceMarker({ listing, selected, onSelect }: Props) {
         className={[
           "w-1.5 h-1.5 rounded-full -mt-px",
           selected
-            ? "bg-blue-400 ring-2 ring-white/40"
+            ? "bg-primary ring-2 ring-white/40"
             : "bg-white border border-zinc-900/40",
         ].join(" ")}
         aria-hidden

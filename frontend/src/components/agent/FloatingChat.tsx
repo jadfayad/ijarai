@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ChevronDown,
   MapPin,
   MessageSquare,
   Send,
@@ -22,14 +21,14 @@ import { toast } from "@/components/ui/toast";
 function ThinkingIndicator() {
   return (
     <div className="flex gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-white/[0.08] border border-white/[0.08]">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-surface-strong border border-border">
         <Sparkles size={14} className="text-primary/60 animate-pulse" />
       </div>
-      <div className="bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-md px-4 py-3">
+      <div className="bg-surface-raised border border-border rounded-2xl rounded-tl-md px-4 py-3">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-fg-subtle animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-fg-subtle animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-fg-subtle animate-bounce [animation-delay:300ms]" />
         </div>
       </div>
     </div>
@@ -150,7 +149,7 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
       <button
         onClick={() => setChatOpen(true)}
         aria-label={hasMessages ? `Open assistant · ${messages.length} messages` : "Open assistant"}
-        className="flex h-11 items-center gap-2 rounded-xl border border-white/[0.14] bg-[rgba(14,14,24,0.82)] backdrop-blur-2xl px-3.5 py-2 shadow-2xl shadow-black/40 hover:bg-[rgba(22,22,36,0.9)] hover:border-white/[0.22] transition-all duration-200 group animate-in fade-in slide-in-from-bottom-2"
+        className="flex h-11 items-center gap-2 rounded-xl border border-border-strong bg-overlay backdrop-blur-2xl px-3.5 py-2 shadow-2xl shadow-black/40 hover:bg-overlay-solid hover:border-border-strong transition-all duration-200 group animate-in fade-in slide-in-from-bottom-2"
       >
         <div className="relative">
           <MessageSquare
@@ -158,7 +157,7 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
             className="text-primary/80 group-hover:text-primary transition-colors"
           />
           {hasMessages && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-[10px] font-semibold text-white flex items-center justify-center tabular-nums ring-2 ring-[rgba(14,14,24,0.95)]">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-caption font-semibold text-primary-foreground flex items-center justify-center tabular-nums ring-2 ring-overlay-solid">
               {messages.length > 99 ? "99+" : messages.length}
             </span>
           )}
@@ -166,7 +165,7 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
           )}
         </div>
-        <span className="text-[12px] font-medium text-white/75 group-hover:text-white">
+        <span className="text-body font-medium text-fg-secondary group-hover:text-fg">
           {isThinking ? "Thinking…" : "Assistant"}
         </span>
       </button>
@@ -176,28 +175,19 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="relative z-10 flex flex-col h-full min-h-0">
-        {/* Header */}
-        <div className="p-3.5 pb-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles className="text-primary" size={14} />
-            </div>
-            <div>
-              <div className="text-[13px] font-semibold text-white tracking-tight leading-none">
-                Assistant
-              </div>
-              <div className="text-[10px] tabular-nums mt-0.5 text-white/30">
-                {activeScenarioName ?? "New scenario"}
-                {hasMessages && ` · ${messages.length}`}
-              </div>
-            </div>
+        {/* Toolbar — the dock tab already says "Assistant"; this row only
+            carries the conversation's context and actions. */}
+        <div className="flex items-center justify-between gap-2 px-3.5 py-2">
+          <div className="min-w-0 truncate text-label text-fg-muted tabular-nums">
+            {activeScenarioName ?? "New scenario"}
+            {hasMessages && ` · ${messages.length} messages`}
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               onClick={() => startNewScenario()}
               aria-label="New scenario"
               title="New scenario"
-              className="text-white/30 hover:text-primary/80 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
+              className="text-fg-muted hover:text-primary p-1.5 rounded-lg hover:bg-surface-strong transition-colors"
             >
               <SquarePen size={13} />
             </button>
@@ -206,23 +196,15 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
                 onClick={handleClear}
                 aria-label="Clear conversation"
                 title="Clear conversation"
-                className="text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
+                className="text-fg-muted hover:text-destructive p-1.5 rounded-lg hover:bg-surface-strong transition-colors"
               >
                 <Trash2 size={13} />
               </button>
             )}
-            <button
-              onClick={() => setChatOpen(false)}
-              aria-label="Minimize assistant"
-              title="Minimize"
-              className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
-            >
-              <ChevronDown size={15} />
-            </button>
           </div>
         </div>
 
-        <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
+        <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
         {/* Transcript */}
         <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 min-h-0">
@@ -233,8 +215,8 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
                 <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15">
                   <Sparkles size={18} className="text-primary" aria-hidden />
                 </div>
-                <p className="text-sm font-semibold text-white">Where should you live in {cityName}?</p>
-                <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-white/60">
+                <p className="text-title font-semibold text-fg">Where should you live in {cityName}?</p>
+                <p className="mx-auto mt-1 max-w-[280px] text-body leading-relaxed text-fg-muted">
                   Describe what matters to you and I&apos;ll set up your criteria. Or start from a profile:
                 </p>
               </div>
@@ -244,14 +226,14 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
                     key={p.id}
                     type="button"
                     onClick={() => sendMessage(p.prompt)}
-                    className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="group flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:border-border-strong hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                       <p.icon size={14} aria-hidden />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-white">{p.label}</span>
-                      <span className="block text-xs text-white/60">{p.sub}</span>
+                      <span className="block text-title font-medium text-fg">{p.label}</span>
+                      <span className="block text-body text-fg-muted">{p.sub}</span>
                     </span>
                   </button>
                 ))}
@@ -274,18 +256,18 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
         </div>
 
         {/* Input */}
-        <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+        <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="p-3">
           {focus && (
-            <p className="mb-2 flex items-center gap-1.5 text-xs text-white/70">
+            <p className="mb-2 flex items-center gap-1.5 text-body text-fg-secondary">
               <MapPin size={12} className="shrink-0 text-primary" aria-hidden />
               <span className="truncate">
-                Asking about <span className="font-medium text-white">{focus.name ?? "the selected area"}</span>
+                Asking about <span className="font-medium text-fg">{focus.name ?? "the selected area"}</span>
                 {focus.score !== null && ` · ${Math.round(focus.score * 100)}% match`}
               </span>
             </p>
           )}
-          <div className="flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-all">
+          <div className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2 focus-within:border-primary/30 transition-all">
             <textarea
               ref={textareaRef}
               value={input}
@@ -294,14 +276,14 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
               placeholder={hasMessages ? "Ask a follow-up…" : placeholderFor(citySlug)}
               rows={1}
               aria-label="Message the AI assistant"
-              className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5 disabled:cursor-not-allowed"
+              className="flex-1 bg-transparent text-title text-fg placeholder:text-fg-subtle resize-none outline-none max-h-[120px] leading-relaxed py-0.5 disabled:cursor-not-allowed"
             />
             {isThinking ? (
               <button
                 onClick={stopAgent}
                 aria-label="Stop generating"
                 title="Stop"
-                className="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all shrink-0"
+                className="p-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-all shrink-0"
               >
                 <Square size={14} fill="currentColor" />
               </button>

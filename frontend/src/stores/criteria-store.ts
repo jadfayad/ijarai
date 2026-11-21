@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { weightToSegment } from "@/lib/priority";
 import { computeScoresStream, cancelScoring, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS, hasCommuteDestination } from "@/lib/types";
 import { useScenarioStore, syncActiveScenarioToCriteria } from "./scenario-store";
@@ -25,7 +26,7 @@ export function createCommuteCriterion(
     type: "commute",
     label: `Commute to ${presetCfg.label}`,
     description: presetCfg.description,
-    weight: preset === "office" ? 8 : preset === "airport" ? 4 : 5,
+    weight: preset === "office" ? 8 : preset === "airport" ? 4 : 6,
     enabled: true,
     params: {
       destination: dest ? { lat: dest.lat, lng: dest.lng } : { lat: 0, lng: 0 },
@@ -65,7 +66,7 @@ export function createBudgetCriterion(
     type: "budget",
     label: "Budget / Rent",
     description: "Match areas to your monthly rent budget",
-    weight: 9,
+    weight: 10,
     enabled: true,
     params: { max_monthly_rent: maxRent },
     icon: "wallet",
@@ -81,7 +82,7 @@ export function createNeighborhoodCriterion(
     type: "neighborhood",
     label: "Neighborhood Quality",
     description: "Overall reputation and livability of the area",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: {},
     icon: "star",
@@ -97,7 +98,7 @@ export function createSafetyCriterion(
     type: "safety",
     label: "Safety",
     description: "Perceived safety and crime-risk of the area",
-    weight: 9,
+    weight: 10,
     enabled: true,
     params: {},
     icon: "shield",
@@ -145,7 +146,7 @@ export function createCommunityCriterion(
     type: "community",
     label: "Community",
     description: "Sense of neighborly community and belonging",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: {},
     icon: "users-round",
@@ -161,7 +162,7 @@ export function createInfrastructureCriterion(
     type: "infrastructure",
     label: "Infrastructure",
     description: "Quality of roads, utilities, and public services",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: {},
     icon: "wrench",
@@ -193,7 +194,7 @@ export function createDesirabilityCriterion(
     type: "desirability",
     label: "Desirability",
     description: "Overall market desirability of the area",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: {},
     icon: "trending-up",
@@ -225,7 +226,7 @@ export function createTransitCriterion(
     type: "transit",
     label: "Transit Access",
     description: "Proximity to metro, rail, and bus stops",
-    weight: 7,
+    weight: 8,
     enabled: true,
     params: { modes: ["train", "bus"] },
     icon: "train",
@@ -241,7 +242,7 @@ export function createHealthcareCriterion(
     type: "healthcare",
     label: "Healthcare Access",
     description: "Proximity to hospitals and clinics for emergency care",
-    weight: 7,
+    weight: 8,
     enabled: true,
     params: { facility_types: ["hospital", "clinic"] },
     icon: "hospital",
@@ -257,7 +258,7 @@ export function createSchoolsCriterion(
     type: "schools",
     label: "Schools",
     description: "School quality (approximate; refine with local data)",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: { age_band: "all" },
     icon: "graduation-cap",
@@ -289,7 +290,7 @@ export function createApartmentCriterion(
     type: "apartment",
     label: "Apartment Profile",
     description: "Size, bedrooms, and furnishing requirements",
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: { furnished: "any", property_type: "apartment", amenities: [] },
     icon: "home",
@@ -319,7 +320,7 @@ export function createAiCriterion(
     type: "ai",
     label,
     description,
-    weight: 5,
+    weight: 6,
     enabled: true,
     params: params as CriterionConfig["params"],
     icon: "sparkles",
@@ -526,8 +527,12 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
 
   setCriteria: (criteria) => set({ criteria }),
 
+  // Weights are snapped to a priority level on the way in (agent and factory
+  // criteria alike). setCriteria restores saved state verbatim.
   addCriterion: (criterion) =>
-    set((state) => ({ criteria: [...state.criteria, criterion] })),
+    set((state) => ({
+      criteria: [...state.criteria, { ...criterion, weight: weightToSegment(criterion.weight) }],
+    })),
 
   removeCriterion: (id) =>
     set((state) => ({
@@ -544,11 +549,13 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
     }),
 
   updateCriterion: (id, updates) =>
-    set((state) => ({
-      criteria: state.criteria.map((c) =>
-        c.id === id ? { ...c, ...updates } : c
-      ),
-    })),
+    set((state) => {
+      const patch =
+        updates.weight !== undefined ? { ...updates, weight: weightToSegment(updates.weight) } : updates;
+      return {
+        criteria: state.criteria.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      };
+    }),
 
   setPendingFocus: (id) => set({ pendingFocusCriterionId: id }),
 

@@ -67,10 +67,10 @@ const AMENITY_OPTIONS: { value: AmenitySlug; label: string }[] = [
 ];
 
 const TOGGLE_BTN = (active: boolean) =>
-  `px-2 py-1 rounded-md text-[11px] transition-all duration-150 border ${
+  `px-2 py-1 rounded-md text-label transition-all duration-150 border ${
     active
       ? "bg-violet-500/20 border-violet-500/30 text-violet-300"
-      : "bg-white/[0.03] border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+      : "bg-surface border-border-subtle text-fg-muted hover:text-fg-secondary hover:bg-surface-raised"
   }`;
 
 export function ApartmentConfig({ criterion }: Props) {
@@ -94,7 +94,7 @@ export function ApartmentConfig({ criterion }: Props) {
     <div className="space-y-4">
       {/* Property type */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Property Type
         </span>
         <div className="flex flex-wrap gap-1">
@@ -113,7 +113,7 @@ export function ApartmentConfig({ criterion }: Props) {
 
       {/* Surface area */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Surface Area (m²)
         </span>
         <div className="flex items-center gap-2">
@@ -125,9 +125,9 @@ export function ApartmentConfig({ criterion }: Props) {
             onChange={(e) =>
               update({ min_surface_m2: e.target.value === "" ? null : Number(e.target.value) })
             }
-            className="flex-1 bg-white/[0.04] border border-white/[0.08] focus:border-white/[0.2] rounded-lg px-3 py-1.5 text-xs text-white/80 placeholder:text-white/20 outline-none transition-colors duration-200"
+            className="flex-1 bg-surface border border-border focus:border-border-strong rounded-lg px-3 py-1.5 text-body text-fg-secondary placeholder:text-fg-subtle outline-none transition-colors duration-200"
           />
-          <span className="text-white/20 text-xs shrink-0">—</span>
+          <span className="text-fg-subtle text-body shrink-0">—</span>
           <input
             type="number"
             min={0}
@@ -136,19 +136,19 @@ export function ApartmentConfig({ criterion }: Props) {
             onChange={(e) =>
               update({ max_surface_m2: e.target.value === "" ? null : Number(e.target.value) })
             }
-            className="flex-1 bg-white/[0.04] border border-white/[0.08] focus:border-white/[0.2] rounded-lg px-3 py-1.5 text-xs text-white/80 placeholder:text-white/20 outline-none transition-colors duration-200"
+            className="flex-1 bg-surface border border-border focus:border-border-strong rounded-lg px-3 py-1.5 text-body text-fg-secondary placeholder:text-fg-subtle outline-none transition-colors duration-200"
           />
         </div>
       </div>
 
       {/* Bedrooms */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Bedrooms
         </span>
         <div className="flex items-start gap-2">
           <div className="flex-1 space-y-1">
-            <span className="text-[10px] text-white/25">Min</span>
+            <span className="text-caption text-fg-subtle">Min</span>
             <div className="flex flex-wrap gap-1">
               {BEDROOM_OPTIONS.map((opt) => (
                 <button
@@ -163,7 +163,7 @@ export function ApartmentConfig({ criterion }: Props) {
             </div>
           </div>
           <div className="flex-1 space-y-1">
-            <span className="text-[10px] text-white/25">Max</span>
+            <span className="text-caption text-fg-subtle">Max</span>
             <div className="flex flex-wrap gap-1">
               {BEDROOM_OPTIONS.map((opt) => (
                 <button
@@ -182,12 +182,12 @@ export function ApartmentConfig({ criterion }: Props) {
 
       {/* Bathrooms */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Bathrooms
         </span>
         <div className="flex items-start gap-2">
           <div className="flex-1 space-y-1">
-            <span className="text-[10px] text-white/25">Min</span>
+            <span className="text-caption text-fg-subtle">Min</span>
             <div className="flex flex-wrap gap-1">
               {BATHROOM_OPTIONS.map((opt) => (
                 <button
@@ -202,7 +202,7 @@ export function ApartmentConfig({ criterion }: Props) {
             </div>
           </div>
           <div className="flex-1 space-y-1">
-            <span className="text-[10px] text-white/25">Max</span>
+            <span className="text-caption text-fg-subtle">Max</span>
             <div className="flex flex-wrap gap-1">
               {BATHROOM_OPTIONS.map((opt) => (
                 <button
@@ -221,7 +221,7 @@ export function ApartmentConfig({ criterion }: Props) {
 
       {/* Furnished */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Furnished
         </span>
         <div className="flex gap-1.5">
@@ -230,10 +230,10 @@ export function ApartmentConfig({ criterion }: Props) {
               key={opt.value}
               type="button"
               onClick={() => update({ furnished: opt.value })}
-              className={`flex-1 py-1.5 rounded-lg text-[11px] transition-all duration-150 border ${
+              className={`flex-1 py-1.5 rounded-lg text-label transition-all duration-150 border ${
                 params.furnished === opt.value
                   ? "bg-violet-500/20 border-violet-500/30 text-violet-300"
-                  : "bg-white/[0.03] border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                  : "bg-surface border-border-subtle text-fg-muted hover:text-fg-secondary hover:bg-surface-raised"
               }`}
             >
               {opt.label}
@@ -244,7 +244,7 @@ export function ApartmentConfig({ criterion }: Props) {
 
       {/* Amenities */}
       <div className="space-y-1.5">
-        <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+        <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
           Amenities
         </span>
         <div className="flex flex-wrap gap-1">
@@ -261,7 +261,7 @@ export function ApartmentConfig({ criterion }: Props) {
         </div>
       </div>
 
-      <p className="text-[10px] text-white/20 leading-relaxed">
+      <p className="text-caption text-fg-subtle leading-relaxed">
         Apartment criteria are used as search context for the AI — they don&apos;t affect the heatmap score.
       </p>
     </div>

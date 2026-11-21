@@ -32,7 +32,7 @@ const budget = {
   type: "budget",
   label: "Budget",
   icon: "wallet",
-  weight: 5,
+  weight: 6,
   enabled: true,
   params: { max_rent: 1000 },
 } as unknown as CriterionConfig;
@@ -41,7 +41,7 @@ const unsetCommute = {
   type: "commute",
   label: "Office",
   icon: "briefcase",
-  weight: 5,
+  weight: 6,
   enabled: true,
   params: { destination: { lat: 0, lng: 0 } },
 } as unknown as CriterionConfig;
@@ -143,14 +143,29 @@ describe("heatmap staleness", () => {
     useCriteriaStore.getState().updateCriterion("c1", { label: "Rent" });
     expect(stale()).toBe(false);
 
-    useCriteriaStore.getState().updateCriterion("c1", { weight: 9 });
+    useCriteriaStore.getState().updateCriterion("c1", { weight: 10 });
     expect(stale()).toBe(true);
 
+    useCriteriaStore.getState().updateCriterion("c1", { weight: 6 });
+    expect(stale()).toBe(false);
+
+    // An off-level weight (e.g. 5 from an older agent) snaps to the level the
+    // picker shows (6), so it doesn't count as a change.
     useCriteriaStore.getState().updateCriterion("c1", { weight: 5 });
+    expect(useCriteriaStore.getState().criteria[0].weight).toBe(6);
     expect(stale()).toBe(false);
 
     useCriteriaStore.getState().setGridResolution("fine");
     expect(stale()).toBe(true);
     expect(_hook).toBeTypeOf("function");
+  });
+});
+
+describe("priority levels", () => {
+  it("snaps agent/factory weights to a priority level on add", () => {
+    useCriteriaStore.getState().setCriteria([]);
+    useCriteriaStore.getState().addCriterion({ ...budget, id: "w9", weight: 9 });
+    useCriteriaStore.getState().addCriterion({ ...budget, id: "w3", weight: 3 });
+    expect(useCriteriaStore.getState().criteria.map((c) => c.weight)).toEqual([10, 4]);
   });
 });

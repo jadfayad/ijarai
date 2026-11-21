@@ -37,10 +37,10 @@ export function HazardConfig({ criterion }: Props) {
             <button
               key={key}
               onClick={() => toggle(key)}
-              className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-all duration-200 select-none ${
+              className={`flex items-center gap-1 text-body px-2.5 py-1.5 rounded-lg border transition-all duration-200 select-none ${
                 active
                   ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                  : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:text-fg-muted hover:border-border"
               }`}
             >
               {icon}
@@ -49,7 +49,7 @@ export function HazardConfig({ criterion }: Props) {
           );
         })}
       </div>
-      <p className="text-[10px] text-white/25 leading-relaxed">
+      <p className="text-caption text-fg-subtle leading-relaxed">
         Polygons are simplified; refine against official hazard maps.
       </p>
     </div>

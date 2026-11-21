@@ -75,15 +75,15 @@ function ToastRow({ item }: { item: ToastItem }) {
   }, [item.id, item.duration, dismiss]);
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/[0.12] bg-[rgba(18,18,30,0.94)] backdrop-blur-xl px-4 py-3 shadow-2xl shadow-black/40 min-w-[280px] max-w-[420px] animate-in fade-in slide-in-from-top-4 duration-300">
-      <span className="flex-1 text-[13px] text-white/85">{item.message}</span>
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-overlay backdrop-blur-xl px-4 py-3 shadow-2xl shadow-black/40 min-w-[280px] max-w-[420px] animate-in fade-in slide-in-from-top-4 duration-300">
+      <span className="flex-1 text-title text-fg">{item.message}</span>
       {item.action && (
         <button
           onClick={() => {
             item.action!.onClick();
             dismiss(item.id);
           }}
-          className="text-[12px] font-semibold text-primary hover:text-primary/80 uppercase tracking-wide px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
+          className="text-body font-semibold text-primary hover:text-primary/80 uppercase tracking-wide px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
         >
           {item.action.label}
         </button>
@@ -91,7 +91,7 @@ function ToastRow({ item }: { item: ToastItem }) {
       <button
         onClick={() => dismiss(item.id)}
         aria-label="Dismiss notification"
-        className="text-white/30 hover:text-white/70 p-0.5 rounded-md hover:bg-white/[0.06] transition-colors"
+        className="text-fg-muted hover:text-fg-secondary p-0.5 rounded-md hover:bg-surface-raised transition-colors"
       >
         <X size={14} />
       </button>

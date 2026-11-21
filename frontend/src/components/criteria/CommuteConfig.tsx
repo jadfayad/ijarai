@@ -48,14 +48,14 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
         value={params.label ?? ""}
         onSelect={handleSelect}
         placeholder="Search for a destination..."
-        className="text-xs h-8 rounded-lg bg-white/[0.05] border-white/[0.1] placeholder:text-white/25 focus:border-primary/40 transition-colors"
+        className="text-body h-8 rounded-lg bg-surface-raised border-border placeholder:text-fg-subtle focus:border-primary/40 transition-colors"
         centerLat={cityConfig.center_lat}
         centerLng={cityConfig.center_lng}
         countryCode={cityConfig.country_code}
       />
 
       <div className="flex items-center gap-2.5">
-        <Label className="text-[11px] text-white/35 shrink-0 uppercase tracking-wider font-medium w-10">Mode</Label>
+        <Label className="text-label text-fg-muted shrink-0 uppercase tracking-wider font-medium w-10">Mode</Label>
         <div className="flex gap-1.5">
           {(["car", "transit"] as const).map((mode) => (
             <button
@@ -65,10 +65,10 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
                   params: { ...params, mode },
                 })
               }
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+              className={`flex items-center gap-1.5 text-body px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                 params.mode === mode
                   ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                  : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:text-fg-muted hover:border-border"
               }`}
             >
               {mode === "car" ? <Car size={12} /> : <TrainFront size={12} />}
@@ -80,7 +80,7 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
 
       {params.mode === "car" && (
         <div className="flex items-center gap-2.5">
-          <Label className="text-[11px] text-white/35 shrink-0 uppercase tracking-wider font-medium w-10">Data</Label>
+          <Label className="text-label text-fg-muted shrink-0 uppercase tracking-wider font-medium w-10">Data</Label>
           <div className="flex gap-1.5">
             {(
               [
@@ -95,16 +95,16 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
                       params: { ...params, source: value as CommuteSource },
                     })
                   }
-                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 text-body px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                     (params.source ?? "isochrone") === value
                       ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                      : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                      : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:text-fg-muted hover:border-border"
                   }`}
                 >
                   <Icon size={12} />
                   {label}
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[180px]">
+                <TooltipContent side="bottom" className="text-body max-w-[180px]">
                   {tip}
                 </TooltipContent>
               </Tooltip>
@@ -114,7 +114,7 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
       )}
 
       <div className="flex items-center gap-2.5">
-        <Label className="text-[11px] text-white/35 shrink-0 uppercase tracking-wider font-medium w-10">Time</Label>
+        <Label className="text-label text-fg-muted shrink-0 uppercase tracking-wider font-medium w-10">Time</Label>
         <div className="flex gap-1.5">
           {(["peak", "off_peak"] as const).map((tod: TimeOfDay) => (
             <button
@@ -124,10 +124,10 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
                   params: { ...params, time_of_day: tod },
                 })
               }
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+              className={`text-body px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                 params.time_of_day === tod
                   ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                  : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:text-fg-muted hover:border-border"
               }`}
             >
               {tod === "peak" ? "Peak" : "Off-Peak"}

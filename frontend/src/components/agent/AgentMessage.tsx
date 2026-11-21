@@ -81,14 +81,14 @@ function CompletedPlan({ plan }: { plan: AgentTodo[] }) {
   const [open, setOpen] = useState(false);
   const completedCount = plan.filter((t) => t.status === "completed").length;
   return (
-    <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+    <div className="mt-2 rounded-lg border border-border-subtle bg-surface overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-label text-fg-muted hover:text-fg-muted transition-colors"
         aria-expanded={open}
       >
-        <CheckCircle2 size={11} className="text-emerald-400/70 shrink-0" />
+        <CheckCircle2 size={11} className="text-success shrink-0" />
         <span className="flex-1 text-left tabular-nums">
           {completedCount} of {plan.length} steps completed
         </span>
@@ -102,16 +102,16 @@ function CompletedPlan({ plan }: { plan: AgentTodo[] }) {
           {plan.map((todo, i) => (
             <li
               key={todo.id ?? i}
-              className="flex items-start gap-2 text-[11px] leading-relaxed"
+              className="flex items-start gap-2 text-label leading-relaxed"
             >
               <span className="shrink-0 mt-0.5">
                 {todo.status === "completed" ? (
-                  <CheckCircle2 size={10} className="text-emerald-400/70" />
+                  <CheckCircle2 size={10} className="text-success" />
                 ) : (
-                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-white/20" />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-border-strong" />
                 )}
               </span>
-              <span className="text-white/50">{todo.content}</span>
+              <span className="text-fg-muted">{todo.content}</span>
             </li>
           ))}
         </ol>
@@ -130,10 +130,10 @@ function EmittedChip({ emitted }: { emitted: EmittedCriterion }) {
     : "";
 
   const tone = !stillPresent
-    ? "text-white/35 bg-white/[0.04] border-white/[0.06] line-through decoration-white/20"
+    ? "text-fg-muted bg-surface border-border-subtle line-through decoration-white/20"
     : emitted.missingInput
-      ? "text-amber-300/90 bg-amber-500/10 border-amber-500/20"
-      : "text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20";
+      ? "text-warning bg-warning/10 border-warning/20"
+      : "text-success bg-success/10 border-success/20";
 
   const title = [
     emitted.label,
@@ -147,7 +147,7 @@ function EmittedChip({ emitted }: { emitted: EmittedCriterion }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
+      className={`inline-flex items-center gap-1 text-caption font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
       title={title}
     >
       <span className="shrink-0 opacity-80">{icon}</span>
@@ -167,14 +167,14 @@ function UpdatedChip({ updated }: { updated: UpdatedCriterion }) {
   if (updated.updates.label !== undefined) changes.push("renamed");
   if (updated.updates.params !== undefined) changes.push("params");
   const tone = !stillPresent
-    ? "text-white/35 bg-white/[0.04] border-white/[0.06] line-through decoration-white/20"
+    ? "text-fg-muted bg-surface border-border-subtle line-through decoration-white/20"
     : "text-blue-300/90 bg-blue-500/10 border-blue-500/20";
   const title = [updated.label, changes.join(", "), updated.reasoning]
     .filter(Boolean)
     .join(" · ");
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
+      className={`inline-flex items-center gap-1 text-caption font-medium rounded-md px-1.5 py-0.5 border ${tone}`}
       title={title}
     >
       <span className="shrink-0 opacity-80">{icon}</span>
@@ -194,7 +194,7 @@ function DeletedChip({ deleted }: { deleted: DeletedCriterion }) {
     .join(" · ");
   return (
     <span
-      className="inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 border text-white/35 bg-white/[0.04] border-white/[0.06]"
+      className="inline-flex items-center gap-1 text-caption font-medium rounded-md px-1.5 py-0.5 border text-fg-muted bg-surface border-border-subtle"
       title={title}
     >
       <span className="shrink-0 opacity-50">{icon}</span>
@@ -220,7 +220,7 @@ function AgentOperationsChipList({
     (emitted?.length ?? 0) + (updated?.length ?? 0) + (deleted?.length ?? 0);
   return (
     <div className="mt-2 w-full">
-      <div className="text-[10px] font-medium text-white/35 mb-1.5 px-0.5">
+      <div className="text-caption font-medium text-fg-muted mb-1.5 px-0.5">
         {parts.join(" · ")} criteri{total === 1 ? "on" : "a"}
       </div>
       <div className="flex flex-wrap gap-1">
@@ -240,7 +240,7 @@ function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
   if (total === 0) return null;
   return (
     <span
-      className="inline-flex items-center gap-1 text-[10px] text-white/20 font-mono"
+      className="inline-flex items-center gap-1 text-caption text-fg-subtle font-mono"
       title={`In: ${usage.input_tokens.toLocaleString()} · Out: ${usage.output_tokens.toLocaleString()}`}
     >
       {formatTokenCount(usage.input_tokens)}↑ {formatTokenCount(usage.output_tokens)}↓
@@ -266,13 +266,13 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
           isUser
             ? "bg-primary/20"
-            : "bg-white/[0.08] border border-white/[0.08]"
+            : "bg-surface-strong border border-border"
         }`}
       >
         {isUser ? (
           <User size={14} className="text-primary" />
         ) : (
-          <Bot size={14} className="text-white/60" />
+          <Bot size={14} className="text-fg-muted" />
         )}
       </div>
 
@@ -280,10 +280,10 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"}`}
       >
         <div
-          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+          className={`rounded-2xl px-3.5 py-2.5 text-title leading-relaxed ${
             isUser
-              ? "whitespace-pre-wrap bg-primary/20 border border-primary/20 text-white rounded-tr-md"
-              : "bg-white/[0.06] border border-white/[0.08] text-white/80 rounded-tl-md"
+              ? "whitespace-pre-wrap bg-primary/20 border border-primary/20 text-fg rounded-tr-md"
+              : "bg-surface-raised border border-border text-fg-secondary rounded-tl-md"
           }`}
         >
           {isUser ? message.content : renderMarkdown(message.content)}
@@ -303,12 +303,12 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
 
         {!isUser && message.criteriaBefore && (
           message.reverted ? (
-            <p className="mt-1.5 text-xs text-white/60">Changes undone</p>
+            <p className="mt-1.5 text-body text-fg-muted">Changes undone</p>
           ) : (
             <button
               type="button"
               onClick={() => revertTurn(message.id)}
-              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-white/70 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-body font-medium text-fg-secondary hover:bg-surface-raised hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Undo2 size={12} aria-hidden />
               Undo these changes
@@ -318,7 +318,7 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
 
         {!isUser && !hasAnyOps && message.researchResult && (
           message.criterionAdded ? (
-            <div className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
+            <div className="mt-2 flex items-center gap-1.5 text-body font-medium text-success bg-success/10 border border-success/20 rounded-lg px-3 py-1.5">
               <Check size={13} />
               Added
             </div>
@@ -332,7 +332,7 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
                   userMsg,
                 );
               }}
-              className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
+              className="mt-2 flex items-center gap-1.5 text-body font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-1.5 transition-all duration-200"
             >
               <Plus size={13} />
               Add to criteria
@@ -340,7 +340,7 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
           )
         )}
 
-        <span className="text-[10px] text-white/25 mt-1 px-1 flex items-center gap-2">
+        <span className="text-caption text-fg-subtle mt-1 px-1 flex items-center gap-2">
           {formatTime(message.timestamp)}
           {/* Token counts are a developer diagnostic, not user-facing. */}
           {!isUser && message.usage && process.env.NODE_ENV === "development" && (

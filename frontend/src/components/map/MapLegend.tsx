@@ -17,8 +17,8 @@ export function MapLegend({ visibleCount, totalCount, threshold, weakCriteria = 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-medium text-white/80">Area score</span>
-        <span className="text-xs tabular-nums text-white/60">
+        <span className="text-body font-medium text-fg-secondary">Area score</span>
+        <span className="text-body tabular-nums text-fg-muted">
           {filtered
             ? `${visibleCount.toLocaleString()} of ${totalCount.toLocaleString()} shown`
             : `${totalCount.toLocaleString()} areas`}
@@ -30,13 +30,13 @@ export function MapLegend({ visibleCount, totalCount, threshold, weakCriteria = 
         style={{ background: SCORE_GRADIENT }}
         aria-label="Colour scale from 0% to 100% match"
       />
-      <div className="mt-1.5 flex items-center justify-between text-xs tabular-nums text-white/60">
+      <div className="mt-1.5 flex items-center justify-between text-body tabular-nums text-fg-muted">
         <span>0%</span>
         <span>50%</span>
         <span>100% match</span>
       </div>
       {weakCriteria.length > 0 && (
-        <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/10 px-2.5 py-1.5 text-xs leading-snug text-amber-100">
+        <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-body leading-snug text-fg">
           {weakCriteria
             .map((c) => `${c.label} (${c.status === "empty" ? "no data" : "same everywhere"})`)
             .join(", ")}{" "}

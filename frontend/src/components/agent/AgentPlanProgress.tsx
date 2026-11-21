@@ -25,20 +25,20 @@ export function AgentPlanProgress() {
 
   return (
     <div className="flex gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-white/[0.08] border border-white/[0.08]">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-surface-strong border border-border">
         <Sparkles size={14} className="text-primary/60 animate-pulse" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
+        <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-surface border border-border">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
             <Loader2 size={11} className="text-primary/70 animate-spin" />
-            <span className="text-[11px] font-medium text-white/50 tracking-wide">
+            <span className="text-label font-medium text-fg-muted tracking-wide">
               {hasPlan ? "Researching" : "Analyzing your request"}
             </span>
             {hasPlan && (
-              <span className="text-[10px] text-white/25 tabular-nums ml-auto">
+              <span className="text-caption text-fg-subtle tabular-nums ml-auto">
                 {currentPlan.filter((t) => t.status === "completed").length}
                 <span className="opacity-60">/{currentPlan.length}</span>
               </span>
@@ -49,7 +49,7 @@ export function AgentPlanProgress() {
           {hasPlan && (
             <ol className="relative space-y-2">
               {/* Vertical guide line */}
-              <div className="absolute left-[5px] top-2 bottom-2 w-px bg-gradient-to-b from-white/[0.12] via-white/[0.08] to-white/[0.04]" />
+              <div className="absolute left-[5px] top-2 bottom-2 w-px bg-gradient-to-b from-border via-border-subtle to-transparent" />
 
               {currentPlan.map((todo, idx) => {
                 const isActive = todo.status === "in_progress";
@@ -66,7 +66,7 @@ export function AgentPlanProgress() {
                     <span className="relative z-10 mt-[3px] shrink-0">
                       {isDone ? (
                         <span
-                          className="flex items-center justify-center w-[11px] h-[11px] rounded-full bg-primary/80 ring-2 ring-[rgba(24,24,40,1)]"
+                          className="flex items-center justify-center w-[11px] h-[11px] rounded-full bg-primary/80 ring-2 ring-overlay-solid"
                           title="Completed"
                         >
                           <Check
@@ -84,11 +84,11 @@ export function AgentPlanProgress() {
                                 "plan-active-ping 1.8s ease-out infinite",
                             }}
                           />
-                          <span className="relative w-[11px] h-[11px] rounded-full bg-primary ring-2 ring-[rgba(24,24,40,1)]" />
+                          <span className="relative w-[11px] h-[11px] rounded-full bg-primary ring-2 ring-overlay-solid" />
                         </span>
                       ) : (
                         <span
-                          className="block w-[11px] h-[11px] rounded-full border border-white/20 bg-[rgba(24,24,40,1)]"
+                          className="block w-[11px] h-[11px] rounded-full border border-border-strong bg-overlay"
                           title="Pending"
                         />
                       )}
@@ -96,18 +96,18 @@ export function AgentPlanProgress() {
 
                     <div className="flex-1 min-w-0 pb-0.5">
                       <div
-                        className={`text-[12px] leading-snug ${
+                        className={`text-body leading-snug ${
                           isActive
-                            ? "text-white font-medium"
+                            ? "text-fg font-medium"
                             : isDone
-                              ? "text-white/40"
-                              : "text-white/30"
+                              ? "text-fg-muted"
+                              : "text-fg-muted"
                         }`}
                       >
                         {todo.content}
                       </div>
                       {isActive && currentStep && (
-                        <div className="mt-1 flex items-center gap-1.5 text-[10.5px] text-primary/65">
+                        <div className="mt-1 flex items-center gap-1.5 text-caption text-primary/65">
                           <Loader2
                             size={9}
                             className="animate-spin shrink-0"
@@ -126,14 +126,14 @@ export function AgentPlanProgress() {
 
           {/* Emitted criteria this turn — compact chip row */}
           {emittedThisTurn.length > 0 && (
-            <div className="mt-3 pt-2.5 border-t border-white/[0.05] flex flex-wrap gap-1">
+            <div className="mt-3 pt-2.5 border-t border-border-subtle flex flex-wrap gap-1">
               {emittedThisTurn.map((e) => (
                 <span
                   key={e.criterionId}
-                  className={`inline-flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-0.5 ${
+                  className={`inline-flex items-center gap-1 text-caption font-medium rounded-md px-1.5 py-0.5 ${
                     e.enabled
-                      ? "text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/20"
-                      : "text-amber-300/90 bg-amber-500/10 border border-amber-500/20"
+                      ? "text-success bg-success/10 border border-success/20"
+                      : "text-warning bg-warning/10 border border-warning/20"
                   }`}
                   title={e.reasoning || e.label}
                 >

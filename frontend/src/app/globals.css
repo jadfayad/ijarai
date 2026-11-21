@@ -38,6 +38,35 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* IJAR design tokens (see "Design tokens" below for values per theme). */
+  --color-overlay: var(--overlay);
+  --color-overlay-solid: var(--overlay-solid);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-strong: var(--surface-strong);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  /* Five-step type scale for the app chrome. Landing/marketing headlines keep
+   * Tailwind's text-2xl+ sizes. */
+  --text-caption: 10px;
+  --text-caption--line-height: 14px;
+  --text-label: 11px;
+  --text-label--line-height: 16px;
+  --text-body: 12px;
+  --text-body--line-height: 18px;
+  --text-title: 13px;
+  --text-title--line-height: 18px;
+  --text-heading: 15px;
+  --text-heading--line-height: 22px;
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -80,6 +109,22 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Design tokens — light values are placeholders until a light theme ships. */
+  --overlay: oklch(1 0 0 / 92%);
+  --overlay-solid: oklch(0.99 0 0);
+  --surface: oklch(0 0 0 / 3%);
+  --surface-raised: oklch(0 0 0 / 5%);
+  --surface-strong: oklch(0 0 0 / 8%);
+  --border-subtle: oklch(0 0 0 / 6%);
+  --border-strong: oklch(0 0 0 / 18%);
+  --fg: oklch(0.145 0 0);
+  --fg-secondary: oklch(0.32 0 0);
+  --fg-muted: oklch(0.45 0 0);
+  --fg-subtle: oklch(0.6 0 0);
+  --success: oklch(0.55 0.14 160);
+  --warning: oklch(0.6 0.14 75);
+  --info: oklch(0.55 0.12 235);
 }
 
 .dark {
@@ -114,6 +159,28 @@
   --sidebar-accent-foreground: oklch(0.96 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.72 0.14 265);
+
+  /* Design tokens (dark-first).
+   * overlay: glass panels floating over the map; overlay-solid: menus,
+   *   popovers and the ring that cuts badges out of a panel.
+   * surface*: fills layered on an overlay (rest / raised+hover / strong+active).
+   * fg*: text. fg, fg-secondary and fg-muted meet WCAG AA (≥4.5:1) on
+   *   overlay and surface-strong; fg-subtle (~3.4:1) is for icons, placeholders
+   *   and disabled text only. */
+  --overlay: oklch(0.17 0.02 280 / 92%);
+  --overlay-solid: oklch(0.17 0.02 280);
+  --surface: oklch(1 0 0 / 4%);
+  --surface-raised: oklch(1 0 0 / 6.5%);
+  --surface-strong: oklch(1 0 0 / 10%);
+  --border-subtle: oklch(1 0 0 / 6%);
+  --border-strong: oklch(1 0 0 / 18%);
+  --fg: oklch(0.96 0 0);
+  --fg-secondary: oklch(0.83 0 0);
+  --fg-muted: oklch(0.68 0 0);
+  --fg-subtle: oklch(0.52 0 0);
+  --success: oklch(0.78 0.15 162);
+  --warning: oklch(0.8 0.14 75);
+  --info: oklch(0.75 0.11 235);
 }
 
 @layer base {
@@ -135,11 +202,30 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-strong);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-strong);
+  }
+
+  /* Keyboard focus: one visible ring everywhere, never on mouse click. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Honour the OS "reduce motion" setting: no entrance/pulse/shimmer animations,
+ * near-instant transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -174,12 +260,12 @@
   0%, 100% {
     opacity: 0.5;
     transform: translateY(10px);
-    filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.4));
+    filter: drop-shadow(0 0 6px color-mix(in oklch, var(--primary) 40%, transparent));
   }
   50% {
     opacity: 1;
     transform: translateY(0px);
-    filter: drop-shadow(0 0 18px hsl(var(--primary) / 0.9)) drop-shadow(0 0 40px hsl(var(--primary) / 0.4));
+    filter: drop-shadow(0 0 18px color-mix(in oklch, var(--primary) 90%, transparent)) drop-shadow(0 0 40px color-mix(in oklch, var(--primary) 40%, transparent));
   }
 }
 
@@ -248,23 +334,23 @@
  * gradient phase sat on its semi-transparent-white stops the text disappeared
  * and the box read as a grey rectangle. */
 .plan-text-shimmer {
-  color: rgb(232, 236, 255);
+  color: var(--fg);
   animation: plan-text-pulse 1.8s ease-in-out infinite;
 }
 
 .plan-glass {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.07) 0%,
-    rgba(255, 255, 255, 0.03) 50%,
-    rgba(255, 255, 255, 0.05) 100%
+    var(--surface-raised) 0%,
+    var(--surface) 50%,
+    var(--surface-raised) 100%
   );
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 8px 32px oklch(0 0 0 / 30%),
+    inset 0 1px 0 var(--border-subtle);
 }
 
 .plan-active-glow {

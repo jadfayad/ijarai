@@ -35,10 +35,10 @@ export function SchoolsConfig({ criterion }: Props) {
                   params: { ...params, age_band: key },
                 })
               }
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 select-none ${
+              className={`text-body px-3 py-1.5 rounded-lg border transition-all duration-200 select-none ${
                 active
                   ? "bg-primary/15 text-primary border-primary/30 shadow-sm shadow-primary/10"
-                  : "bg-white/[0.03] border-white/[0.08] text-white/35 hover:bg-white/[0.06] hover:text-white/50 hover:border-white/[0.12]"
+                  : "bg-surface border-border text-fg-muted hover:bg-surface-raised hover:text-fg-muted hover:border-border"
               }`}
             >
               {label}
@@ -46,7 +46,7 @@ export function SchoolsConfig({ criterion }: Props) {
           );
         })}
       </div>
-      <p className="text-[10px] text-white/25 leading-relaxed">
+      <p className="text-caption text-fg-subtle leading-relaxed">
         Based on curated ratings; accuracy varies by city.
       </p>
     </div>

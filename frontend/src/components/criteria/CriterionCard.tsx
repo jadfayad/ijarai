@@ -37,11 +37,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  SegmentedControl,
-  WEIGHT_OPTIONS,
-  weightToSegment,
-} from "@/components/ui/segmented-control";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { WEIGHT_OPTIONS, weightToSegment } from "@/lib/priority";
 import { toast } from "@/components/ui/toast";
 import type {
   CriterionConfig,
@@ -90,9 +87,9 @@ const ICON_CONFIG: Record<
   },
   users: {
     icon: <Users size={15} />,
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    activeBg: "bg-amber-500/20",
+    bg: "bg-warning/10",
+    text: "text-warning",
+    activeBg: "bg-warning/20",
   },
   "graduation-cap": {
     icon: <GraduationCap size={15} />,
@@ -102,9 +99,9 @@ const ICON_CONFIG: Record<
   },
   dumbbell: {
     icon: <Dumbbell size={15} />,
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    activeBg: "bg-emerald-500/20",
+    bg: "bg-success/10",
+    text: "text-success",
+    activeBg: "bg-success/20",
   },
   "map-pin": {
     icon: <MapPin size={15} />,
@@ -114,15 +111,15 @@ const ICON_CONFIG: Record<
   },
   trees: {
     icon: <Trees size={15} />,
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    activeBg: "bg-emerald-500/20",
+    bg: "bg-success/10",
+    text: "text-success",
+    activeBg: "bg-success/20",
   },
   wallet: {
     icon: <Wallet size={15} />,
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    activeBg: "bg-amber-500/20",
+    bg: "bg-warning/10",
+    text: "text-warning",
+    activeBg: "bg-warning/20",
   },
   star: {
     icon: <Star size={15} />,
@@ -156,9 +153,9 @@ const ICON_CONFIG: Record<
   },
   "tree-pine": {
     icon: <TreePine size={15} />,
-    bg: "bg-green-500/10",
-    text: "text-green-400",
-    activeBg: "bg-green-500/20",
+    bg: "bg-success/10",
+    text: "text-success",
+    activeBg: "bg-success/20",
   },
   "users-round": {
     icon: <UsersRound size={15} />,
@@ -192,15 +189,15 @@ const ICON_CONFIG: Record<
   },
   hospital: {
     icon: <Hospital size={15} />,
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    activeBg: "bg-red-500/20",
+    bg: "bg-destructive/10",
+    text: "text-destructive",
+    activeBg: "bg-destructive/20",
   },
   flame: {
     icon: <Flame size={15} />,
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    activeBg: "bg-amber-500/20",
+    bg: "bg-warning/10",
+    text: "text-warning",
+    activeBg: "bg-warning/20",
   },
   home: {
     icon: <Home size={15} />,
@@ -301,15 +298,15 @@ function OriginCornerDot({ origin }: { origin: CriterionConfig["origin"] }) {
   const label = origin === "agent" ? "Added by AI" : "Added by wizard";
   const tint =
     origin === "agent"
-      ? "bg-violet-500/90 text-white"
-      : "bg-primary text-white";
+      ? "bg-violet-500/90 text-fg"
+      : "bg-primary text-primary-foreground";
   // Decorative marker inside the expand toggle — must not be interactive
   // (a nested button is invalid HTML). The origin is in the toggle's label.
   return (
     <span
       aria-hidden
       title={label}
-      className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-[rgba(14,14,24,0.97)] ${tint}`}
+      className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-overlay-solid ${tint}`}
     >
       <Icon size={8} strokeWidth={2.5} />
     </span>
@@ -368,10 +365,10 @@ export function CriterionCard({ criterion }: Props) {
   return (
     <div
       ref={cardRef}
-      className={`criterion-card-enter rounded-xl border bg-white/[0.06] transition-all duration-250 ${
+      className={`criterion-card-enter rounded-xl border bg-surface-raised transition-all duration-250 ${
         expanded
-          ? "border-white/[0.16]"
-          : "border-white/[0.1] hover:border-white/[0.16]"
+          ? "border-border-strong"
+          : "border-border hover:border-border-strong"
       } ${criterion.enabled ? "" : "opacity-60"}`}
     >
       {/* Header: on/off switch, expand toggle (icon + full title), remove.
@@ -406,12 +403,12 @@ export function CriterionCard({ criterion }: Props) {
               </div>
               <OriginCornerDot origin={criterion.origin} />
             </div>
-            <span className="flex-1 min-w-0 text-[13px] font-medium text-white truncate leading-tight">
+            <span className="flex-1 min-w-0 text-title font-medium text-fg truncate leading-tight">
               {criterion.label}
             </span>
             <ChevronDown
               size={14}
-              className={`text-white/50 shrink-0 transition-transform duration-200 ${
+              className={`text-fg-muted shrink-0 transition-transform duration-200 ${
                 expanded ? "rotate-180" : ""
               }`}
             />
@@ -419,7 +416,7 @@ export function CriterionCard({ criterion }: Props) {
 
           {!expanded && (
             <div className="mt-1 flex items-center gap-2 pl-[38px]">
-              <p className="flex-1 min-w-0 text-xs text-white/60 truncate">
+              <p className="flex-1 min-w-0 text-body text-fg-muted truncate">
                 {criterion.enabled ? summary : "Off — not scored"}
               </p>
               <select
@@ -427,10 +424,10 @@ export function CriterionCard({ criterion }: Props) {
                 value={weightToSegment(criterion.weight)}
                 disabled={!criterion.enabled}
                 onChange={(e) => updateCriterion(criterion.id, { weight: Number(e.target.value) })}
-                className="shrink-0 cursor-pointer rounded-md border border-white/[0.1] bg-white/[0.04] px-1 py-0.5 text-xs text-white/80 hover:border-white/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed"
+                className="shrink-0 cursor-pointer rounded-md border border-border bg-surface px-1 py-0.5 text-body text-fg-secondary hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed"
               >
                 {WEIGHT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value} className="bg-[rgb(20,20,32)]">
+                  <option key={o.value} value={o.value} className="bg-overlay-solid">
                     {o.label}
                   </option>
                 ))}
@@ -443,11 +440,11 @@ export function CriterionCard({ criterion }: Props) {
           <TooltipTrigger
             onClick={handleRemove}
             aria-label={`Remove ${criterion.label}`}
-            className="mt-1 text-white/40 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors duration-200 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="mt-1 text-fg-muted hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors duration-200 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <Trash2 size={13} />
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
+          <TooltipContent side="top" className="text-body">
             Remove
           </TooltipContent>
         </Tooltip>
@@ -461,18 +458,18 @@ export function CriterionCard({ criterion }: Props) {
       >
         <div className="overflow-hidden">
           <div className="px-3.5 pb-3.5 space-y-3">
-            <div className="h-px bg-white/[0.06]" />
+            <div className="h-px bg-surface-raised" />
 
             <div className="flex items-center gap-1.5">
-              <Label className="text-sm font-medium text-white">
+              <Label className="text-title font-medium text-fg">
                 {criterion.label}
               </Label>
               {criterion.type !== "ai" && (
                 <Tooltip>
-                  <TooltipTrigger className="text-white/20 hover:text-white/50 transition-colors">
+                  <TooltipTrigger className="text-fg-subtle hover:text-fg-muted transition-colors">
                     <Info size={12} />
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                  <TooltipContent side="top" className="max-w-[220px] text-body">
                     {criterion.description}
                   </TooltipContent>
                 </Tooltip>
@@ -482,16 +479,16 @@ export function CriterionCard({ criterion }: Props) {
             <div className="space-y-3 pt-1">
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+                  <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
                     Priority
                   </span>
                   <Tooltip>
-                    <TooltipTrigger className="text-white/15 hover:text-white/40 transition-colors">
+                    <TooltipTrigger className="text-fg-subtle hover:text-fg-muted transition-colors">
                       <Info size={10} />
                     </TooltipTrigger>
                     <TooltipContent
                       side="top"
-                      className="max-w-[200px] text-xs"
+                      className="max-w-[200px] text-body"
                     >
                       Higher priority means this criterion has more influence
                       on the final score.
@@ -529,10 +526,10 @@ export function CriterionCard({ criterion }: Props) {
               )}
               {criterion.type === "ai" && (
                 <div className="space-y-2">
-                  <span className="text-[11px] text-white/40 uppercase tracking-wider font-medium">
+                  <span className="text-label text-fg-muted uppercase tracking-wider font-medium">
                     Research Summary
                   </span>
-                  <p className="text-[12px] leading-relaxed text-white/60 whitespace-pre-wrap">
+                  <p className="text-body leading-relaxed text-fg-muted whitespace-pre-wrap">
                     {criterion.description}
                   </p>
                 </div>

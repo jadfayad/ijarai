@@ -7,16 +7,21 @@ import { skylines } from "@/components/Skylines";
 export function TravelOverlay() {
   const traveling = useTravelStore((s) => s.traveling);
   const city = useTravelStore((s) => s.city);
-  const [mounted, setMounted] = useState(false);
+  // Stay mounted for the 600ms fade-out after travel ends.
+  const [lingering, setLingering] = useState(false);
+  const [prevTraveling, setPrevTraveling] = useState(traveling);
+  if (traveling !== prevTraveling) {
+    setPrevTraveling(traveling);
+    setLingering(!traveling);
+  }
 
   useEffect(() => {
-    if (traveling) {
-      setMounted(true);
-    } else {
-      const id = setTimeout(() => setMounted(false), 600);
-      return () => clearTimeout(id);
-    }
-  }, [traveling]);
+    if (!lingering) return;
+    const id = setTimeout(() => setLingering(false), 600);
+    return () => clearTimeout(id);
+  }, [lingering]);
+
+  const mounted = traveling || lingering;
 
   if (!mounted || !city) return null;
 
@@ -36,7 +41,7 @@ export function TravelOverlay() {
         className="relative z-10 text-center"
         style={{ animation: "travel-text-appear 0.6s ease-out 0.4s both" }}
       >
-        <p className="text-[11px] font-medium text-primary/50 uppercase tracking-[0.3em] mb-3">
+        <p className="text-label font-medium text-primary/50 uppercase tracking-[0.3em] mb-3">
           Travelling to
         </p>
         <h2 className="text-5xl font-bold tracking-tight bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">

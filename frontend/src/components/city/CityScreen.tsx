@@ -46,18 +46,18 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
       <main className="flex h-screen w-screen items-center justify-center bg-background p-6">
         <div role="alert" className="max-w-sm space-y-4 text-center">
           <h1 className="text-lg font-semibold text-foreground">We couldn&apos;t load this city</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-title text-muted-foreground">
             The service may be temporarily unavailable. Please try again in a moment.
           </p>
           <div className="flex justify-center gap-3">
             <button
               type="button"
               onClick={() => loadCityConfig(slug)}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className="rounded-md bg-primary px-4 py-2 text-title font-medium text-primary-foreground"
             >
               Try again
             </button>
-            <Link href="/" className="rounded-md border border-border px-4 py-2 text-sm text-foreground">
+            <Link href="/" className="rounded-md border border-border px-4 py-2 text-title text-foreground">
               Choose another city
             </Link>
           </div>
@@ -70,18 +70,18 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-white/[0.08] bg-[rgb(14,14,24)] px-3">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-[rgb(14,14,24)] px-3">
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold tracking-tight text-foreground hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex items-center gap-2 rounded-lg px-2 py-1 text-title font-semibold tracking-tight text-foreground hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Home className="h-4 w-4 text-primary" aria-hidden />
           IJAR.AI
         </Link>
-        <span className="text-white/20" aria-hidden>/</span>
-        <h1 className="text-sm font-medium text-white/80">
+        <span className="text-fg-subtle" aria-hidden>/</span>
+        <h1 className="text-title font-medium text-fg-secondary">
           {city?.name}
-          {city?.country && <span className="ml-1.5 text-white/50">{city.country}</span>}
+          {city?.country && <span className="ml-1.5 text-fg-muted">{city.country}</span>}
         </h1>
       </header>
 

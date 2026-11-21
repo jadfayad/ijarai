@@ -144,19 +144,19 @@ export function POIMarker({ category, name, distance_m }: Props) {
         <div
           className="absolute bottom-full mb-2 px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-100"
           style={{
-            background: "rgba(12,12,20,0.94)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "var(--overlay-solid)",
+            border: "1px solid var(--border)",
             boxShadow: "0 12px 30px rgba(0,0,0,0.45)",
             backdropFilter: "blur(16px)",
             zIndex: 60,
           }}
         >
           {name && (
-            <div className="text-[12px] font-semibold text-white leading-tight">
+            <div className="text-body font-semibold text-fg leading-tight">
               {name}
             </div>
           )}
-          <div className="text-[10.5px] text-white/55 leading-tight mt-0.5">
+          <div className="text-caption text-fg-muted leading-tight mt-0.5">
             {[label, dist].filter(Boolean).join(" · ")}
           </div>
         </div>

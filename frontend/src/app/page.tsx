@@ -63,7 +63,7 @@ export default function LandingPage() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
             Your perfect home exists.
             <br />
-            <span className="font-serif italic font-normal text-primary/80">We&apos;ll find it.</span>
+            <span className="italic text-primary/80">We&apos;ll find it.</span>
           </h1>
           <p className="mx-auto max-w-lg text-base text-muted-foreground leading-relaxed">
             Tell us your commute, lifestyle, and budget. We&apos;ll show you exactly where to live and what to rent.
