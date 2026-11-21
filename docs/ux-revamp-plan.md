@@ -21,7 +21,7 @@ Update the status table and "Remaining" list as work lands.
 | 2 — Core scoring loop | ✅ Done | `463a9ef` `ecb0e01` `2aa8820` |
 | 3 — Assistant | ✅ Done (one deviation, see below) | `1d6e396` `e5aae75` `832e366` |
 | — Grid freshness (found during work) | ✅ Done | `7478a3a` |
-| 4 — Visual system & polish | ⏳ Not started | — |
+| 4 — Visual system & polish | ✅ Done (not yet checked in a browser, see below) | `70fed37` `aa6606e` `96f3aa7` `301777b` `ec145cd` |
 
 Tests: `cd frontend && npm test` (Vitest, store/state-machine + lib tests) · `cd backend && uv run pytest` (API contract, cancellation, streams, agent context, grid freshness).
 
@@ -60,24 +60,28 @@ Tests: `cd frontend && npm test` (Vitest, store/state-machine + lib tests) · `c
 - **Agent changes**: per-reply Undo after applying, instead of a staged accept/revert diff before applying. Revisit if users want to approve changes first.
 - **Not done from Phase 0**: a generic `Async<T>` union for rentals/evidence/geocode/autocomplete/health; making `CriterionConfig` a discriminated union on `type` (removes `as CommuteParams` casts).
 
-## Remaining — Phase 4 (visual system & polish)
+### Phase 4 — visual system & polish
+- **Tokens** (`globals.css`): `overlay`/`overlay-solid`, `surface`/`-raised`/`-strong`, `border-subtle`/`border`/`border-strong`, `fg`/`-secondary`/`-muted` (WCAG AA on overlay) and `fg-subtle` (icons/placeholders only), `success`/`warning`/`info`. Light values exist as placeholders under `:root`. ~240 white/alpha + rgba usages replaced; categorical hues (criterion icons, personas, chips) and the light map markers are intentionally kept.
+- **Type scale**: `text-caption` 10 · `label` 11 · `body` 12 · `title` 13 · `heading` 15 (no more `text-[Npx]`; `text-xs/sm` in app components mapped to body/title; landing headlines keep Tailwind sizes). Landing hero drops `font-serif`.
+- Global `:focus-visible` ring; `prefers-reduced-motion`; fixed the `hsl(var(--primary))` glow and `--primary-rgb` shadow.
+- **Menus**: Base UI `Menu` (Add criterion) and `Popover` (scenario switcher).
+- **Rentals**: backend `{status: ok|empty|unavailable|no_provider, expanded, resolved_area, total, page, has_more}`, parallel neighbour search, pagination, `price_monthly`, failures never cached (`tests/test_rentals.py`). Area tab: "Find rentals here" primary action under the score; distinct states; Load more; monthly headline price. PropertyFinder reports no total, so `total` is null there and `has_more` means "the last page wasn't empty".
+- Weights snap to the five priority levels on add/update (`lib/priority.ts`).
+- Assistant panel's duplicate header replaced by a context/actions toolbar. Dead code removed; lint clean.
 
-- Design tokens in `globals.css` (`surface`, `surface-elevated`, `overlay`, `border-subtle`, text levels meeting WCAG AA); replace ~240 hardcoded `rgba(...)` / `white/[x]` usages; structure so a light theme can follow.
-- 5-step type scale (remove ad-hoc `text-[9–15px]`); load a real display font or drop `font-serif` on the landing hero.
-- Adopt shadcn/Base UI primitives for the hand-rolled menus (`AddCriterionDialog`, `ScenarioSwitcher`) → keyboard, Escape, focus management.
-- `prefers-reduced-motion`; focus-visible styles; fix broken `hsl(var(--primary))` glow (theme is oklch).
-- Rentals: "Find rentals" as primary action (currently inside the collapsible breakdown); distinct empty / failed / no-provider states; backend `{status, expanded, resolved_area, total}`; parallel neighbour search; pagination; monthly-normalised price; don't negative-cache transient failures for 1h.
-- Assistant panel polish: duplicate "Assistant" header under the tab.
-- Snap agent/factory default weights (e.g. 9) to the five priority levels so choosing the displayed level doesn't mark the heatmap stale.
-- Remove dead code: `map/CellPopup.tsx`, `ui/loading-screen.tsx`, unused `ui/*`, `agentResearch()`, `getScenariosByCity`; wire or remove `/api/geocode`.
-- Fix the 3 remaining lint errors (`RentalListCard.tsx`, `ui/travel-overlay.tsx` — setState in effect).
+## Remaining / follow-ups
+
+- **Visual QA in a browser** — Phase 4 was verified by typecheck, lint, tests and a production build only. Walk every screen for contrast/spacing regressions from the token codemod (notably text that was `white/30–35` is now AA `fg-muted`, i.e. brighter).
+- Light theme: fill in the `:root` token values and add a toggle.
+- From Phase 0: generic `Async<T>`; `CriterionConfig` as a discriminated union.
+- S2 protocol extras: `start`/`turn_id`/`text_delta`/heartbeat frames.
 
 ## Reference — implicit state machines found in the audit
 
 Client: M1 scoring job · M2 city load · M3 agent turn · M4 chat↔scenario binding · M5 scenario clean/dirty · M6 cell inspector · M7 right-panel exclusivity · M8 rentals fetch · M9 criteria draft/applied · M10 commute destination · M11 pending focus · M12 threshold animation · M13 boot readiness · M14 travel transition · M15 welcome hero · M16 popover/menu states · M17 dead state.
 Server/protocol: S1 score computation · S2 agent SSE protocol · S3 agent conversation · S4 rentals search · S5 city/grid loading.
 
-Addressed: M1–M7, M9 (staleness), M10–M16, S1, S2 (partially: error frames, history; no `start`/`turn_id`/`text_delta`/heartbeat yet), S3, S5. Open: M8/S4 (rentals — Phase 4), M17 (dead code — Phase 4).
+Addressed: M1–M7, M9 (staleness), M10–M16, S1, S2 (partially: error frames, history; no `start`/`turn_id`/`text_delta`/heartbeat yet), S3, S5. M8/S4 (rentals) and M17 (dead code) addressed in Phase 4.
 
 ## How to verify end to end
 
