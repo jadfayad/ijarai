@@ -77,45 +77,63 @@ function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
   };
 }
 
-let messageCounter = 0;
+/** Globally unique ids — safe across reloads (persisted messages never collide). */
+function newId(prefix: string): string {
+  const rand =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${rand}`;
+}
+
+function agentMessage(content: string, extra?: Partial<AgentMessage>): AgentMessage {
+  return { id: newId("msg"), role: "agent", content, timestamp: Date.now(), ...extra };
+}
 
 export interface PerCityAgentState {
   messages: AgentMessage[];
   chatOpen: boolean;
   heroDismissed: boolean;
   // Transient — not persisted:
+  /** Id of the turn streaming into this context; null when idle. */
+  turnId: string | null;
   currentPlan: AgentTodo[];
   currentStep: string | null;
   emittedThisTurn: EmittedCriterion[];
   updatedThisTurn: UpdatedCriterion[];
   deletedThisTurn: DeletedCriterion[];
+  /** Always equals `turnId !== null`; kept for component ergonomics. */
   isThinking: boolean;
 }
 
-export const EMPTY_CITY_AGENT_STATE: PerCityAgentState = {
-  messages: [],
-  chatOpen: false,
-  heroDismissed: false,
+const IDLE_TURN: Pick<
+  PerCityAgentState,
+  | "turnId"
+  | "isThinking"
+  | "currentPlan"
+  | "currentStep"
+  | "emittedThisTurn"
+  | "updatedThisTurn"
+  | "deletedThisTurn"
+> = {
+  turnId: null,
+  isThinking: false,
   currentPlan: [],
   currentStep: null,
   emittedThisTurn: [],
   updatedThisTurn: [],
   deletedThisTurn: [],
-  isThinking: false,
+};
+
+export const EMPTY_CITY_AGENT_STATE: PerCityAgentState = {
+  messages: [],
+  chatOpen: false,
+  heroDismissed: false,
+  ...IDLE_TURN,
 };
 
 function makeEmptyCtxState(): PerCityAgentState {
-  return {
-    messages: [],
-    chatOpen: false,
-    heroDismissed: false,
-    currentPlan: [],
-    currentStep: null,
-    emittedThisTurn: [],
-    updatedThisTurn: [],
-    deletedThisTurn: [],
-    isThinking: false,
-  };
+  return { ...EMPTY_CITY_AGENT_STATE, messages: [] };
 }
 
 /** Composite key: city + scenario (or empty string when no scenario is active). */
@@ -123,35 +141,52 @@ function ctxKey(city: string, scenarioId: string | null): string {
   return `${city}:${scenarioId ?? ""}`;
 }
 
+function cityOfKey(key: string): string {
+  return key.slice(0, key.indexOf(":"));
+}
+
+// ── In-flight turns ──────────────────────────────────────────────────────────
+// Runtime-only registry (AbortControllers aren't serializable). Each turn owns
+// its controller and knows which context it belongs to; `key` is updated if the
+// context is re-keyed (unsaved chat adopted by a newly saved scenario).
+interface ActiveTurn {
+  key: string;
+  controller: AbortController;
+}
+const _turns = new Map<string, ActiveTurn>();
+
+function abortTurnsForKey(key: string) {
+  for (const [id, turn] of _turns) {
+    if (turn.key === key) {
+      turn.controller.abort();
+      _turns.delete(id);
+    }
+  }
+}
+
 function ensureCtx(
   byCtx: Record<string, PerCityAgentState>,
-  city: string,
-  scenarioId: string | null,
+  key: string,
 ): Record<string, PerCityAgentState> {
-  const key = ctxKey(city, scenarioId);
   if (byCtx[key]) return byCtx;
   return { ...byCtx, [key]: makeEmptyCtxState() };
 }
 
-function updateCtxSlice(
+function patchCtx(
   byCtx: Record<string, PerCityAgentState>,
-  city: string,
-  scenarioId: string | null,
-  patch: Partial<PerCityAgentState>,
+  key: string,
+  patch: Partial<PerCityAgentState> | ((prev: PerCityAgentState) => Partial<PerCityAgentState>),
 ): Record<string, PerCityAgentState> {
-  const key = ctxKey(city, scenarioId);
   const prev = byCtx[key] ?? makeEmptyCtxState();
-  return { ...byCtx, [key]: { ...prev, ...patch } };
+  const p = typeof patch === "function" ? patch(prev) : patch;
+  return { ...byCtx, [key]: { ...prev, ...p } };
 }
 
 interface AgentStore {
   byCtx: Record<string, PerCityAgentState>;
   currentCity: string | null;
   currentScenarioId: string | null;
-  /** One in-flight stream at a time across the whole app. */
-  abortController: AbortController | null;
 
-  setCurrentCity: (city: string) => void;
   setCurrentScenario: (city: string, scenarioId: string | null) => void;
   setChatOpen: (open: boolean) => void;
   dismissHero: () => void;
@@ -167,442 +202,339 @@ interface AgentStore {
 
 export const useAgentStore = create<AgentStore>()(
   persist(
-    (set, get) => ({
-      byCtx: {},
-      currentCity: null,
-      currentScenarioId: null,
-      abortController: null,
-
-      setCurrentCity: (city) => {
-        set((state) => ({
-          currentCity: city,
-          byCtx: ensureCtx(state.byCtx, city, state.currentScenarioId),
-        }));
-      },
-
-      setCurrentScenario: (city, scenarioId) => {
-        set((state) => ({
-          currentCity: city,
-          currentScenarioId: scenarioId,
-          byCtx: ensureCtx(state.byCtx, city, scenarioId),
-        }));
-      },
-
-      setChatOpen: (open) => {
+    (set, get) => {
+      const currentKey = (): string | null => {
         const { currentCity, currentScenarioId } = get();
-        if (!currentCity) return;
-        set((state) => ({
-          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, { chatOpen: open }),
-        }));
-      },
+        return currentCity ? ctxKey(currentCity, currentScenarioId) : null;
+      };
 
-      dismissHero: () => {
-        const { currentCity, currentScenarioId } = get();
-        if (!currentCity) return;
-        set((state) => ({
-          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, { heroDismissed: true }),
-        }));
-      },
-
-      sendMessage: async (content: string) => {
-        const { currentCity: turnCity, currentScenarioId: turnScenarioId } = get();
-        if (!turnCity) return;
-
-        const userMsg: AgentMessage = {
-          id: `msg-${++messageCounter}`,
-          role: "user",
-          content,
-          timestamp: Date.now(),
-        };
-
-        const controller = new AbortController();
-        const key = ctxKey(turnCity, turnScenarioId);
-
+      /** Patch the slice a turn belongs to, only if that turn still owns it. */
+      const patchTurn = (
+        turnId: string,
+        patch: Partial<PerCityAgentState> | ((prev: PerCityAgentState) => Partial<PerCityAgentState>),
+      ) => {
+        const turn = _turns.get(turnId);
+        if (!turn) return;
         set((state) => {
-          const prev = state.byCtx[key] ?? makeEmptyCtxState();
+          if (state.byCtx[turn.key]?.turnId !== turnId) return state;
+          return { byCtx: patchCtx(state.byCtx, turn.key, patch) };
+        });
+      };
+
+      /** Finish a turn: reset transient fields and optionally append a message. */
+      const endTurn = (turnId: string, message?: AgentMessage) => {
+        const turn = _turns.get(turnId);
+        if (!turn) return;
+        _turns.delete(turnId);
+        set((state) => {
+          if (state.byCtx[turn.key]?.turnId !== turnId) return state;
           return {
-            byCtx: {
-              ...state.byCtx,
-              [key]: {
-                ...prev,
-                messages: [...prev.messages, userMsg],
-                isThinking: true,
-                currentPlan: [],
-                currentStep: null,
-                emittedThisTurn: [],
-                updatedThisTurn: [],
-                deletedThisTurn: [],
-              },
-            },
-            abortController: controller,
+            byCtx: patchCtx(state.byCtx, turn.key, (prev) => ({
+              ...IDLE_TURN,
+              messages: message ? [...prev.messages, message] : prev.messages,
+            })),
           };
         });
+      };
 
-        try {
-          const { cityConfig, criteria } = useCriteriaStore.getState();
+      /**
+       * The criteria panel may only be mutated by a turn whose context is the one
+       * on screen (same city AND same scenario). Otherwise ops are recorded in the
+       * transcript but not applied.
+       */
+      const turnIsOnScreen = (turnId: string): boolean => {
+        const turn = _turns.get(turnId);
+        if (!turn) return false;
+        return (
+          turn.key === currentKey() &&
+          useCriteriaStore.getState().cityConfig.slug === cityOfKey(turn.key)
+        );
+      };
 
-          await agentResearchStream(
-            {
-              prompt: content,
-              city: cityConfig.slug,
-              existing_criteria: criteria.length > 0 ? criteria : undefined,
-            },
-            (event) => {
-              switch (event.type) {
-                case "plan":
-                  set((state) => ({
-                    byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
-                      currentPlan: event.data.todos,
-                    }),
-                  }));
-                  break;
+      return {
+        byCtx: {},
+        currentCity: null,
+        currentScenarioId: null,
 
-                case "step":
-                  set((state) => ({
-                    byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
-                      currentStep: event.data.tool,
-                    }),
-                  }));
-                  break;
+        setCurrentScenario: (city, scenarioId) => {
+          set((state) => ({
+            currentCity: city,
+            currentScenarioId: scenarioId,
+            byCtx: ensureCtx(state.byCtx, ctxKey(city, scenarioId)),
+          }));
+        },
 
-                case "criterion": {
-                  const emitted = emittedFromEvent(event.data);
-                  // Only mutate the criteria panel when the originating city
-                  // is still the one being viewed — prevents cross-city leak
-                  // if the user navigated away mid-turn.
-                  if (
-                    useCriteriaStore.getState().cityConfig.slug === turnCity
-                  ) {
-                    useCriteriaStore
-                      .getState()
-                      .addCriterion(event.data.criterion);
-                  }
-                  set((state) => {
-                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
-                    return {
-                      byCtx: {
-                        ...state.byCtx,
-                        [key]: {
-                          ...prev,
-                          emittedThisTurn: [...prev.emittedThisTurn, emitted],
-                        },
-                      },
-                    };
-                  });
-                  break;
-                }
+        setChatOpen: (open) => {
+          const key = currentKey();
+          if (!key) return;
+          set((state) => ({ byCtx: patchCtx(state.byCtx, key, { chatOpen: open }) }));
+        },
 
-                case "criterion_updated": {
-                  const { criterion_id, updates, reasoning } = event.data as CriterionUpdatedEvent;
-                  const criteriaState = useCriteriaStore.getState();
-                  const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
-                  if (existing && criteriaState.cityConfig.slug === turnCity) {
-                    const mergedUpdates = updates.params
-                      ? {
-                          ...updates,
-                          params: {
-                            ...(existing.params as Record<string, unknown>),
-                            ...updates.params,
-                          } as typeof existing.params,
-                        }
-                      : updates;
-                    criteriaState.updateCriterion(criterion_id, mergedUpdates as Parameters<typeof criteriaState.updateCriterion>[1]);
-                  }
-                  const op: UpdatedCriterion = {
-                    criterionId: criterion_id,
-                    label: existing?.label ?? criterion_id,
-                    icon: existing?.icon ?? "pencil",
-                    updates,
-                    reasoning,
-                  };
-                  set((state) => {
-                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
-                    return {
-                      byCtx: {
-                        ...state.byCtx,
-                        [key]: {
-                          ...prev,
-                          updatedThisTurn: [...prev.updatedThisTurn, op],
-                        },
-                      },
-                    };
-                  });
-                  break;
-                }
+        dismissHero: () => {
+          const key = currentKey();
+          if (!key) return;
+          set((state) => ({ byCtx: patchCtx(state.byCtx, key, { heroDismissed: true }) }));
+        },
 
-                case "criterion_deleted": {
-                  const { criterion_id, reasoning } = event.data as CriterionDeletedEvent;
-                  const criteriaState = useCriteriaStore.getState();
-                  const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
-                  if (criteriaState.cityConfig.slug === turnCity) {
-                    criteriaState.removeCriterion(criterion_id);
-                  }
-                  const op: DeletedCriterion = {
-                    criterionId: criterion_id,
-                    label: existing?.label ?? criterion_id,
-                    icon: existing?.icon ?? "trash-2",
-                    reasoning,
-                  };
-                  set((state) => {
-                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
-                    return {
-                      byCtx: {
-                        ...state.byCtx,
-                        [key]: {
-                          ...prev,
-                          deletedThisTurn: [...prev.deletedThisTurn, op],
-                        },
-                      },
-                    };
-                  });
-                  break;
-                }
+        sendMessage: async (content: string) => {
+          const key = currentKey();
+          if (!key) return;
+          // One turn per context at a time.
+          if (get().byCtx[key]?.turnId) return;
 
-                case "result": {
-                  const result = event.data;
-                  const slice = get().byCtx[key] ?? makeEmptyCtxState();
-                  const planSnapshot = slice.currentPlan;
-                  const emittedSnapshot = slice.emittedThisTurn;
-                  const updatedSnapshot = slice.updatedThisTurn;
-                  const deletedSnapshot = slice.deletedThisTurn;
-                  const hasEmitted = emittedSnapshot.length > 0;
-                  const hasAnyOps =
-                    hasEmitted ||
-                    updatedSnapshot.length > 0 ||
-                    deletedSnapshot.length > 0;
-                  const agentMsg: AgentMessage = {
-                    id: `msg-${++messageCounter}`,
-                    role: "agent",
-                    content: hasAnyOps
-                      ? result.summary
-                      : result.summary +
-                        "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
-                    timestamp: Date.now(),
-                    researchResult: hasAnyOps ? undefined : result,
-                    usage: result.usage,
-                    plan: planSnapshot.length > 0 ? planSnapshot : undefined,
-                    emittedCriteria: hasEmitted ? emittedSnapshot : undefined,
-                    updatedCriteria:
-                      updatedSnapshot.length > 0 ? updatedSnapshot : undefined,
-                    deletedCriteria:
-                      deletedSnapshot.length > 0 ? deletedSnapshot : undefined,
-                  };
+          const turnId = newId("turn");
+          const controller = new AbortController();
+          _turns.set(turnId, { key, controller });
 
-                  set((state) => {
-                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
-                    return {
-                      byCtx: {
-                        ...state.byCtx,
-                        [key]: {
-                          ...prev,
-                          messages: [...prev.messages, agentMsg],
-                          isThinking: false,
-                          currentPlan: [],
-                          currentStep: null,
-                          emittedThisTurn: [],
-                          updatedThisTurn: [],
-                          deletedThisTurn: [],
-                        },
-                      },
-                      abortController: null,
-                    };
-                  });
-                  break;
-                }
-
-                case "error": {
-                  const errorMsg: AgentMessage = {
-                    id: `msg-${++messageCounter}`,
-                    role: "agent",
-                    content: `Sorry, I encountered an error: ${event.data.message}. Please try again.`,
-                    timestamp: Date.now(),
-                  };
-
-                  set((state) => {
-                    const prev = state.byCtx[key] ?? makeEmptyCtxState();
-                    return {
-                      byCtx: {
-                        ...state.byCtx,
-                        [key]: {
-                          ...prev,
-                          messages: [...prev.messages, errorMsg],
-                          isThinking: false,
-                          currentPlan: [],
-                          currentStep: null,
-                          emittedThisTurn: [],
-                          updatedThisTurn: [],
-                          deletedThisTurn: [],
-                        },
-                      },
-                      abortController: null,
-                    };
-                  });
-                  break;
-                }
-              }
-            },
-            controller.signal,
-          );
-
-          // If the stream ended without a result/error event, clear thinking state.
-          if (get().byCtx[key]?.isThinking) {
-            set((state) => ({
-              byCtx: updateCtxSlice(state.byCtx, turnCity, turnScenarioId, {
-                isThinking: false,
-                currentPlan: [],
-                currentStep: null,
-                emittedThisTurn: [],
-                updatedThisTurn: [],
-                deletedThisTurn: [],
-              }),
-              abortController: null,
-            }));
-          }
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") {
-            return;
-          }
-
-          const errorMsg: AgentMessage = {
-            id: `msg-${++messageCounter}`,
-            role: "agent",
-            content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
+          const userMsg: AgentMessage = {
+            id: newId("msg"),
+            role: "user",
+            content,
             timestamp: Date.now(),
           };
 
+          set((state) => ({
+            byCtx: patchCtx(state.byCtx, key, (prev) => ({
+              ...IDLE_TURN,
+              turnId,
+              isThinking: true,
+              messages: [...prev.messages, userMsg],
+            })),
+          }));
+
+          try {
+            const { cityConfig, criteria } = useCriteriaStore.getState();
+
+            await agentResearchStream(
+              {
+                prompt: content,
+                city: cityConfig.slug,
+                existing_criteria: criteria.length > 0 ? criteria : undefined,
+              },
+              (event) => {
+                // Events from a stopped/cleared turn are ignored.
+                if (!_turns.has(turnId)) return;
+
+                switch (event.type) {
+                  case "plan":
+                    patchTurn(turnId, { currentPlan: event.data.todos });
+                    break;
+
+                  case "step":
+                    patchTurn(turnId, { currentStep: event.data.tool });
+                    break;
+
+                  case "criterion": {
+                    const emitted = emittedFromEvent(event.data);
+                    if (turnIsOnScreen(turnId)) {
+                      useCriteriaStore.getState().addCriterion(event.data.criterion);
+                    }
+                    patchTurn(turnId, (prev) => ({
+                      emittedThisTurn: [...prev.emittedThisTurn, emitted],
+                    }));
+                    break;
+                  }
+
+                  case "criterion_updated": {
+                    const { criterion_id, updates, reasoning } = event.data as CriterionUpdatedEvent;
+                    const criteriaState = useCriteriaStore.getState();
+                    const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
+                    if (existing && turnIsOnScreen(turnId)) {
+                      const mergedUpdates = updates.params
+                        ? {
+                            ...updates,
+                            params: {
+                              ...(existing.params as Record<string, unknown>),
+                              ...updates.params,
+                            } as typeof existing.params,
+                          }
+                        : updates;
+                      criteriaState.updateCriterion(
+                        criterion_id,
+                        mergedUpdates as Parameters<typeof criteriaState.updateCriterion>[1],
+                      );
+                    }
+                    const op: UpdatedCriterion = {
+                      criterionId: criterion_id,
+                      label: existing?.label ?? criterion_id,
+                      icon: existing?.icon ?? "pencil",
+                      updates,
+                      reasoning,
+                    };
+                    patchTurn(turnId, (prev) => ({
+                      updatedThisTurn: [...prev.updatedThisTurn, op],
+                    }));
+                    break;
+                  }
+
+                  case "criterion_deleted": {
+                    const { criterion_id, reasoning } = event.data as CriterionDeletedEvent;
+                    const criteriaState = useCriteriaStore.getState();
+                    const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
+                    if (turnIsOnScreen(turnId)) {
+                      criteriaState.removeCriterion(criterion_id);
+                    }
+                    const op: DeletedCriterion = {
+                      criterionId: criterion_id,
+                      label: existing?.label ?? criterion_id,
+                      icon: existing?.icon ?? "trash-2",
+                      reasoning,
+                    };
+                    patchTurn(turnId, (prev) => ({
+                      deletedThisTurn: [...prev.deletedThisTurn, op],
+                    }));
+                    break;
+                  }
+
+                  case "result": {
+                    const result = event.data;
+                    const turn = _turns.get(turnId);
+                    const slice = turn ? get().byCtx[turn.key] : undefined;
+                    if (!slice) break;
+                    const emitted = slice.emittedThisTurn;
+                    const updated = slice.updatedThisTurn;
+                    const deleted = slice.deletedThisTurn;
+                    const hasAnyOps = emitted.length + updated.length + deleted.length > 0;
+                    endTurn(
+                      turnId,
+                      agentMessage(
+                        hasAnyOps
+                          ? result.summary
+                          : result.summary +
+                              "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
+                        {
+                          researchResult: hasAnyOps ? undefined : result,
+                          usage: result.usage,
+                          plan: slice.currentPlan.length > 0 ? slice.currentPlan : undefined,
+                          emittedCriteria: emitted.length > 0 ? emitted : undefined,
+                          updatedCriteria: updated.length > 0 ? updated : undefined,
+                          deletedCriteria: deleted.length > 0 ? deleted : undefined,
+                        },
+                      ),
+                    );
+                    break;
+                  }
+
+                  case "error":
+                    endTurn(
+                      turnId,
+                      agentMessage(
+                        `Sorry, I encountered an error: ${event.data.message}. Please try again.`,
+                      ),
+                    );
+                    break;
+                }
+              },
+              controller.signal,
+            );
+
+            // Stream closed without a result/error frame.
+            if (_turns.has(turnId)) {
+              endTurn(
+                turnId,
+                agentMessage("The connection closed before I finished. Please try again."),
+              );
+            }
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              // stopAgent/clearConversation already reset the slice; this is a no-op
+              // for them, and finishes any turn aborted another way.
+              endTurn(turnId);
+              return;
+            }
+            endTurn(
+              turnId,
+              agentMessage(
+                `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
+              ),
+            );
+          }
+        },
+
+        stopAgent: () => {
+          const key = currentKey();
+          if (!key) return;
+          const turnId = get().byCtx[key]?.turnId;
+          if (!turnId) return;
+          _turns.get(turnId)?.controller.abort();
+          endTurn(turnId, agentMessage("Stopped."));
+        },
+
+        addCriterionFromResult: (messageId, result, prompt) => {
+          const key = currentKey();
+          if (!key) return;
+          const criterion = createAiCriterion(prompt, result);
+          useCriteriaStore.getState().addCriterion(criterion);
+
           set((state) => {
-            const prev = state.byCtx[key] ?? makeEmptyCtxState();
+            const prev = state.byCtx[key];
+            if (!prev) return state;
             return {
-              byCtx: {
-                ...state.byCtx,
-                [key]: {
-                  ...prev,
-                  messages: [...prev.messages, errorMsg],
-                  isThinking: false,
-                  currentPlan: [],
-                  currentStep: null,
-                  emittedThisTurn: [],
-                  updatedThisTurn: [],
-                  deletedThisTurn: [],
-                },
-              },
-              abortController: null,
-            };
-          });
-        }
-      },
-
-      stopAgent: () => {
-        const { abortController, currentCity, currentScenarioId } = get();
-        if (!abortController || !currentCity) return;
-        abortController.abort();
-        const stoppedMsg: AgentMessage = {
-          id: `msg-${++messageCounter}`,
-          role: "agent",
-          content: "Stopped.",
-          timestamp: Date.now(),
-        };
-        set((state) => {
-          const key = ctxKey(currentCity, currentScenarioId);
-          const prev = state.byCtx[key] ?? makeEmptyCtxState();
-          return {
-            byCtx: {
-              ...state.byCtx,
-              [key]: {
-                ...prev,
-                messages: [...prev.messages, stoppedMsg],
-                isThinking: false,
-                currentPlan: [],
-                currentStep: null,
-                emittedThisTurn: [],
-                updatedThisTurn: [],
-                deletedThisTurn: [],
-              },
-            },
-            abortController: null,
-          };
-        });
-      },
-
-      addCriterionFromResult: (messageId, result, prompt) => {
-        const { currentCity, currentScenarioId } = get();
-        if (!currentCity) return;
-        const criterion = createAiCriterion(prompt, result);
-        useCriteriaStore.getState().addCriterion(criterion);
-
-        set((state) => {
-          const key = ctxKey(currentCity, currentScenarioId);
-          const prev = state.byCtx[key];
-          if (!prev) return state;
-          return {
-            byCtx: {
-              ...state.byCtx,
-              [key]: {
-                ...prev,
+              byCtx: patchCtx(state.byCtx, key, {
                 messages: prev.messages.map((m) =>
                   m.id === messageId ? { ...m, criterionAdded: true } : m,
                 ),
-              },
-            },
-          };
-        });
-      },
+              }),
+            };
+          });
+        },
 
-      clearConversation: () => {
-        const { abortController, currentCity, currentScenarioId } = get();
-        if (abortController) abortController.abort();
-        if (!currentCity) return;
-        set((state) => ({
-          byCtx: updateCtxSlice(state.byCtx, currentCity, currentScenarioId, {
-            messages: [],
-            isThinking: false,
-            currentPlan: [],
-            currentStep: null,
-            emittedThisTurn: [],
-            updatedThisTurn: [],
-            deletedThisTurn: [],
-          }),
-          abortController: null,
-        }));
-      },
-    }),
+        clearConversation: () => {
+          const key = currentKey();
+          if (!key) return;
+          abortTurnsForKey(key);
+          set((state) => ({
+            byCtx: patchCtx(state.byCtx, key, { ...IDLE_TURN, messages: [] }),
+          }));
+        },
+      };
+    },
     {
       name: "ijar-agent",
-      version: 2,
+      version: 3,
       migrate: (persisted, fromVersion) => {
+        let state = (persisted ?? {}) as {
+          byCity?: Record<string, PerCityAgentState>;
+          byCtx?: Record<string, PerCityAgentState>;
+        };
         if (fromVersion < 2) {
           // v1 stored byCity keyed by city slug; migrate to byCtx keyed by "${city}:"
-          const old = (persisted ?? {}) as {
-            byCity?: Record<string, PerCityAgentState>;
-          };
           const byCtx: Record<string, PerCityAgentState> = {};
-          for (const [city, slice] of Object.entries(old.byCity ?? {})) {
+          for (const [city, slice] of Object.entries(state.byCity ?? {})) {
             byCtx[`${city}:`] = slice;
           }
-          return { byCtx, currentScenarioId: null };
+          state = { byCtx };
         }
-        return persisted as AgentStore;
+        if (fromVersion < 3) {
+          // v2 ids ("msg-N") collided across reloads; make them unique once.
+          const byCtx: Record<string, PerCityAgentState> = {};
+          for (const [key, slice] of Object.entries(state.byCtx ?? {})) {
+            byCtx[key] = {
+              ...makeEmptyCtxState(),
+              ...slice,
+              ...IDLE_TURN,
+              messages: (slice.messages ?? []).map((m) => ({ ...m, id: newId("msg") })),
+            };
+          }
+          state = { byCtx };
+        }
+        return state as unknown as AgentStore;
       },
-      // Persist only durable per-context fields. Strip transient state and
-      // runtime-only fields (currentCity, currentScenarioId, abortController).
-      partialize: (state) => ({
-        byCtx: Object.fromEntries(
-          Object.entries(state.byCtx).map(([key, slice]) => [
-            key,
-            {
-              messages: slice.messages,
-              chatOpen: slice.chatOpen,
-              heroDismissed: slice.heroDismissed,
-              currentPlan: [],
-              currentStep: null,
-              emittedThisTurn: [],
-              updatedThisTurn: [],
-              deletedThisTurn: [],
-              isThinking: false,
-            },
-          ]),
-        ),
-      }) as Partial<AgentStore>,
+      // Persist only durable per-context fields.
+      partialize: (state) =>
+        ({
+          byCtx: Object.fromEntries(
+            Object.entries(state.byCtx).map(([key, slice]) => [
+              key,
+              {
+                messages: slice.messages,
+                chatOpen: slice.chatOpen,
+                heroDismissed: slice.heroDismissed,
+                ...IDLE_TURN,
+              },
+            ]),
+          ),
+        }) as Partial<AgentStore>,
     },
   ),
 );
@@ -619,10 +551,20 @@ export function useCurrentCityAgentSlice(): PerCityAgentState {
   });
 }
 
+/** Move a context's chat (and any in-flight turn) to a new key. */
+function rekeyCtx(fromKey: string, toKey: string) {
+  for (const turn of _turns.values()) {
+    if (turn.key === fromKey) turn.key = toKey;
+  }
+  useAgentStore.setState((s) => {
+    const { [fromKey]: moved, ...rest } = s.byCtx;
+    return { byCtx: { ...rest, [toKey]: moved ?? makeEmptyCtxState() } };
+  });
+}
+
 // Keep agent store context mirrored to criteria-store city + scenario-store active scenario.
 // Runs once at module load in the browser.
 if (typeof window !== "undefined") {
-  // Initialize with current city + its active scenario.
   const initialSlug = useCriteriaStore.getState().cityConfig.slug;
   const initialScenarioId =
     useScenarioStore.getState().activeScenarioIdByCity[initialSlug] ?? null;
@@ -646,16 +588,31 @@ if (typeof window !== "undefined") {
     const prevActiveId = prev.activeScenarioIdByCity[city] ?? null;
     if (newActiveId === prevActiveId) return;
 
+    // The unsaved working state was just saved as a scenario (first Generate):
+    // the conversation that produced those criteria moves with it.
+    if (
+      prevActiveId === null &&
+      newActiveId !== null &&
+      state.lastCreated?.id === newActiveId &&
+      state.lastCreated.from === "save"
+    ) {
+      rekeyCtx(ctxKey(city, null), ctxKey(city, newActiveId));
+      useAgentStore.getState().setCurrentScenario(city, newActiveId);
+      return;
+    }
+
     if (newActiveId === null) {
-      // "New scenario" — always start with a blank chat so the new session feels fresh.
+      // Active scenario deleted — fall back to a fresh unsaved context.
+      const key = ctxKey(city, null);
+      abortTurnsForKey(key);
       useAgentStore.setState((s) => ({
-        ...s,
         currentCity: city,
         currentScenarioId: null,
-        byCtx: { ...s.byCtx, [`${city}:`]: makeEmptyCtxState() },
+        byCtx: { ...s.byCtx, [key]: makeEmptyCtxState() },
       }));
-    } else {
-      useAgentStore.getState().setCurrentScenario(city, newActiveId);
+      return;
     }
+
+    useAgentStore.getState().setCurrentScenario(city, newActiveId);
   });
 }

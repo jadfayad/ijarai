@@ -159,12 +159,44 @@ export function MapView() {
         .filter((d) => d.lat !== 0 || d.lng !== 0),
     [criteria]
   );
-  const [selectedCellProperties, setSelectedCellProperties] = useState<Record<string, unknown> | null>(null);
-  const [areaName, setAreaName] = useState<string | null>(null);
-  /** World-coord center of the clicked cell. Drives the "evidence" overlay. */
-  const [clickedCenter, setClickedCenter] = useState<[number, number] | null>(null);
-  const [cellEvidence, setCellEvidence] = useState<CellEvidence | null>(null);
+  // ── Cell inspector ─────────────────────────────────────────────────────────
+  // The store's `selectedCellId` is the single source of truth. Local inspector
+  // data (area name, evidence, centre) is tagged with the cell it belongs to and
+  // is ignored as soon as it no longer matches — so a scenario switch or reset
+  // that clears the selection can't leave a stale card open.
+  const [inspector, setInspector] = useState<{
+    cellId: string;
+    /** World-coord center of the clicked cell. Drives the "evidence" overlay. */
+    center: [number, number] | null;
+    areaName: string | null;
+    evidence: CellEvidence | null;
+  } | null>(null);
   const evidenceAbortRef = useRef<AbortController | null>(null);
+  const activeInspector =
+    inspector && inspector.cellId === selectedCellId ? inspector : null;
+  const areaName = activeInspector?.areaName ?? null;
+  const clickedCenter = activeInspector?.center ?? null;
+  const cellEvidence = activeInspector?.evidence ?? null;
+
+  /** Patch inspector data only if it still belongs to `cellId` (drops late responses). */
+  const patchInspector = useCallback(
+    (cellId: string, patch: Partial<NonNullable<typeof inspector>>) =>
+      setInspector((prev) => (prev && prev.cellId === cellId ? { ...prev, ...patch } : prev)),
+    [],
+  );
+
+  // Derived from the current heatmap, so a re-score shows fresh numbers.
+  const selectedCellProperties = useMemo<Record<string, unknown> | null>(() => {
+    if (!selectedCellId || !scoreData?.features) return null;
+    const f = scoreData.features.find((x) => x.properties.cell_id === selectedCellId);
+    if (!f) return null;
+    return {
+      hexIndex: f.properties.cell_id,
+      weight: f.properties.score,
+      center: f.geometry.coordinates,
+      ...f.properties,
+    };
+  }, [selectedCellId, scoreData]);
 
   const scoreRange = useMemo(() => {
     if (!scoreData?.features?.length) return { min: 0, max: 1 };
@@ -406,18 +438,6 @@ export function MapView() {
   const { chatOpen } = useCurrentCityAgentSlice();
   const setChatOpen = useAgentStore((s) => s.setChatOpen);
 
-  // Close rental panel when chat opens, and vice-versa.
-  useEffect(() => {
-    if (!chatOpen) return;
-    setSelectedCellProperties(null);
-    setSelectedCellId(null);
-    setAreaName(null);
-    setClickedCenter(null);
-    setCellEvidence(null);
-    evidenceAbortRef.current?.abort();
-    clearRentals();
-  }, [chatOpen, setSelectedCellId, clearRentals]);
-
   // Previous heatmap stays visible while a new score is computing.
   const allLayers = useMemo(
     () => [...layers, ...evidenceLayers],
@@ -442,80 +462,71 @@ export function MapView() {
         info.object &&
         typeof info.object.score === "number" &&
         (info.object.score as number) < scoreThreshold;
-      if (info.object && !hiddenByThreshold) {
-        const cellId = info.object.cell_id as string;
-        if (cellId !== selectedCellId) {
-          clearRentals();
-        }
-        setSelectedCellId(cellId);
-        setSelectedCellProperties(info.object);
-        setChatOpen(false);
+      evidenceAbortRef.current?.abort();
 
-        const center = (info.object.center ?? info.coordinate) as
-          | [number, number]
-          | undefined;
-        if (center && center.length >= 2) {
-          setClickedCenter([center[0], center[1]]);
-
-          // Fetch nearby OSM POIs for geo-specific active criteria.
-          evidenceAbortRef.current?.abort();
-          const abortCtrl = new AbortController();
-          evidenceAbortRef.current = abortCtrl;
-          setCellEvidence(null);
-
-          const [lng, lat] = center;
-          const geoSpecificCriteria = criteria
-            .filter((c) => c.enabled && ["amenities", "transit", "healthcare"].includes(c.type))
-            .map((c) => ({ type: c.type, params: c.params as Record<string, unknown> }));
-
-          if (geoSpecificCriteria.length > 0) {
-            const cellSizeM = GRID_RESOLUTION_CONFIG[gridResolution].cell_size_m;
-            fetchCellEvidence(cityConfig.slug, lat, lng, cellSizeM, geoSpecificCriteria, abortCtrl.signal)
-              .then(setCellEvidence)
-              .catch(() => {});
-          }
-        }
-
-        const zoneName = info.object.zone_name as string | undefined;
-        if (zoneName) {
-          setAreaName(zoneName);
-        } else {
-          setAreaName(null);
-          if (info.coordinate && info.coordinate.length >= 2) {
-            const [lng, lat] = info.coordinate;
-            fetch(
-              `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lng}&latitude=${lat}&types=neighborhood,locality,place&access_token=${MAPBOX_TOKEN}`
-            )
-              .then((res) => res.json())
-              .then((data) => {
-                const feature = data.features?.[0];
-                if (feature) {
-                  setAreaName(feature.properties?.name ?? feature.properties?.full_address ?? null);
-                }
-              })
-              .catch(() => {});
-          }
-        }
-      } else {
+      if (!info.object || hiddenByThreshold) {
         setSelectedCellId(null);
-        setSelectedCellProperties(null);
-        setAreaName(null);
-        setClickedCenter(null);
-        setCellEvidence(null);
-        evidenceAbortRef.current?.abort();
+        setInspector(null);
+        clearRentals();
+        return;
+      }
+
+      const cellId = info.object.cell_id as string;
+      if (cellId !== selectedCellId) {
         clearRentals();
       }
+      setSelectedCellId(cellId);
+      setChatOpen(false);
+
+      const rawCenter = (info.object.center ?? info.coordinate) as
+        | [number, number]
+        | undefined;
+      const center: [number, number] | null =
+        rawCenter && rawCenter.length >= 2 ? [rawCenter[0], rawCenter[1]] : null;
+      const zoneName = (info.object.zone_name as string | undefined) ?? null;
+
+      setInspector({ cellId, center, areaName: zoneName, evidence: null });
+
+      // Fetch nearby OSM POIs for geo-specific active criteria.
+      if (center) {
+        const geoSpecificCriteria = criteria
+          .filter((c) => c.enabled && ["amenities", "transit", "healthcare"].includes(c.type))
+          .map((c) => ({ type: c.type, params: c.params as Record<string, unknown> }));
+
+        if (geoSpecificCriteria.length > 0) {
+          const abortCtrl = new AbortController();
+          evidenceAbortRef.current = abortCtrl;
+          const [lng, lat] = center;
+          const cellSizeM = GRID_RESOLUTION_CONFIG[gridResolution].cell_size_m;
+          fetchCellEvidence(cityConfig.slug, lat, lng, cellSizeM, geoSpecificCriteria, abortCtrl.signal)
+            .then((evidence) => patchInspector(cellId, { evidence }))
+            .catch(() => {});
+        }
+      }
+
+      // Reverse-geocode a name when the backend didn't provide one. The result is
+      // tagged to this cell, so a slow response can't rename a later selection.
+      if (!zoneName && info.coordinate && info.coordinate.length >= 2) {
+        const [lng, lat] = info.coordinate;
+        fetch(
+          `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lng}&latitude=${lat}&types=neighborhood,locality,place&access_token=${MAPBOX_TOKEN}`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            const feature = data.features?.[0];
+            const name = feature?.properties?.name ?? feature?.properties?.full_address ?? null;
+            if (name) patchInspector(cellId, { areaName: name });
+          })
+          .catch(() => {});
+      }
     },
-    [setSelectedCellId, scoreThreshold, selectedCellId, clearRentals, criteria, gridResolution, cityConfig.slug]
+    [setSelectedCellId, setChatOpen, scoreThreshold, selectedCellId, clearRentals, criteria, gridResolution, cityConfig.slug, patchInspector]
   );
 
   const handleCellClose = useCallback(() => {
-    setSelectedCellId(null);
-    setSelectedCellProperties(null);
-    setAreaName(null);
-    setClickedCenter(null);
-    setCellEvidence(null);
     evidenceAbortRef.current?.abort();
+    setSelectedCellId(null);
+    setInspector(null);
     clearRentals();
   }, [setSelectedCellId, clearRentals]);
 
@@ -637,7 +648,9 @@ export function MapView() {
 
       {(
         <RentalListCard
-          cellProperties={selectedCellProperties}
+          // Chat and cell card share the right edge; while chat is open the card
+          // is hidden but the selection is kept, so closing chat brings it back.
+          cellProperties={chatOpen ? null : selectedCellProperties}
           areaName={areaName}
           criterionLabels={scoreData?.criterion_labels}
           onCellClose={handleCellClose}

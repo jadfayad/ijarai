@@ -13,6 +13,12 @@ interface ScenarioStore {
   scenarios: Scenario[];
   /** Active scenario id per city slug. A city with no entry has no active scenario. */
   activeScenarioIdByCity: Record<string, string | null>;
+  /**
+   * Transient (not persisted): how the most recent scenario came to exist.
+   * "save" = the unsaved working state was promoted into it (its chat should follow);
+   * "new"  = user explicitly started a blank scenario.
+   */
+  lastCreated: { id: string; from: "save" | "new" } | null;
 
   saveScenario: (snapshot: {
     city: string;
@@ -136,6 +142,7 @@ export const useScenarioStore = create<ScenarioStore>()(
     (set, get) => ({
       scenarios: [],
       activeScenarioIdByCity: {},
+      lastCreated: null,
 
       saveScenario: (snapshot) => {
         const state = get();
@@ -179,6 +186,7 @@ export const useScenarioStore = create<ScenarioStore>()(
             ...s.activeScenarioIdByCity,
             [snapshot.city]: id,
           },
+          lastCreated: { id, from: "save" },
         }));
         return id;
       },
@@ -281,6 +289,7 @@ export const useScenarioStore = create<ScenarioStore>()(
             ...s.activeScenarioIdByCity,
             [targetCity]: id,
           },
+          lastCreated: { id, from: "new" },
         }));
 
         // Reset the criteria store for the fresh scenario.
@@ -299,6 +308,11 @@ export const useScenarioStore = create<ScenarioStore>()(
       name: "ijar-scenarios",
       version: 2,
       storage: createJSONStorage(() => quotaSafeStorage),
+      partialize: (state) =>
+        ({
+          scenarios: state.scenarios,
+          activeScenarioIdByCity: state.activeScenarioIdByCity,
+        }) as ScenarioStore,
       migrate: (persisted, fromVersion) => {
         if (fromVersion < 2) {
           const old = (persisted ?? {}) as {

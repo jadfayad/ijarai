@@ -132,7 +132,14 @@ export const useRentalStore = create<RentalStore>((set) => ({
     const controller = new AbortController();
     _abortController = controller;
 
-    set({ hexId, loading: true, error: null, listings: [], selectedListingId: null });
+    set({
+      hexId,
+      loading: true,
+      error: null,
+      listings: [],
+      selectedListingId: null,
+      expanded: expandNeighbours,
+    });
 
     try {
       const filters = deriveFilters(useCriteriaStore.getState().criteria);

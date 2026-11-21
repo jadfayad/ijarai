@@ -341,8 +341,13 @@ export function CriterionCard({ criterion }: Props) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpanded(true);
     cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    const t = setTimeout(() => commuteAddressRef.current?.focus(), 220);
-    setPendingFocus(null);
+    // Clear the handoff only once focus has actually happened. Clearing it
+    // synchronously re-ran this effect's cleanup and cancelled the timer, so the
+    // input never received focus.
+    const t = setTimeout(() => {
+      commuteAddressRef.current?.focus();
+      setPendingFocus(null);
+    }, 220);
     return () => clearTimeout(t);
   }, [pendingFocusCriterionId, criterion.id, setPendingFocus]);
 

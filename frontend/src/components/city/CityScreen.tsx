@@ -7,6 +7,7 @@ import { MapView } from "@/components/map/MapView";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useAppReady } from "@/lib/use-app-ready";
 import { useTravelStore } from "@/stores/travel-store";
+import { useRentalStore } from "@/stores/rental-store";
 import type { CitySlug } from "@/lib/cities";
 
 export function CityScreen({ slug }: { slug: CitySlug }) {
@@ -15,9 +16,13 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
   const ready = useAppReady();
   const endTravel = useTravelStore((s) => s.endTravel);
 
+  const clearRentals = useRentalStore((s) => s.clear);
+
   useEffect(() => {
+    // Rental listings/markers are city-scoped; never carry them across cities.
+    clearRentals();
     loadCityConfig(slug);
-  }, [loadCityConfig, slug]);
+  }, [loadCityConfig, clearRentals, slug]);
 
   useEffect(() => {
     if (ready || cityError) endTravel();
