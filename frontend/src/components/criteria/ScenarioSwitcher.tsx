@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useScenarioStore } from "@/stores/scenario-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
+import { toast } from "@/components/ui/toast";
 
 /**
  * Returns a timestamp captured on mount and refreshed every 30 s. Using this
@@ -43,6 +44,7 @@ export function ScenarioSwitcher({
   );
   const loadScenario = useScenarioStore((s) => s.loadScenario);
   const deleteScenario = useScenarioStore((s) => s.deleteScenario);
+  const restoreScenario = useScenarioStore((s) => s.restoreScenario);
   const renameScenario = useScenarioStore((s) => s.renameScenario);
   const startNewScenario = useScenarioStore((s) => s.startNewScenario);
 
@@ -301,8 +303,19 @@ export function ScenarioSwitcher({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              const snapshot = sc;
+                              const wasActive = activeId === sc.id;
                               deleteScenario(sc.id);
+                              toast(`"${snapshot.name}" deleted`, {
+                                // Context the user is in after the delete.
+                                scope: `${citySlug}:${wasActive ? "" : (activeId ?? "")}`,
+                                action: {
+                                  label: "Undo",
+                                  onClick: () => restoreScenario(snapshot, wasActive),
+                                },
+                              });
                             }}
+                            aria-label={`Delete ${sc.name}`}
                             className="p-1 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all"
                           >
                             <X size={11} />

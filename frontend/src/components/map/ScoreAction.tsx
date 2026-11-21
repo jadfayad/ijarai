@@ -15,7 +15,7 @@ import { useCriteriaStore, useHeatmapStale } from "@/stores/criteria-store";
  *
  * The previous heatmap stays on the map in every state; nothing blocks the UI.
  */
-export function ScoreAction({ hasCriteria }: { hasCriteria: boolean }) {
+export function ScoreAction({ hasCriteria, emptyReason }: { hasCriteria: boolean; emptyReason: string }) {
   const { loading, scoreData, progress, generate, cancel } = useCriteriaStore(
     useShallow((s) => ({
       loading: s.loading,
@@ -81,7 +81,7 @@ export function ScoreAction({ hasCriteria }: { hasCriteria: boolean }) {
     return (
       <div className={`${base} cursor-not-allowed select-none border border-white/[0.12] bg-[rgba(16,16,28,0.85)] text-white/60`}>
         <Sparkles size={14} aria-hidden />
-        Add a criterion to score
+        {emptyReason}
       </div>
     );
   }

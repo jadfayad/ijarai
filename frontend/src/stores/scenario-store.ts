@@ -29,6 +29,8 @@ interface ScenarioStore {
   }) => string;
   loadScenario: (id: string) => void;
   deleteScenario: (id: string) => void;
+  /** Undo a delete: re-insert the scenario and, if it was active, switch back to it. */
+  restoreScenario: (scenario: Scenario, wasActive: boolean) => void;
   renameScenario: (id: string, name: string) => void;
   startNewScenario: (city?: string) => void;
   getScenariosByCity: (city: string) => Scenario[];
@@ -242,6 +244,12 @@ export const useScenarioStore = create<ScenarioStore>()(
           }
           return { scenarios: filtered, activeScenarioIdByCity: nextActive };
         });
+      },
+
+      restoreScenario: (scenario, wasActive) => {
+        if (get().scenarios.some((s) => s.id === scenario.id)) return;
+        set((s) => ({ scenarios: [...s.scenarios, scenario] }));
+        if (wasActive) get().loadScenario(scenario.id);
       },
 
       renameScenario: (id, name) => {

@@ -115,6 +115,12 @@ export function MapView() {
   );
 
   const hasActiveCriteria = criteria.some(isScorable);
+  const scoreEmptyReason =
+    criteria.length === 0
+      ? "Add a criterion to score"
+      : criteria.some((c) => c.enabled && c.type === "commute" && !isScorable(c))
+        ? "Set a commute destination"
+        : "Turn on a criterion to score";
 
   const destinations = useMemo(
     () =>
@@ -649,7 +655,7 @@ export function MapView() {
               </SelectContent>
             </Select>
 
-          <ScoreAction hasCriteria={hasActiveCriteria} />
+          <ScoreAction hasCriteria={hasActiveCriteria} emptyReason={scoreEmptyReason} />
 
           <FloatingChat mode="pill" />
         </div>

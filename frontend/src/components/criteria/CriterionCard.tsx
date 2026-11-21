@@ -41,7 +41,6 @@ import {
   SegmentedControl,
   WEIGHT_OPTIONS,
   weightToSegment,
-  weightLabel,
 } from "@/components/ui/segmented-control";
 import { toast } from "@/components/ui/toast";
 import type {
@@ -65,6 +64,7 @@ import { SchoolsConfig } from "./SchoolsConfig";
 import { HazardConfig } from "./HazardConfig";
 import { ApartmentConfig } from "./ApartmentConfig";
 import { useAgentStore } from "@/stores/agent-store";
+import { Switch } from "@/components/ui/switch";
 
 const ICON_CONFIG: Record<
   string,
@@ -374,53 +374,76 @@ export function CriterionCard({ criterion }: Props) {
         expanded
           ? "border-white/[0.16]"
           : "border-white/[0.1] hover:border-white/[0.16]"
-      }`}
+      } ${criterion.enabled ? "" : "opacity-60"}`}
     >
-      {/* Header row — minimal: icon, title, chevron; trash reveals on hover.
-          Horizontal padding matches the expanded section below so expanding
-          doesn't shift content; vertical padding + icon padding are kept
-          tight so the collapsed row stays low-profile. */}
-      <div className="group/header w-full py-2 px-3.5 flex items-center gap-2.5">
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          aria-expanded={expanded}
-          aria-label={expanded ? `Collapse ${criterion.label}` : `Expand ${criterion.label}`}
-          className="flex-1 min-w-0 flex items-center gap-2.5 text-left"
-        >
-          <div className="relative shrink-0">
-            <div
-              className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-1.5 transition-colors duration-200`}
-            >
-              {iconCfg.icon}
-            </div>
-            <OriginCornerDot origin={criterion.origin} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-medium text-white truncate leading-tight">
-              {criterion.label}
-            </div>
-            {!expanded && (
-              <p className="text-[11px] text-white/40 truncate leading-tight mt-0.5">
-                {summary ? `${summary} · ` : ""}
-                <span className="text-white/55">{weightLabel(criterion.weight)}</span>
-              </p>
-            )}
-          </div>
-
-          <ChevronDown
-            size={13}
-            className={`text-white/25 shrink-0 transition-transform duration-200 ${
-              expanded ? "rotate-180" : ""
-            }`}
+      {/* Header: on/off switch, expand toggle (icon + full title), remove.
+          The second line carries the summary and the priority picker, so the
+          controls people change most never require expanding the card and the
+          title keeps the full width. Nothing interactive is nested in the toggle. */}
+      <div className="w-full py-2 px-3 flex items-start gap-2">
+        <div className="pt-2">
+          <Switch
+            size="sm"
+            checked={criterion.enabled}
+            onCheckedChange={(on) => updateCriterion(criterion.id, { enabled: on })}
+            aria-label={`${criterion.enabled ? "Turn off" : "Turn on"} ${criterion.label}`}
           />
-        </button>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${criterion.label}` : `Expand ${criterion.label}`}
+            className="w-full min-w-0 flex items-center gap-2.5 text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <div className="relative shrink-0">
+              <div
+                className={`rounded-lg ${iconCfg.activeBg} ${iconCfg.text} p-1.5 transition-colors duration-200`}
+              >
+                {iconCfg.icon}
+              </div>
+              <OriginCornerDot origin={criterion.origin} />
+            </div>
+            <span className="flex-1 min-w-0 text-[13px] font-medium text-white truncate leading-tight">
+              {criterion.label}
+            </span>
+            <ChevronDown
+              size={14}
+              className={`text-white/50 shrink-0 transition-transform duration-200 ${
+                expanded ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {!expanded && (
+            <div className="mt-1 flex items-center gap-2 pl-[38px]">
+              <p className="flex-1 min-w-0 text-xs text-white/60 truncate">
+                {criterion.enabled ? summary : "Off — not scored"}
+              </p>
+              <select
+                aria-label={`${criterion.label} priority`}
+                value={weightToSegment(criterion.weight)}
+                disabled={!criterion.enabled}
+                onChange={(e) => updateCriterion(criterion.id, { weight: Number(e.target.value) })}
+                className="shrink-0 cursor-pointer rounded-md border border-white/[0.1] bg-white/[0.04] px-1 py-0.5 text-xs text-white/80 hover:border-white/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed"
+              >
+                {WEIGHT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-[rgb(20,20,32)]">
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
         <Tooltip>
           <TooltipTrigger
             onClick={handleRemove}
             aria-label={`Remove ${criterion.label}`}
-            className="text-white/20 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-all duration-200 shrink-0 opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+            className="mt-1 text-white/40 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors duration-200 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <Trash2 size={13} />
           </TooltipTrigger>
