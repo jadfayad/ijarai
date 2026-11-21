@@ -118,19 +118,16 @@ export function FloatingChat() {
     if (snapshot.length === 0) return;
     clearConversation();
     toast("Conversation cleared", {
+      scope: key,
       action: {
         label: "Undo",
+        // Restore into the context the conversation was cleared from.
         onClick: () => {
           const state = useAgentStore.getState();
-          if (!state.currentCity) return;
-          const ctxKey = `${state.currentCity}:${state.currentScenarioId ?? ""}`;
-          const prev = state.byCtx[ctxKey];
-          if (!prev) return;
+          const prev = state.byCtx[key];
+          if (!prev || prev.messages.length > 0) return;
           useAgentStore.setState({
-            byCtx: {
-              ...state.byCtx,
-              [ctxKey]: { ...prev, messages: snapshot },
-            },
+            byCtx: { ...state.byCtx, [key]: { ...prev, messages: snapshot } },
           });
         },
       },

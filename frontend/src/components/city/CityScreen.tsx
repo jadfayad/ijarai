@@ -8,6 +8,8 @@ import { useCriteriaStore } from "@/stores/criteria-store";
 import { useAppReady } from "@/lib/use-app-ready";
 import { useTravelStore } from "@/stores/travel-store";
 import { useRentalStore } from "@/stores/rental-store";
+import { useAgentStore } from "@/stores/agent-store";
+import { retainToastScope } from "@/components/ui/toast";
 import type { CitySlug } from "@/lib/cities";
 
 export function CityScreen({ slug }: { slug: CitySlug }) {
@@ -17,6 +19,14 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
   const endTravel = useTravelStore((s) => s.endTravel);
 
   const clearRentals = useRentalStore((s) => s.clear);
+  const ctxKey = useAgentStore((s) =>
+    s.currentCity ? `${s.currentCity}:${s.currentScenarioId ?? ""}` : "",
+  );
+
+  // Undo toasts belong to the context they were raised in.
+  useEffect(() => {
+    retainToastScope(ctxKey);
+  }, [ctxKey]);
 
   useEffect(() => {
     // Rental listings/markers are city-scoped; never carry them across cities.

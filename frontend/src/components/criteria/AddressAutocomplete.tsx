@@ -114,12 +114,24 @@ export const AddressAutocomplete = forwardRef<AddressAutocompleteHandle, Props>(
     setQuery(value);
   }, [value]);
 
+  // Only the latest request may write predictions (responses can arrive out of order).
+  const fetchSeqRef = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
+
   const handleFetch = useCallback(async (text: string) => {
+    const seq = ++fetchSeqRef.current;
     if (!text.trim()) {
       setPredictions([]);
       return;
     }
     const results = await fetchAutocomplete(text.trim(), center, countryCode);
+    if (seq !== fetchSeqRef.current) return;
     setPredictions(results);
   }, [center, countryCode]);
 
@@ -138,10 +150,17 @@ export const AddressAutocomplete = forwardRef<AddressAutocompleteHandle, Props>(
     setPredictions([]);
     setOpen(false);
 
+    // Invalidate any in-flight prediction fetch so it can't reopen the list.
+    fetchSeqRef.current++;
     const location = await fetchPlaceLocation(prediction.place_id);
+    if (!location) {
+      // Don't commit a label with no coordinates; restore the last saved value.
+      setQuery(value);
+      return;
+    }
     onSelect({
-      lat: location?.lat ?? 0,
-      lng: location?.lng ?? 0,
+      lat: location.lat,
+      lng: location.lng,
       display_name: prediction.description,
     });
   };

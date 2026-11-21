@@ -24,15 +24,21 @@ export function CommuteConfig({ criterion, addressRef }: Props) {
 
   const handleSelect = useCallback(
     (result: { lat: number; lng: number; display_name: string }) => {
+      // onSelect fires after an async place lookup; read the latest params from
+      // the store so mode/time changes made meanwhile aren't overwritten.
+      const latest = useCriteriaStore
+        .getState()
+        .criteria.find((c) => c.id === criterion.id);
+      if (!latest) return;
       updateCriterion(criterion.id, {
         params: {
-          ...params,
+          ...(latest.params as CommuteParams),
           destination: { lat: result.lat, lng: result.lng },
           label: result.display_name,
         },
       });
     },
-    [criterion.id, params, updateCriterion]
+    [criterion.id, updateCriterion]
   );
 
   return (

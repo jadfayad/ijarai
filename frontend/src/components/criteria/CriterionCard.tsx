@@ -64,6 +64,7 @@ import { HealthcareConfig } from "./HealthcareConfig";
 import { SchoolsConfig } from "./SchoolsConfig";
 import { HazardConfig } from "./HazardConfig";
 import { ApartmentConfig } from "./ApartmentConfig";
+import { useAgentStore } from "@/stores/agent-store";
 
 const ICON_CONFIG: Record<
   string,
@@ -356,7 +357,9 @@ export function CriterionCard({ criterion }: Props) {
     removeCriterion(criterion.id);
     const snapshot = criterion;
     const at = index === -1 ? criteria.length : index;
+    const { currentCity, currentScenarioId } = useAgentStore.getState();
     toast(`"${snapshot.label}" removed`, {
+      scope: currentCity ? `${currentCity}:${currentScenarioId ?? ""}` : undefined,
       action: {
         label: "Undo",
         onClick: () => restoreCriterion(snapshot, at),

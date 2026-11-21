@@ -76,7 +76,16 @@ export const COMMUTE_PRESETS: CommutePresetConfig[] = [
   { preset: "other", label: "Other", icon: "map-pin", description: "Any other frequent destination" },
 ];
 
+/**
+ * Wire format uses (0,0) for "destination not chosen yet" (shared with the
+ * backend agent and persisted scenarios). Always test through this helper.
+ */
+export function hasCommuteDestination(dest: LatLng | null | undefined): dest is LatLng {
+  return !!dest && !(dest.lat === 0 && dest.lng === 0);
+}
+
 export interface CommuteParams {
+  /** (0,0) = unset — see hasCommuteDestination. */
   destination: LatLng;
   mode: TransportMode;
   source: CommuteSource;

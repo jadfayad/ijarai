@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { computeScores, cancelScoring, fetchCityConfig } from "@/lib/api";
-import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS } from "@/lib/types";
+import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS, hasCommuteDestination } from "@/lib/types";
 import { useScenarioStore, syncActiveScenarioToCriteria } from "./scenario-store";
 import type {
   CriterionConfig,
@@ -10,6 +10,7 @@ import type {
   CityConfig,
   DestinationConfig,
   CommutePreset,
+  CommuteParams,
   AgentResearchResponse,
 } from "@/lib/types";
 
@@ -407,12 +408,10 @@ function newJobId(): string {
     : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Commute criteria use (0,0) as the "destination not chosen yet" sentinel. */
 function isScorable(c: CriterionConfig): boolean {
   if (!c.enabled || c.weight <= 0 || c.type === "apartment") return false;
-  if (c.type === "commute") {
-    const dest = (c.params as { destination?: { lat: number; lng: number } }).destination;
-    if (!dest || (dest.lat === 0 && dest.lng === 0)) return false;
+  if (c.type === "commute" && !hasCommuteDestination((c.params as CommuteParams).destination)) {
+    return false;
   }
   return true;
 }
@@ -568,7 +567,8 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
         controller.signal,
       );
       if (!isCurrent()) return;
-      set({ scoreData: data });
+      // A fresh heatmap starts unfiltered; the threshold is user-controlled from here.
+      set({ scoreData: data, scoreThreshold: 0 });
 
       useScenarioStore.getState().saveScenario({
         city: cityConfig.slug,
