@@ -226,10 +226,14 @@ def _normalize_slug(slug: str) -> str:
     return slug.lower().replace("_", "-")
 
 
+class UnknownCityError(ValueError):
+    """Requested city slug has no config. Mapped to HTTP 404 in app.main."""
+
+
 def get_city(slug: str) -> CityConfig:
     normalized = _normalize_slug(slug)
     if normalized not in CITIES:
-        raise ValueError(
+        raise UnknownCityError(
             f"Unknown city '{slug}'. Available: {', '.join(CITIES.keys())}"
         )
     return CITIES[normalized]

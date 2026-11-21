@@ -329,7 +329,7 @@ class PropertyFinderProvider(RentalProvider):
         # Filters change results, so they must be part of the cache key.
         cache_key = (
             query.city_slug, query.hex_id, query.area_name, query.limit,
-            query.property_type, query.bedrooms_csv,
+            query.property_type, query.bedrooms_csv, query.bathrooms_csv,
             query.area_min_sqft, query.area_max_sqft,
             query.furnishing, query.amenities_csv, query.price_max_monthly,
         )
