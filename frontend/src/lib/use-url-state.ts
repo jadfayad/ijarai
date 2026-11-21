@@ -55,7 +55,7 @@ export function useUrlState(slug: string, ready: boolean) {
     const write = () => {
       // Don't overwrite the incoming URL before it has been applied.
       if (appliedFor.current !== slug) return;
-      const { selectedCellId, gridResolution, scoreThreshold, scoreData } =
+      const { selectedCellId, gridResolution, scoreThreshold } =
         useCriteriaStore.getState();
       const activeId = useScenarioStore.getState().activeScenarioIdByCity[slug] ?? null;
 
@@ -63,7 +63,7 @@ export function useUrlState(slug: string, ready: boolean) {
       if (activeId) params.set("s", activeId);
       if (selectedCellId) params.set("cell", selectedCellId);
       if (gridResolution !== "normal") params.set("res", gridResolution);
-      if (scoreData && scoreThreshold > 0) params.set("min", String(Math.round(scoreThreshold * 100)));
+      if (scoreThreshold > 0) params.set("min", String(Math.round(scoreThreshold * 100)));
 
       const qs = params.toString();
       const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;

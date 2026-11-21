@@ -32,24 +32,26 @@ export function CriteriaPanel() {
 
   if (!sidebarOpen) {
     return (
-      <button
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Open sidebar"
-        className="absolute top-14 left-4 z-40 bg-black/60 backdrop-blur-xl border border-white/[0.12] rounded-xl px-3 py-2.5 shadow-2xl hover:bg-black/70 hover:border-white/[0.18] transition-all text-foreground group"
-      >
-        <Menu
-          size={20}
-          className="group-hover:scale-110 transition-transform"
-        />
-      </button>
+      <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-white/[0.08] bg-[rgb(14,14,24)] py-2">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open criteria panel"
+          title="Criteria"
+          className="rounded-lg p-2 text-white/70 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Menu size={18} />
+        </button>
+      </div>
     );
   }
 
   const isEmpty = criteria.length === 0;
 
   return (
-    <div className="absolute top-14 left-4 bottom-4 w-[380px] z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl shadow-black/40 animate-in slide-in-from-left-4 fade-in duration-300">
-      <div className="absolute inset-0 bg-gradient-to-b from-[rgba(18,18,30,0.88)] to-[rgba(10,10,18,0.92)] backdrop-blur-2xl rounded-2xl border border-white/[0.1]" />
+    <aside
+      aria-label="Criteria"
+      className="absolute inset-y-0 left-0 z-30 flex w-[min(360px,100%)] flex-col overflow-hidden border-r border-white/[0.08] bg-[rgb(14,14,24)] shadow-2xl shadow-black/50 lg:static lg:z-auto lg:shadow-none"
+    >
 
       <div className="relative z-10 flex flex-col h-full">
         {/* Header — title + scenario pill + health + collapse, single row */}
@@ -190,6 +192,6 @@ export function CriteriaPanel() {
           </div>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

@@ -11,7 +11,8 @@ import { useTravelStore } from "@/stores/travel-store";
 import { useRentalStore } from "@/stores/rental-store";
 import { useAgentStore } from "@/stores/agent-store";
 import { retainToastScope } from "@/components/ui/toast";
-import type { CitySlug } from "@/lib/cities";
+import { getCity, type CitySlug } from "@/lib/cities";
+import { Home } from "lucide-react";
 
 export function CityScreen({ slug }: { slug: CitySlug }) {
   const loadCityConfig = useCriteriaStore((s) => s.loadCityConfig);
@@ -65,13 +66,35 @@ export function CityScreen({ slug }: { slug: CitySlug }) {
     );
   }
 
+  const city = getCity(slug);
+
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
-      <div className="absolute inset-0">
-        <MapView />
-      </div>
-      {/* Stays mounted while scoring so panel state survives each run. */}
-      {ready && <CriteriaPanel />}
-    </main>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-white/[0.08] bg-[rgb(14,14,24)] px-3">
+        <Link
+          href="/"
+          className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold tracking-tight text-foreground hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Home className="h-4 w-4 text-primary" aria-hidden />
+          IJAR.AI
+        </Link>
+        <span className="text-white/20" aria-hidden>/</span>
+        <h1 className="text-sm font-medium text-white/80">
+          {city?.name}
+          {city?.country && <span className="ml-1.5 text-white/50">{city.country}</span>}
+        </h1>
+      </header>
+
+      {/* Docked shell: criteria | map | details. Panels stay mounted while scoring. */}
+      <main className="relative flex min-h-0 flex-1">
+        {ready && <CriteriaPanel />}
+        <div className="relative min-w-0 flex-1">
+          {/* Mounted only once the city config and persisted stores are ready:
+              avoids SSR/hydration mismatches from localStorage-backed state, and
+              the map's initial view is the right city, not the fallback. */}
+          {ready && <MapView />}
+        </div>
+      </main>
+    </div>
   );
 }

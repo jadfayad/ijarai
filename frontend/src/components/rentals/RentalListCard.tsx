@@ -178,7 +178,7 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
     listings.length < EXPAND_THRESHOLD;
 
   return (
-    <div className="absolute top-14 right-4 z-30 w-[360px] max-h-[calc(100vh-7rem)] bg-[rgba(14,14,24,0.92)] backdrop-blur-2xl border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
 
       {/* Header: area name + overall score */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-white/[0.06]">

@@ -9,7 +9,6 @@ import {
   Square,
   SquarePen,
   Trash2,
-  X,
 } from "lucide-react";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
@@ -40,7 +39,7 @@ function ThinkingIndicator() {
  * the sidebar so criteria and chat can coexist without competing for space.
  * Collapses to a small pill when idle; auto-expands on new turns.
  */
-export function FloatingChat() {
+export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
   const { messages, isThinking, currentPlan, chatOpen } =
     useCurrentCityAgentSlice();
   const setChatOpen = useAgentStore((s) => s.setChatOpen);
@@ -136,13 +135,17 @@ export function FloatingChat() {
 
   const hasMessages = messages.length > 0;
 
-  // Collapsed pill — always reachable bottom-right.
-  if (!chatOpen) {
+  // Pill lives on the map; the panel lives in the right dock. Each renders only
+  // in its own state so the two never show at once.
+  if (mode === "panel" && !chatOpen) return null;
+  if (mode === "pill" && chatOpen) return null;
+
+  if (mode === "pill") {
     return (
       <button
         onClick={() => setChatOpen(true)}
         aria-label={hasMessages ? `Open assistant · ${messages.length} messages` : "Open assistant"}
-        className="absolute bottom-5 right-4 z-30 flex items-center gap-2 rounded-full border border-white/[0.14] bg-[rgba(14,14,24,0.82)] backdrop-blur-2xl px-3.5 py-2 shadow-2xl shadow-black/40 hover:bg-[rgba(22,22,36,0.9)] hover:border-white/[0.22] transition-all duration-200 group animate-in fade-in slide-in-from-bottom-2"
+        className="flex h-11 items-center gap-2 rounded-xl border border-white/[0.14] bg-[rgba(14,14,24,0.82)] backdrop-blur-2xl px-3.5 py-2 shadow-2xl shadow-black/40 hover:bg-[rgba(22,22,36,0.9)] hover:border-white/[0.22] transition-all duration-200 group animate-in fade-in slide-in-from-bottom-2"
       >
         <div className="relative">
           <MessageSquare
@@ -166,10 +169,8 @@ export function FloatingChat() {
   }
 
   return (
-    <div className="absolute bottom-5 right-4 z-30 w-[380px] max-h-[calc(100vh-5rem)] flex flex-col overflow-hidden rounded-2xl shadow-2xl shadow-black/40 animate-in slide-in-from-bottom-4 fade-in duration-300">
-      <div className="absolute inset-0 bg-gradient-to-b from-[rgba(18,18,30,0.88)] to-[rgba(10,10,18,0.92)] backdrop-blur-2xl rounded-2xl border border-white/[0.1]" />
-
-      <div className="relative z-10 flex flex-col h-full max-h-[calc(100vh-5rem)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="relative z-10 flex flex-col h-full min-h-0">
         {/* Header */}
         <div className="p-3.5 pb-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -213,21 +214,13 @@ export function FloatingChat() {
             >
               <ChevronDown size={15} />
             </button>
-            <button
-              onClick={() => setChatOpen(false)}
-              aria-label="Close assistant"
-              title="Close"
-              className="text-white/40 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.08] transition-all sr-only"
-            >
-              <X size={15} />
-            </button>
           </div>
         </div>
 
         <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
 
         {/* Transcript */}
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 min-h-[200px] max-h-[55vh]">
+        <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 min-h-0">
           {!hasMessages && !isThinking ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-8">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">

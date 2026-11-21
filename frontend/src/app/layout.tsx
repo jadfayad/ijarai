@@ -3,8 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import { TravelOverlay } from "@/components/ui/travel-overlay";
-import { Home } from "lucide-react";
-import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,13 +32,6 @@ export default function RootLayout({
       className={`dark ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="font-sans antialiased">
-        <Link
-          href="/"
-          className="fixed top-4 left-4 z-50 flex items-center gap-2 rounded-lg bg-background/80 px-3 py-1.5 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
-        >
-          <Home className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold tracking-tight">IJAR.AI</span>
-        </Link>
         <TooltipProvider>{children}</TooltipProvider>
         <TravelOverlay />
         <Toaster />

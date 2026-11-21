@@ -27,7 +27,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
-import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
+import { useAgentStore } from "@/stores/agent-store";
 import { fetchCellEvidence } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MapLegend } from "./MapLegend";
+import { RightDock } from "./RightDock";
 import { ScoringOverlay } from "./ScoringOverlay";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
@@ -178,7 +179,6 @@ export function MapView() {
   const evidenceAbortRef = useRef<AbortController | null>(null);
   const activeInspector =
     inspector && inspector.cellId === selectedCellId ? inspector : null;
-  const areaName = activeInspector?.areaName ?? null;
   const clickedCenter = activeInspector?.center ?? null;
   const cellEvidence = activeInspector?.evidence ?? null;
 
@@ -201,6 +201,12 @@ export function MapView() {
       ...f.properties,
     };
   }, [selectedCellId, scoreData]);
+
+  // Click-time name (zone or reverse-geocoded) first; for a restored/deep-linked
+  // selection fall back to the zone name carried on the cell itself.
+  const areaName =
+    activeInspector?.areaName ??
+    ((selectedCellProperties?.zone_name as string | undefined) || null);
 
   const scoreRange = useMemo(() => {
     if (!scoreData?.features?.length) return { min: 0, max: 1 };
@@ -375,7 +381,6 @@ export function MapView() {
   const selectedListingId = useRentalStore((s) => s.selectedListingId);
   const selectListing = useRentalStore((s) => s.selectListing);
 
-  const { chatOpen } = useCurrentCityAgentSlice();
   const setChatOpen = useAgentStore((s) => s.setChatOpen);
 
   // Previous heatmap stays visible while a new score is computing.
@@ -471,8 +476,9 @@ export function MapView() {
   }, [setSelectedCellId, clearRentals]);
 
   return (
+    <div className="relative flex h-full w-full">
     <div
-      className={`relative w-full h-full map-root ${
+      className={`relative h-full min-w-0 flex-1 map-root ${
         selectedCellId ? "cell-focused" : ""
       }`}
     >
@@ -586,46 +592,25 @@ export function MapView() {
         </Map>
       </DeckGL>
 
-      {(
-        <RentalListCard
-          // Chat and cell card share the right edge; while chat is open the card
-          // is hidden but the selection is kept, so closing chat brings it back.
-          cellProperties={chatOpen ? null : selectedCellProperties}
-          areaName={areaName}
-          criterionLabels={scoreData?.criterion_labels}
-          onCellClose={handleCellClose}
-        />
-      )}
-
-      {scoreData && (
-        <MapLegend
-          visibleCount={visibleCount}
-          totalCount={totalCount}
-          threshold={scoreThreshold}
-        />
-      )}
-
-      <FloatingChat />
       <WelcomeChat />
 
-      {scoreData && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 min-w-[340px] max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="bg-[rgba(12,12,20,0.8)] backdrop-blur-2xl rounded-2xl px-6 py-4 shadow-2xl shadow-black/30 border border-white/[0.1]">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Filter size={13} className="text-white/30" />
-                <span className="text-[11px] font-medium text-white/40 uppercase tracking-wider">
-                  Min score
+      {/* Map footer: a single row that wraps on narrow widths instead of
+          stacking floating cards on top of each other. */}
+      <div className="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex flex-wrap items-end justify-between gap-3">
+        {scoreData ? (
+          <div className="pointer-events-auto w-[260px] rounded-xl border border-white/[0.1] bg-[rgba(12,12,20,0.88)] px-3.5 py-3 shadow-2xl shadow-black/30 backdrop-blur-2xl">
+            <MapLegend visibleCount={visibleCount} totalCount={totalCount} threshold={scoreThreshold} />
+            <div className="mt-3 border-t border-white/[0.08] pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-white/60">
+                  <Filter size={12} aria-hidden />
+                  Hide areas below
+                </span>
+                <span className="text-xs font-semibold tabular-nums text-white">
+                  {Math.round(scoreThreshold * 100)}%
                 </span>
               </div>
-              <span className="text-sm font-semibold tabular-nums text-white">
-                {Math.round(scoreThreshold * 100)}%
-                <span className="text-white/30 font-normal text-xs ml-1.5">
-                  ({visibleCount}/{totalCount})
-                </span>
-              </span>
-            </div>
-            <Slider
+              <Slider
               value={[scoreThreshold]}
               onValueChange={(val) => {
                 const v = Array.isArray(val) ? val[0] : val;
@@ -635,14 +620,14 @@ export function MapView() {
               max={scoreRange.max}
               step={0.01}
             />
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <span />
+        )}
 
-      {(
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="pointer-events-auto flex items-stretch gap-2.5">
-            <Select
+        <div className="pointer-events-auto flex flex-wrap items-stretch justify-end gap-2.5">
+          <Select
               value={gridResolution}
               onValueChange={(v) => setGridResolution(v as GridResolution)}
             >
@@ -688,10 +673,10 @@ export function MapView() {
               </SelectContent>
             </Select>
 
-            {!hasActiveCriteria ? (
-              <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 text-sm font-medium text-white/35 cursor-not-allowed select-none">
+          {!hasActiveCriteria ? (
+              <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 whitespace-nowrap text-sm font-medium text-white/60 cursor-not-allowed select-none">
                 <Sparkles size={14} className="text-white/25" />
-                Enable criteria first
+                Add a criterion to score
               </div>
             ) : (
               <Button
@@ -705,11 +690,27 @@ export function MapView() {
                 </span>
               </Button>
             )}
-          </div>
+
+          <FloatingChat mode="pill" />
         </div>
-      )}
+      </div>
 
       <ScoringOverlay />
+    </div>
+
+    <RightDock
+      area={
+        selectedCellProperties ? (
+          <RentalListCard
+            cellProperties={selectedCellProperties}
+            areaName={areaName}
+            criterionLabels={scoreData?.criterion_labels}
+            onCellClose={handleCellClose}
+          />
+        ) : null
+      }
+      onCloseArea={handleCellClose}
+    />
     </div>
   );
 }
