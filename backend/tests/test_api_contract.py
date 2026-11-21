@@ -189,3 +189,16 @@ def test_agent_provider_crash_ends_with_error_frame(monkeypatch):
     events = _parse_sse(r.text)
     assert events[-1][0] == "error"
     assert events[-1][1]["code"] == "server_error"
+
+
+def test_committed_grids_are_current():
+    """Stale grids get regenerated (and rewritten into app/data) on first use in
+    every fresh process. Run scripts/regenerate_grids.py after grid changes."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "regenerate_grids", Path(__file__).resolve().parents[1] / "scripts/regenerate_grids.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.stale_grids() == []
