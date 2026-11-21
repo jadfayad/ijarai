@@ -11,9 +11,10 @@ coordinates, so each search is a two-step flow:
 The area name typically comes from the frontend (Mapbox reverse geocode on
 the clicked hex). If missing, we fall back to Nominatim reverse geocoding.
 
-Failures (missing key, upstream errors, unknown response shapes) all degrade
-to ``[]`` so the UI remains responsive. Warning logs surface the first
-unknown shape so the parser can be tweaked against real responses.
+Transient failures (missing key, network/upstream errors) raise
+``RentalProviderUnavailable`` and are never cached; only successful searches
+(including genuinely empty ones) are. Warning logs surface unknown response
+shapes so the parser can be tweaked against real responses.
 
 Env-var overrides (for iterating against the live API without editing code):
 - ``PROPERTYFINDER_API_HOST`` (default: ``propertyfinder-uae-data.p.rapidapi.com``)
@@ -30,7 +31,12 @@ import httpx
 from cachetools import TTLCache
 
 from app.services.rentals.base import RentalProvider
-from app.services.rentals.types import RentalListing, RentalSearchQuery
+from app.services.rentals.types import (
+    ProviderPage,
+    RentalListing,
+    RentalProviderUnavailable,
+    RentalSearchQuery,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +46,14 @@ _DEFAULT_AUTOCOMPLETE_PATH = "/autocomplete-location"
 _NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 _HTTP_TIMEOUT = 30.0
 
-# Listing cache: (city_slug, hex_id, area_name_or_none, limit) → listings.
-# Cache key = (city_slug, hex_id, area_name, limit, *filters). The filters
-# are part of the key so two searches at the same hex with different
-# budgets/bedrooms return distinct results.
-_search_cache: TTLCache[tuple, list[RentalListing]] = TTLCache(maxsize=256, ttl=3600)
-# location_id cache: lowercased area query → location_id.
-_autocomplete_cache: TTLCache[str, int | str | None] = TTLCache(maxsize=512, ttl=3600)
+# Page cache: (city_slug, hex_id, area_name, limit, page, *filters) → page.
+# The filters are part of the key so two searches at the same hex with
+# different budgets/bedrooms return distinct results. Failures are not cached.
+_search_cache: TTLCache[tuple, ProviderPage] = TTLCache(maxsize=256, ttl=3600)
+# location cache: lowercased area query → (location_id, location name) | None.
+_autocomplete_cache: TTLCache[str, tuple[int | str, str | None] | None] = TTLCache(
+    maxsize=512, ttl=3600
+)
 # reverse-geocode cache: rounded (lat, lng) → area name.
 _reverse_geo_cache: TTLCache[tuple[float, float], str | None] = TTLCache(
     maxsize=512, ttl=3600
@@ -90,13 +97,29 @@ def _find_first_list(payload: Any) -> list[Any]:
     return []
 
 
-def _extract_location_id(payload: Any) -> int | str | None:
-    """Extract the top autocomplete result's location_id."""
+def _extract_location(payload: Any) -> tuple[int | str, str | None] | None:
+    """Extract the top autocomplete result's (location_id, name)."""
     items = _find_first_list(payload)
     if not items:
         return None
     top = items[0]
-    return _first(top, "location_id", "id", "value", "code")
+    location_id = _first(top, "location_id", "id", "value", "code")
+    if location_id is None:
+        return None
+    name = _first(top, "name", "full_name", "title", "label")
+    return location_id, (str(name) if name else None)
+
+
+def _extract_total(payload: Any) -> int | None:
+    """Best-effort total match count; PropertyFinder's schema doesn't define one."""
+    if not isinstance(payload, dict):
+        return None
+    for container in (payload, payload.get("meta"), payload.get("pagination")):
+        if isinstance(container, dict):
+            v = _first(container, "total", "total_count", "totalCount", "count")
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return int(v)
+    return None
 
 
 def _parse_listing(raw: dict[str, Any]) -> RentalListing | None:
@@ -164,7 +187,10 @@ def _parse_listing(raw: dict[str, Any]) -> RentalListing | None:
 
 
 async def _reverse_geocode(lat: float, lng: float) -> str | None:
-    """Return a neighborhood-level name for (lat, lng) via Nominatim, or None."""
+    """Return a neighborhood-level name for (lat, lng) via Nominatim, or None.
+
+    Raises RentalProviderUnavailable when Nominatim itself fails (not cached).
+    """
     key = (round(lat, 4), round(lng, 4))
     if key in _reverse_geo_cache:
         return _reverse_geo_cache[key]
@@ -179,8 +205,7 @@ async def _reverse_geocode(lat: float, lng: float) -> str | None:
             data = resp.json()
     except Exception as e:  # noqa: BLE001
         logger.warning("Nominatim reverse geocode failed: %s", e)
-        _reverse_geo_cache[key] = None
-        return None
+        raise RentalProviderUnavailable("reverse geocode failed") from e
 
     address = data.get("address") or {}
     name = (
@@ -230,7 +255,7 @@ class PropertyFinderProvider(RentalProvider):
 
     async def _autocomplete_location(
         self, client: httpx.AsyncClient, query: str
-    ) -> int | str | None:
+    ) -> tuple[int | str, str | None] | None:
         key = query.strip().lower()
         if not key:
             return None
@@ -247,37 +272,35 @@ class PropertyFinderProvider(RentalProvider):
                 "PropertyFinder autocomplete %s for query=%r: %s",
                 e.response.status_code, query, e.response.text[:400],
             )
-            _autocomplete_cache[key] = None
-            return None
+            raise RentalProviderUnavailable("autocomplete failed") from e
         except Exception as e:  # noqa: BLE001
             logger.warning("PropertyFinder autocomplete failed: %s", e)
-            _autocomplete_cache[key] = None
-            return None
+            raise RentalProviderUnavailable("autocomplete failed") from e
 
-        location_id = _extract_location_id(payload)
-        if location_id is None and isinstance(payload, dict):
+        location = _extract_location(payload)
+        if location is None and isinstance(payload, dict):
             logger.warning(
                 "PropertyFinder autocomplete: no location_id in response; top-level keys=%s",
                 list(payload.keys())[:10],
             )
         else:
             logger.info(
-                "PropertyFinder autocomplete: %r -> location_id=%s", query, location_id
+                "PropertyFinder autocomplete: %r -> location=%s", query, location
             )
-        _autocomplete_cache[key] = location_id
-        return location_id
+        _autocomplete_cache[key] = location
+        return location
 
     async def _search_rent(
         self,
         client: httpx.AsyncClient,
         location_id: int | str,
         query: RentalSearchQuery,
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], int | None]:
         url = f"https://{self._host}{self._search_path}"
         params: dict[str, Any] = {
             "location_id": location_id,
             "sort": "newest",
-            "page": 1,
+            "page": query.page,
         }
         if query.property_type:
             params["property_type"] = query.property_type
@@ -308,10 +331,10 @@ class PropertyFinderProvider(RentalProvider):
                 "PropertyFinder search-rent %s (params=%s): %s",
                 e.response.status_code, params, e.response.text[:400],
             )
-            return []
+            raise RentalProviderUnavailable("search failed") from e
         except Exception as e:  # noqa: BLE001
             logger.warning("PropertyFinder search-rent failed: %s", e)
-            return []
+            raise RentalProviderUnavailable("search failed") from e
 
         items = _find_first_list(payload)
         if not items and isinstance(payload, dict):
@@ -319,16 +342,16 @@ class PropertyFinderProvider(RentalProvider):
                 "PropertyFinder search-rent: no listings list found; top-level keys=%s",
                 list(payload.keys())[:10],
             )
-        return items[: query.limit]
+        return items[: query.limit], _extract_total(payload)
 
-    async def search(self, query: RentalSearchQuery) -> list[RentalListing]:
+    async def search(self, query: RentalSearchQuery) -> ProviderPage:
         if not self._api_key:
-            logger.info("RAPIDAPI_KEY not set; returning empty rental results")
-            return []
+            logger.info("RAPIDAPI_KEY not set; rental search unavailable")
+            raise RentalProviderUnavailable("RAPIDAPI_KEY not set")
 
         # Filters change results, so they must be part of the cache key.
         cache_key = (
-            query.city_slug, query.hex_id, query.area_name, query.limit,
+            query.city_slug, query.hex_id, query.area_name, query.limit, query.page,
             query.property_type, query.bedrooms_csv, query.bathrooms_csv,
             query.area_min_sqft, query.area_max_sqft,
             query.furnishing, query.amenities_csv, query.price_max_monthly,
@@ -340,21 +363,22 @@ class PropertyFinderProvider(RentalProvider):
         if not area_name:
             fallback = await _reverse_geocode(query.center_lat, query.center_lng)
             if not fallback:
-                logger.info(
-                    "No area_name and reverse geocode failed for hex %s", query.hex_id
-                )
-                _search_cache[cache_key] = []
-                return []
+                logger.info("No area name found for hex %s", query.hex_id)
+                page = ProviderPage()
+                _search_cache[cache_key] = page
+                return page
             area_name = fallback
 
         async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-            location_id = await self._autocomplete_location(client, area_name)
-            if location_id is None:
+            location = await self._autocomplete_location(client, area_name)
+            if location is None:
                 logger.info("PropertyFinder: no location_id for '%s'", area_name)
-                _search_cache[cache_key] = []
-                return []
+                page = ProviderPage(resolved_area=area_name)
+                _search_cache[cache_key] = page
+                return page
+            location_id, location_name = location
 
-            raw_items = await self._search_rent(client, location_id, query)
+            raw_items, total = await self._search_rent(client, location_id, query)
 
         listings: list[RentalListing] = []
         for raw in raw_items:
@@ -368,5 +392,14 @@ class PropertyFinderProvider(RentalProvider):
             "PropertyFinder: '%s' (location_id=%s) → %d listings",
             area_name, location_id, len(listings),
         )
-        _search_cache[cache_key] = listings
-        return listings
+        seen = (query.page - 1) * query.limit + len(raw_items)
+        page = ProviderPage(
+            listings=listings,
+            resolved_area=location_name or area_name,
+            total=total,
+            # No total in PropertyFinder's schema: a non-empty page may have a
+            # successor; an empty "next" page ends it.
+            has_more=(total > seen) if total is not None else bool(raw_items),
+        )
+        _search_cache[cache_key] = page
+        return page

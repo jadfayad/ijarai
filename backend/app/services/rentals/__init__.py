@@ -12,7 +12,9 @@ from collections.abc import Callable
 from app.city_config import CityConfig
 from app.services.rentals.base import RentalProvider
 from app.services.rentals.types import (
+    ProviderPage,
     RentalListing,
+    RentalProviderUnavailable,
     RentalSearchQuery,
     RentalSearchResponse,
 )
@@ -47,7 +49,9 @@ def get_rental_provider(city: CityConfig) -> RentalProvider | None:
 
 
 __all__ = [
+    "ProviderPage",
     "RentalProvider",
+    "RentalProviderUnavailable",
     "RentalListing",
     "RentalSearchQuery",
     "RentalSearchResponse",
