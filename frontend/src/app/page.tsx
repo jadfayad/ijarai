@@ -5,24 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import { skylines } from "@/components/Skylines";
 import { useTravelStore } from "@/stores/travel-store";
+import { AVAILABLE_CITIES, UPCOMING_CITIES, type CityEntry } from "@/lib/cities";
 
 const LAST_CITY_KEY = "optim_house.last_city_slug";
 
-const cities = [
-  { name: "Dubai", slug: "dubai", country: "UAE", available: true },
-  { name: "San Francisco", slug: "san-francisco", country: "USA", available: true },
-  { name: "New York", slug: "new-york", country: "USA", available: false },
-  { name: "London", slug: "london", country: "UK", available: false },
-  { name: "Singapore", slug: "singapore", country: "Singapore", available: false },
-  { name: "Hong Kong", slug: "hong-kong", country: "China", available: false },
-  { name: "Tokyo", slug: "tokyo", country: "Japan", available: false },
-  { name: "Sydney", slug: "sydney", country: "Australia", available: false },
-  { name: "Paris", slug: "paris", country: "France", available: true },
-  { name: "Montreal", slug: "montreal", country: "Canada", available: true },
-  { name: "Toronto", slug: "toronto", country: "Canada", available: false },
-];
-
-type City = (typeof cities)[number];
+type City = CityEntry;
 
 export default function LandingPage() {
   const router = useRouter();
@@ -34,7 +21,7 @@ export default function LandingPage() {
     try {
       const slug = window.localStorage.getItem(LAST_CITY_KEY);
       if (!slug) return;
-      const found = cities.find((c) => c.slug === slug && c.available);
+      const found = AVAILABLE_CITIES.find((c) => c.slug === slug);
       // Hydrating persisted client-only state — one-shot on mount.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (found) setLastCity(found);
@@ -104,51 +91,39 @@ export default function LandingPage() {
           <p className="text-center text-xs font-medium text-muted-foreground/60 uppercase tracking-[0.2em]">
             Where are you looking?
           </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {cities.map((city) => {
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {AVAILABLE_CITIES.map((city) => {
               const Skyline = skylines[city.slug];
               return (
                 <button
                   key={city.slug}
+                  type="button"
                   onClick={() => handleCityClick(city)}
-                  className={`group relative flex flex-col items-center overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 ${
-                    city.available
-                      ? "border-primary/30 bg-primary/[0.04] hover:border-primary/60 hover:bg-primary/[0.08] hover:scale-[1.04] cursor-pointer shadow-lg shadow-primary/[0.04] hover:shadow-xl hover:shadow-primary/10"
-                      : "border-border/50 bg-card/50 cursor-default"
-                  }`}
+                  disabled={transitioning}
+                  className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-primary/30 bg-primary/[0.04] backdrop-blur-sm shadow-lg shadow-primary/[0.04] transition-all duration-300 hover:border-primary/60 hover:bg-primary/[0.08] hover:scale-[1.04] hover:shadow-xl hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none motion-reduce:hover:scale-100"
                 >
-                  <div className={`relative w-full flex items-end justify-center pt-5 px-4 h-24 ${
-                    city.available ? "text-primary/40 group-hover:text-primary/60" : "text-muted-foreground/15"
-                  } transition-colors duration-300`}>
+                  <div className="relative w-full flex items-end justify-center pt-5 px-4 h-24 text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
                     {Skyline && <Skyline className="w-full h-16" />}
                   </div>
-
                   <div className="relative w-full px-4 pb-4 pt-2 text-center">
-                    <span className={`text-sm font-semibold tracking-tight ${
-                      city.available ? "text-foreground" : "text-muted-foreground/50"
-                    }`}>
+                    <span className="text-sm font-semibold tracking-tight text-foreground">
                       {city.name}
                     </span>
-                    <span className={`block text-[10px] uppercase tracking-widest mt-0.5 ${
-                      city.available ? "text-muted-foreground" : "text-muted-foreground/30"
-                    }`}>
+                    <span className="block text-xs uppercase tracking-widest mt-0.5 text-muted-foreground">
                       {city.country}
                     </span>
                   </div>
-
-                  {!city.available && (
-                    <span className="absolute top-2.5 right-2.5 rounded-md bg-muted/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                      Soon
-                    </span>
-                  )}
-
-                  {city.available && (
-                    <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-primary/10 group-hover:ring-primary/20 transition-all duration-300" />
-                  )}
                 </button>
               );
             })}
           </div>
+
+          {UPCOMING_CITIES.length > 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              <span className="font-medium">Coming soon:</span>{" "}
+              {UPCOMING_CITIES.map((c) => c.name).join(" · ")}
+            </p>
+          )}
         </div>
       </div>
 

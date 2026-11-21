@@ -8,7 +8,7 @@ from app.api.geocode import router as geocode_router
 from app.api.agent import router as agent_router
 from app.api.rentals import router as rentals_router
 from app.api.cell_evidence import router as cell_evidence_router
-from app.city_config import get_city, get_active_city
+from app.city_config import CITIES, get_city, get_active_city
 from app.errors import install_error_handlers
 from app.models.schemas import CityConfigResponse
 from app.services.static_data import get_city_average_utility_cost
@@ -36,6 +36,20 @@ app.include_router(cell_evidence_router, prefix="/api")
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/cities")
+async def list_cities():
+    """Cities the backend can score, with the capabilities the UI needs up front."""
+    return [
+        {
+            "slug": c.slug,
+            "name": c.name,
+            "country_code": c.country_code,
+            "has_rentals": c.rental_provider is not None,
+        }
+        for c in CITIES.values()
+    ]
 
 
 @app.get("/api/city", response_model=CityConfigResponse)
