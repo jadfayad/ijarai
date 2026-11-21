@@ -41,7 +41,6 @@ import { RightDock } from "./RightDock";
 import { scoreToRgb } from "@/lib/score-scale";
 import { ScoreAction } from "./ScoreAction";
 import { FloatingChat } from "@/components/agent/FloatingChat";
-import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import { RentalListCard } from "@/components/rentals/RentalListCard";
 import { RentalPriceMarker } from "@/components/map/RentalPriceMarker";
 import { POIMarker } from "@/components/map/POIMarker";
@@ -563,8 +562,6 @@ export function MapView() {
           ))}
         </Map>
       </DeckGL>
-
-      <WelcomeChat />
 
       {/* Map footer: a single row that wraps on narrow widths instead of
           stacking floating cards on top of each other. */}

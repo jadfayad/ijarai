@@ -10,7 +10,7 @@ import { useScenarioStore } from "@/stores/scenario-store";
  * of empty-state UI is ready: both persisted stores have rehydrated and the
  * city config has loaded from the backend.
  *
- * Prevents the WelcomeChat hero from briefly appearing on refresh when a
+ * Prevents first-visit UI (the assistant welcome) from briefly appearing on refresh when a
  * user already has criteria or a conversation saved.
  */
 // Safe on the server: persist middleware is only wired on the client, so

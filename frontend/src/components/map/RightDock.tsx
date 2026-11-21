@@ -1,9 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { MapPin, MessageSquare, X } from "lucide-react";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
 import { FloatingChat } from "@/components/agent/FloatingChat";
+import { useCriteriaStore } from "@/stores/criteria-store";
+import { useScenarioStore } from "@/stores/scenario-store";
 
 /**
  * Right-hand dock shared by the area inspector and the assistant.
@@ -16,8 +18,21 @@ import { FloatingChat } from "@/components/agent/FloatingChat";
  * Docked beside the map on large screens; overlays the map below `lg`.
  */
 export function RightDock({ area, onCloseArea }: { area: ReactNode | null; onCloseArea: () => void }) {
-  const { chatOpen, isThinking } = useCurrentCityAgentSlice();
+  const { chatOpen, isThinking, messages, heroDismissed } = useCurrentCityAgentSlice();
   const setChatOpen = useAgentStore((s) => s.setChatOpen);
+  const dismissHero = useAgentStore((s) => s.dismissHero);
+  const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
+  const hasCriteria = useCriteriaStore((s) => s.criteria.length > 0);
+  const hasScenarios = useScenarioStore((s) => s.scenarios.some((sc) => sc.city === citySlug));
+
+  // First visit to a city: greet with the assistant (its empty state offers
+  // profiles and a prompt) instead of a modal over the map. Only once.
+  const firstVisit = !heroDismissed && !hasScenarios && !hasCriteria && messages.length === 0;
+  useEffect(() => {
+    if (!firstVisit) return;
+    setChatOpen(true);
+    dismissHero();
+  }, [firstVisit, setChatOpen, dismissHero]);
 
   const tab: "area" | "assistant" | null = chatOpen ? "assistant" : area ? "area" : null;
   if (!tab) return null;

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  MapPin,
   MessageSquare,
   Send,
   Sparkles,
@@ -10,7 +11,8 @@ import {
   SquarePen,
   Trash2,
 } from "lucide-react";
-import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
+import { selectedFocusArea, useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
+import { personasFor, placeholderFor } from "./personas";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useScenarioStore } from "@/stores/scenario-store";
 import { AgentMessageBubble } from "./AgentMessage";
@@ -46,9 +48,12 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
   const sendMessage = useAgentStore((s) => s.sendMessage);
   const stopAgent = useAgentStore((s) => s.stopAgent);
   const clearConversation = useAgentStore((s) => s.clearConversation);
-  // Heatmap generation locks the chat too — don't let the user start a new
-  // agent turn while the scoring is in flight.
-  const heatmapLoading = useCriteriaStore((s) => s.loading);
+  const cityName = useCriteriaStore((s) => s.cityConfig.name);
+  // Re-derive the focus area whenever the selection or heatmap changes.
+  const selectedCellId = useCriteriaStore((s) => s.selectedCellId);
+  const scoreData = useCriteriaStore((s) => s.scoreData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedFocusArea reads these from the store
+  const focus = useMemo(() => selectedFocusArea(), [selectedCellId, scoreData]);
   const citySlug = useCriteriaStore((s) => s.cityConfig.slug);
   const startNewScenario = useScenarioStore((s) => s.startNewScenario);
   const activeScenarioName = useScenarioStore((s) => {
@@ -89,7 +94,7 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed || isThinking || heatmapLoading) return;
+    if (!trimmed || isThinking) return;
     sendMessage(trimmed);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -222,17 +227,35 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
         {/* Transcript */}
         <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 min-h-0">
           {!hasMessages && !isThinking ? (
-            <div className="h-full flex flex-col items-center justify-center text-center py-8">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-                <Sparkles size={20} className="text-primary/50" />
+            // Welcome: the single entry point for describing what you want.
+            <div className="flex flex-col gap-4 py-2">
+              <div className="text-center">
+                <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15">
+                  <Sparkles size={18} className="text-primary" aria-hidden />
+                </div>
+                <p className="text-sm font-semibold text-white">Where should you live in {cityName}?</p>
+                <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-white/60">
+                  Describe what matters to you and I&apos;ll set up your criteria. Or start from a profile:
+                </p>
               </div>
-              <p className="text-[13px] font-medium text-white/55 mb-1">
-                Ask about your search
-              </p>
-              <p className="text-[11px] text-white/25 max-w-[240px] leading-relaxed">
-                Describe what you want and I&apos;ll add matching criteria to
-                your panel.
-              </p>
+              <div className="space-y-2">
+                {personasFor(citySlug).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => sendMessage(p.prompt)}
+                    className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                      <p.icon size={14} aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-white">{p.label}</span>
+                      <span className="block text-xs text-white/60">{p.sub}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <>
@@ -253,26 +276,23 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
         {/* Input */}
         <div className="mx-3.5 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
         <div className="p-3">
-          <div
-            className={`flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-all ${
-              heatmapLoading ? "opacity-50 pointer-events-none" : ""
-            }`}
-            aria-busy={heatmapLoading}
-          >
+          {focus && (
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-white/70">
+              <MapPin size={12} className="shrink-0 text-primary" aria-hidden />
+              <span className="truncate">
+                Asking about <span className="font-medium text-white">{focus.name ?? "the selected area"}</span>
+                {focus.score !== null && ` · ${Math.round(focus.score * 100)}% match`}
+              </span>
+            </p>
+          )}
+          <div className="flex items-end gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 focus-within:border-primary/30 transition-all">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder={
-                heatmapLoading
-                  ? "Generating heatmap…"
-                  : hasMessages
-                    ? "Ask a follow-up…"
-                    : "Ask about areas, budgets, commutes…"
-              }
+              placeholder={hasMessages ? "Ask a follow-up…" : placeholderFor(citySlug)}
               rows={1}
-              disabled={heatmapLoading}
               aria-label="Message the AI assistant"
               className="flex-1 bg-transparent text-[13px] text-white placeholder:text-white/25 resize-none outline-none max-h-[120px] leading-relaxed py-0.5 disabled:cursor-not-allowed"
             />
@@ -288,7 +308,7 @@ export function FloatingChat({ mode }: { mode: "pill" | "panel" }) {
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || heatmapLoading}
+                disabled={!input.trim()}
                 aria-label="Send message"
                 className="p-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-30 disabled:hover:bg-primary/20 transition-all shrink-0"
               >
