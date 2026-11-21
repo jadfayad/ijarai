@@ -369,10 +369,26 @@ export interface RentalListing {
   external_url?: string | null;
   property_type?: string | null;
   source: string;
+  /** Price normalised to one month (yearly / 12, …); null when unknown. */
+  price_monthly?: number | null;
 }
+
+/**
+ * ok: listings found · empty: searched, nothing matched · unavailable: the
+ * provider failed (retryable) · no_provider: this city has no rental source.
+ */
+export type RentalSearchStatus = "ok" | "empty" | "unavailable" | "no_provider";
 
 export interface RentalSearchResponse {
   hex_id: string;
+  status: RentalSearchStatus;
+  /** Results include ring-1 neighbour cells. */
+  expanded: boolean;
+  /** The area the provider actually searched, e.g. "Dubai Marina". */
+  resolved_area?: string | null;
+  total?: number | null;
+  page: number;
+  has_more: boolean;
   count: number;
   listings: RentalListing[];
 }

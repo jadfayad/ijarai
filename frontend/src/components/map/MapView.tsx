@@ -664,6 +664,7 @@ export function MapView() {
       area={
         selectedCellProperties ? (
           <RentalListCard
+            key={String(selectedCellProperties.cell_id ?? "")}
             cellProperties={selectedCellProperties}
             areaName={areaName}
             criterionLabels={scoreData?.criterion_labels}

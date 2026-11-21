@@ -4,7 +4,6 @@ import type {
   ScoreProgressEvent,
   CityConfig,
   AgentResearchRequest,
-  AgentResearchResponse,
   AgentStreamEvent,
   RentalSearchResponse,
   CellEvidence,
@@ -160,8 +159,10 @@ export async function searchRentalsInHex(
   areaName?: string | null,
   filters?: RentalFilters,
   signal?: AbortSignal,
+  page = 1,
 ): Promise<RentalSearchResponse> {
   const q = new URLSearchParams({ city: citySlug, hex_id: hexId });
+  if (page > 1) q.set("page", String(page));
   if (areaName) q.set("area_name", areaName);
   if (filters) {
     if (filters.property_type) q.set("property_type", filters.property_type);
