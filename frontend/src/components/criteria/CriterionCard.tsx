@@ -303,18 +303,16 @@ function OriginCornerDot({ origin }: { origin: CriterionConfig["origin"] }) {
     origin === "agent"
       ? "bg-violet-500/90 text-white"
       : "bg-primary text-white";
+  // Decorative marker inside the expand toggle — must not be interactive
+  // (a nested button is invalid HTML). The origin is in the toggle's label.
   return (
-    <Tooltip>
-      <TooltipTrigger
-        aria-label={label}
-        className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-[rgba(14,14,24,0.97)] ${tint}`}
-      >
-        <Icon size={8} strokeWidth={2.5} />
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        {label}
-      </TooltipContent>
-    </Tooltip>
+    <span
+      aria-hidden
+      title={label}
+      className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-[rgba(14,14,24,0.97)] ${tint}`}
+    >
+      <Icon size={8} strokeWidth={2.5} />
+    </span>
   );
 }
 
@@ -395,7 +393,9 @@ export function CriterionCard({ criterion }: Props) {
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
-            aria-label={expanded ? `Collapse ${criterion.label}` : `Expand ${criterion.label}`}
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${criterion.label}${
+              criterion.origin === "agent" ? " (added by AI)" : criterion.origin && criterion.origin !== "manual" ? " (added by wizard)" : ""
+            }`}
             className="w-full min-w-0 flex items-center gap-2.5 text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="relative shrink-0">

@@ -11,6 +11,7 @@ import type {
   CriterionDeletedEvent,
   TokenUsage,
   ChatTurn,
+  CriterionConfig,
   FocusArea,
 } from "@/lib/types";
 
@@ -64,6 +65,10 @@ export interface AgentMessage {
   plan?: AgentTodo[];
   /** Local status line (stopped / error / dropped connection) — not sent as history. */
   isNotice?: boolean;
+  /** Criteria as they were before this reply changed them (set only if it did). */
+  criteriaBefore?: CriterionConfig[];
+  /** The user undid this reply's changes. */
+  reverted?: boolean;
 }
 
 function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
@@ -131,6 +136,17 @@ function newId(prefix: string): string {
 
 function agentMessage(content: string, extra?: Partial<AgentMessage>): AgentMessage {
   return { id: newId("msg"), role: "agent", content, timestamp: Date.now(), ...extra };
+}
+
+/** Plain-language fallback when the agent returns no summary text. */
+export function describeOps(added: number, updated: number, removed: number, addedLabels: string[]): string {
+  const parts: string[] = [];
+  if (added) parts.push(`Added ${added} ${added === 1 ? "criterion" : "criteria"}${addedLabels.length ? `: ${addedLabels.join(", ")}` : ""}`);
+  if (updated) parts.push(`updated ${updated}`);
+  if (removed) parts.push(`removed ${removed}`);
+  if (!parts.length) return "I couldn't find anything to change for that request.";
+  const text = parts.join("; ");
+  return text.charAt(0).toUpperCase() + text.slice(1) + ".";
 }
 
 function noticeMessage(content: string): AgentMessage {
@@ -245,6 +261,8 @@ interface AgentStore {
     prompt: string,
   ) => void;
   clearConversation: () => void;
+  /** Restore the criteria to how they were before the given reply changed them. */
+  revertTurn: (messageId: string) => void;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -332,6 +350,10 @@ export const useAgentStore = create<AgentStore>()(
           const turnId = newId("turn");
           const controller = new AbortController();
           _turns.set(turnId, { key, controller });
+          // Snapshot for "Undo these changes"; attached to the reply only if the
+          // turn actually changed the criteria on screen.
+          const criteriaBefore = structuredClone(useCriteriaStore.getState().criteria);
+          let changedCriteria = false;
 
           const userMsg: AgentMessage = {
             id: newId("msg"),
@@ -377,6 +399,7 @@ export const useAgentStore = create<AgentStore>()(
                     const emitted = emittedFromEvent(event.data);
                     if (turnIsOnScreen(turnId)) {
                       useCriteriaStore.getState().addCriterion(event.data.criterion);
+                      changedCriteria = true;
                     }
                     patchTurn(turnId, (prev) => ({
                       emittedThisTurn: [...prev.emittedThisTurn, emitted],
@@ -402,6 +425,7 @@ export const useAgentStore = create<AgentStore>()(
                         criterion_id,
                         mergedUpdates as Parameters<typeof criteriaState.updateCriterion>[1],
                       );
+                      changedCriteria = true;
                     }
                     const op: UpdatedCriterion = {
                       criterionId: criterion_id,
@@ -422,6 +446,7 @@ export const useAgentStore = create<AgentStore>()(
                     const existing = criteriaState.criteria.find((c) => c.id === criterion_id);
                     if (turnIsOnScreen(turnId)) {
                       criteriaState.removeCriterion(criterion_id);
+                      changedCriteria = true;
                     }
                     const op: DeletedCriterion = {
                       criterionId: criterion_id,
@@ -444,12 +469,16 @@ export const useAgentStore = create<AgentStore>()(
                     const updated = slice.updatedThisTurn;
                     const deleted = slice.deletedThisTurn;
                     const hasAnyOps = emitted.length + updated.length + deleted.length > 0;
+                    // Never leave an empty reply: describe what changed instead.
+                    const summary =
+                      result.summary?.trim() ||
+                      describeOps(emitted.length, updated.length, deleted.length, emitted.map((e) => e.label));
                     endTurn(
                       turnId,
                       agentMessage(
                         hasAnyOps
-                          ? result.summary
-                          : result.summary +
+                          ? summary
+                          : summary +
                               "\n\nClick **Add to criteria** to include this in your heatmap scoring.",
                         {
                           researchResult: hasAnyOps ? undefined : result,
@@ -458,6 +487,7 @@ export const useAgentStore = create<AgentStore>()(
                           emittedCriteria: emitted.length > 0 ? emitted : undefined,
                           updatedCriteria: updated.length > 0 ? updated : undefined,
                           deletedCriteria: deleted.length > 0 ? deleted : undefined,
+                          criteriaBefore: changedCriteria ? criteriaBefore : undefined,
                         },
                       ),
                     );
@@ -526,6 +556,19 @@ export const useAgentStore = create<AgentStore>()(
               }),
             };
           });
+        },
+
+        revertTurn: (messageId) => {
+          const key = currentKey();
+          if (!key) return;
+          const msg = get().byCtx[key]?.messages.find((m) => m.id === messageId);
+          if (!msg?.criteriaBefore || msg.reverted) return;
+          useCriteriaStore.getState().setCriteria(structuredClone(msg.criteriaBefore));
+          set((state) => ({
+            byCtx: patchCtx(state.byCtx, key, (prev) => ({
+              messages: prev.messages.map((m) => (m.id === messageId ? { ...m, reverted: true } : m)),
+            })),
+          }));
         },
 
         clearConversation: () => {

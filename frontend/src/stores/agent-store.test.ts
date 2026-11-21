@@ -209,3 +209,45 @@ describe("conversation context sent to the agent", () => {
     useCriteriaStore.setState({ selectedCellId: null, scoreData: null });
   });
 });
+
+describe("undoing a reply's changes", () => {
+  const criterionEvent = (id: string) =>
+    ({
+      type: "criterion",
+      data: {
+        criterion: { id, type: "budget", label: "Budget", icon: "wallet", weight: 5, enabled: true, params: {} },
+        reasoning: "",
+        source_tool: "typed",
+        missing_input: "",
+      },
+    }) as unknown as AgentStreamEvent;
+
+  it("restores the criteria from before the reply", async () => {
+    useCriteriaStore.setState({
+      criteria: [],
+      cityConfig: { ...useCriteriaStore.getState().cityConfig, slug: "dubai" },
+    });
+    useAgentStore.getState().sendMessage("add a budget");
+    await flush();
+    streams[0].emit(criterionEvent("c-new"));
+    streams[0].emit(result("added"));
+    streams[0].finish();
+    await flush();
+    expect(useCriteriaStore.getState().criteria.map((c) => c.id)).toEqual(["c-new"]);
+
+    const reply = slice("dubai:").messages.at(-1)!;
+    expect(reply.criteriaBefore).toEqual([]);
+    useAgentStore.getState().revertTurn(reply.id);
+    expect(useCriteriaStore.getState().criteria).toEqual([]);
+    expect(slice("dubai:").messages.at(-1)!.reverted).toBe(true);
+  });
+
+  it("offers no undo when the reply changed nothing on screen", async () => {
+    useAgentStore.getState().sendMessage("just a question");
+    await flush();
+    streams[0].emit(result("an answer"));
+    streams[0].finish();
+    await flush();
+    expect(slice("dubai:").messages.at(-1)!.criteriaBefore).toBeUndefined();
+  });
+});

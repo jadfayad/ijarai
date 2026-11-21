@@ -27,6 +27,7 @@ import {
   Sparkles,
   Pencil,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { useAgentStore, EMPTY_CITY_AGENT_STATE } from "@/stores/agent-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
@@ -37,25 +38,12 @@ import type {
   DeletedCriterion,
 } from "@/stores/agent-store";
 import type { TokenUsage, AgentTodo } from "@/lib/types";
+import { renderMarkdown } from "@/lib/mini-markdown";
 
 function formatTime(timestamp: number) {
   return new Date(timestamp).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-  });
-}
-
-function renderContent(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={i} className="font-semibold text-white">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return <span key={i}>{part}</span>;
   });
 }
 
@@ -262,6 +250,7 @@ function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
 
 export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
   const addCriterionFromResult = useAgentStore((s) => s.addCriterionFromResult);
+  const revertTurn = useAgentStore((s) => s.revertTurn);
   const isUser = message.role === "user";
   const hasAnyOps = !!(
     (message.emittedCriteria?.length ?? 0) +
@@ -291,13 +280,13 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
         className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"}`}
       >
         <div
-          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
             isUser
-              ? "bg-primary/20 border border-primary/20 text-white rounded-tr-md"
+              ? "whitespace-pre-wrap bg-primary/20 border border-primary/20 text-white rounded-tr-md"
               : "bg-white/[0.06] border border-white/[0.08] text-white/80 rounded-tl-md"
           }`}
         >
-          {isUser ? message.content : renderContent(message.content)}
+          {isUser ? message.content : renderMarkdown(message.content)}
         </div>
 
         {!isUser && message.plan && message.plan.length > 0 && (
@@ -310,6 +299,21 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
             updated={message.updatedCriteria}
             deleted={message.deletedCriteria}
           />
+        )}
+
+        {!isUser && message.criteriaBefore && (
+          message.reverted ? (
+            <p className="mt-1.5 text-xs text-white/60">Changes undone</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => revertTurn(message.id)}
+              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-white/70 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <Undo2 size={12} aria-hidden />
+              Undo these changes
+            </button>
+          )
         )}
 
         {!isUser && !hasAnyOps && message.researchResult && (
@@ -338,7 +342,10 @@ export function AgentMessageBubble({ message }: { message: AgentMessageType }) {
 
         <span className="text-[10px] text-white/25 mt-1 px-1 flex items-center gap-2">
           {formatTime(message.timestamp)}
-          {!isUser && message.usage && <TokenUsageBadge usage={message.usage} />}
+          {/* Token counts are a developer diagnostic, not user-facing. */}
+          {!isUser && message.usage && process.env.NODE_ENV === "development" && (
+            <TokenUsageBadge usage={message.usage} />
+          )}
         </span>
       </div>
     </div>
