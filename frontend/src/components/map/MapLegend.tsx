@@ -1,5 +1,7 @@
 "use client";
 
+import { SCORE_GRADIENT } from "@/lib/score-scale";
+
 interface Props {
   visibleCount: number;
   totalCount: number;
@@ -7,10 +9,6 @@ interface Props {
   /** Criteria whose data couldn't rank areas, as display labels with a reason. */
   weakCriteria?: { label: string; status: "no_variation" | "empty" }[];
 }
-
-// Matches the COLOR_RAMP in MapView: red → orange → yellow → light-green → green
-const RAMP_GRADIENT =
-  "linear-gradient(to right, rgb(215,25,28), rgb(253,174,97), rgb(255,255,191), rgb(166,217,106), rgb(26,150,65))";
 
 /** Legend body; framed and positioned by the map footer card in MapView. */
 export function MapLegend({ visibleCount, totalCount, threshold, weakCriteria = [] }: Props) {
@@ -29,12 +27,13 @@ export function MapLegend({ visibleCount, totalCount, threshold, weakCriteria = 
       <div
         role="img"
         className="h-2 w-full rounded-full"
-        style={{ background: RAMP_GRADIENT }}
-        aria-label="Colour scale from lowest to highest score in this search"
+        style={{ background: SCORE_GRADIENT }}
+        aria-label="Colour scale from 0% to 100% match"
       />
-      <div className="mt-1.5 flex items-center justify-between text-xs text-white/60">
-        <span>Lowest</span>
-        <span>Highest</span>
+      <div className="mt-1.5 flex items-center justify-between text-xs tabular-nums text-white/60">
+        <span>0%</span>
+        <span>50%</span>
+        <span>100% match</span>
       </div>
       {weakCriteria.length > 0 && (
         <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/10 px-2.5 py-1.5 text-xs leading-snug text-amber-100">

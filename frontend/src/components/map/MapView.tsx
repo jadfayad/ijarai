@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { MapLegend } from "./MapLegend";
 import { RightDock } from "./RightDock";
+import { scoreToRgb } from "@/lib/score-scale";
 import { ScoreAction } from "./ScoreAction";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
@@ -74,33 +75,6 @@ const ICON_MAP: Record<string, typeof MapPin> = {
 };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-
-const COLOR_RAMP: [number, number, number][] = [
-  [215, 25, 28],
-  [253, 174, 97],
-  [255, 255, 191],
-  [166, 217, 106],
-  [26, 150, 65],
-];
-
-function scoreToColor(
-  score: number,
-  min: number,
-  max: number
-): [number, number, number, number] {
-  const normalized = max > min ? (score - min) / (max - min) : 0.5;
-  const t = Math.max(0, Math.min(1, normalized)) * (COLOR_RAMP.length - 1);
-  const i = Math.min(Math.floor(t), COLOR_RAMP.length - 2);
-  const f = t - i;
-  const c0 = COLOR_RAMP[i];
-  const c1 = COLOR_RAMP[i + 1];
-  return [
-    c0[0] + (c1[0] - c0[0]) * f,
-    c0[1] + (c1[1] - c0[1]) * f,
-    c0[2] + (c1[2] - c0[2]) * f,
-    200,
-  ];
-}
 
 export function MapView() {
   const {
@@ -206,17 +180,6 @@ export function MapView() {
     activeInspector?.areaName ??
     ((selectedCellProperties?.zone_name as string | undefined) || null);
 
-  const scoreRange = useMemo(() => {
-    if (!scoreData?.features?.length) return { min: 0, max: 1 };
-    let min = Infinity;
-    let max = -Infinity;
-    for (const f of scoreData.features) {
-      const s = f.properties.score as number;
-      if (s < min) min = s;
-      if (s > max) max = s;
-    }
-    return { min, max };
-  }, [scoreData]);
 
 
   const heatmapStale = useHeatmapStale();
@@ -247,7 +210,7 @@ export function MapView() {
         getHexagon: (d: (typeof data)[0]) => d.hexIndex,
         getFillColor: (d: (typeof data)[0]) => {
           if (d.weight < scoreThreshold) return [0, 0, 0, 0];
-          const [r, g, b] = scoreToColor(d.weight, scoreRange.min, scoreRange.max);
+          const [r, g, b] = scoreToRgb(d.weight);
           if (!selectedCellId) return [r, g, b, 216];
           // Spotlight via the blue border (see getLineColor); keep the fill
           // semi-transparent on the selected cell so POI markers rendered
@@ -263,7 +226,7 @@ export function MapView() {
         lineWidthUnits: "pixels",
         lineWidthMinPixels: 0,
         updateTriggers: {
-          getFillColor: [selectedCellId, scoreThreshold, scoreRange.min, scoreRange.max],
+          getFillColor: [selectedCellId, scoreThreshold],
           getLineColor: [selectedCellId],
           getLineWidth: [selectedCellId],
         },
@@ -277,7 +240,7 @@ export function MapView() {
         },
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange, selectedCellId, heatmapDimmed]);
+  }, [scoreData, scoreThreshold, selectedCellId, heatmapDimmed]);
 
   /**
    * Evidence overlay layers: plotted when a cell is clicked, showing the raw
@@ -629,8 +592,8 @@ export function MapView() {
                 const v = Array.isArray(val) ? val[0] : val;
                 setScoreThreshold(v);
               }}
-              min={scoreRange.min}
-              max={scoreRange.max}
+              min={0}
+              max={1}
               step={0.01}
             />
             </div>

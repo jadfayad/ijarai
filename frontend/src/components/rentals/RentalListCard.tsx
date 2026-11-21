@@ -6,6 +6,7 @@ import { BedDouble, Bath, Ruler, ExternalLink, X, AlertTriangle, Home, ChevronDo
 import { useRentalStore } from "@/stores/rental-store";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { formatRentalPrice } from "@/lib/format";
+import { scoreBand, scoreToCss } from "@/lib/score-scale";
 
 // ── Score breakdown helpers ──────────────────────────────────────────────────
 
@@ -38,12 +39,6 @@ function formatMetric(scoreKey: string, value: number, currencySymbol: string): 
 
 function ScoreBar({ label, value, metric }: { label: string; value: number; metric?: string | null }) {
   const pct = Math.round(value * 100);
-  const barColor =
-    pct >= 70
-      ? "from-emerald-500 to-emerald-400"
-      : pct >= 45
-        ? "from-amber-500 to-yellow-400"
-        : "from-red-500 to-red-400";
 
   return (
     <div className="flex items-center gap-2.5">
@@ -52,8 +47,8 @@ function ScoreBar({ label, value, metric }: { label: string; value: number; metr
       </span>
       <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-500`}
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none"
+          style={{ width: `${pct}%`, background: scoreToCss(value) }}
         />
       </div>
       <span className="text-[11px] font-mono w-16 text-right truncate tabular-nums text-white/60">
@@ -140,11 +135,6 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
   if (!cellProperties) return null;
   const score = cellProperties.score as number | undefined;
   const pct = score !== undefined ? Math.round(score * 100) : null;
-  const scoreColor =
-    pct === null ? "text-white"
-    : pct >= 70 ? "text-emerald-400"
-    : pct >= 45 ? "text-amber-400"
-    : "text-red-400";
 
   const breakdownKeys = Object.keys(cellProperties).filter((k) => k.startsWith("s_"));
 
@@ -191,7 +181,10 @@ export function RentalListCard({ cellProperties, areaName, criterionLabels, onCe
               <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
                 Overall Score
               </span>
-              <span className={`text-[15px] font-bold tabular-nums ${scoreColor}`}>{pct}%</span>
+              <span className="text-[15px] font-bold tabular-nums" style={{ color: scoreToCss(score!) }}>
+                {pct}%
+              </span>
+              <span className="text-xs text-white/70">{scoreBand(score!)}</span>
             </div>
           )}
         </div>
