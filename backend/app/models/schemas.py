@@ -214,6 +214,9 @@ class ScoreResponse(BaseModel):
     type: str = "FeatureCollection"
     features: list[dict]
     criterion_labels: dict[str, str] = Field(default_factory=dict)
+    # Per criterion key: "ok" | "no_variation" | "empty". Lets the UI flag
+    # criteria that couldn't rank areas (missing data, failed upstream source).
+    criterion_status: dict[str, str] = Field(default_factory=dict)
 
 
 class GeocodeRequest(BaseModel):

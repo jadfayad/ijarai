@@ -286,7 +286,17 @@ export interface ScoreResponse {
   features: GeoJSONFeature[];
   /** Maps criterion keys (e.g. "commute_car_peak_0") to display labels */
   criterion_labels?: Record<string, string>;
+  /** Per criterion key: whether it could rank areas (see backend _signal_status). */
+  criterion_status?: Record<string, CriterionSignalStatus>;
 }
+
+export type CriterionSignalStatus = "ok" | "no_variation" | "empty";
+
+/** Progress frames from POST /api/score/stream (terminal frames handled in api.ts). */
+export type ScoreProgressEvent =
+  | { type: "start"; cells: number; criteria: { key: string; label: string }[] }
+  | { type: "criterion_done"; key: string; label: string; status: CriterionSignalStatus }
+  | { type: "assembling" };
 
 export interface Scenario {
   id: string;

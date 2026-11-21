@@ -24,7 +24,7 @@ vi.mock("@/lib/api", () => ({
       );
       streams.push({ emit: onEvent, finish: resolve, signal });
     }),
-  computeScores: vi.fn(),
+  computeScoresStream: vi.fn(),
   cancelScoring: vi.fn(),
   fetchCityConfig: vi.fn(),
 }));

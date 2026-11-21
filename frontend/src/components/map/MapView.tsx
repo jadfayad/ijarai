@@ -17,7 +17,6 @@ import {
   Users,
   GraduationCap,
   Dumbbell,
-  Sparkles,
   Grid2x2,
   Grid3x3,
   LayoutGrid,
@@ -25,11 +24,10 @@ import {
   Filter,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { useCriteriaStore } from "@/stores/criteria-store";
+import { isScorable, useCriteriaStore, useHeatmapStale } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
 import { useAgentStore } from "@/stores/agent-store";
 import { fetchCellEvidence } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -40,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { MapLegend } from "./MapLegend";
 import { RightDock } from "./RightDock";
-import { ScoringOverlay } from "./ScoringOverlay";
+import { ScoreAction } from "./ScoreAction";
 import { FloatingChat } from "@/components/agent/FloatingChat";
 import { WelcomeChat } from "@/components/agent/WelcomeChat";
 import { RentalListCard } from "@/components/rentals/RentalListCard";
@@ -115,7 +113,7 @@ export function MapView() {
     setScoreThreshold,
     gridResolution,
     setGridResolution,
-    generate,
+
   } = useCriteriaStore(
     useShallow((s) => ({
       cityConfig: s.cityConfig,
@@ -127,7 +125,7 @@ export function MapView() {
       setScoreThreshold: s.setScoreThreshold,
       gridResolution: s.gridResolution,
       setGridResolution: s.setGridResolution,
-      generate: s.generate,
+
     })),
   );
 
@@ -142,7 +140,7 @@ export function MapView() {
     [cityConfig]
   );
 
-  const hasActiveCriteria = criteria.length > 0;
+  const hasActiveCriteria = criteria.some(isScorable);
 
   const destinations = useMemo(
     () =>
@@ -221,6 +219,10 @@ export function MapView() {
   }, [scoreData]);
 
 
+  const heatmapStale = useHeatmapStale();
+  const scoringLoading = useCriteriaStore((s) => s.loading);
+  const heatmapDimmed = heatmapStale || scoringLoading;
+
   const layers = useMemo(() => {
     if (!scoreData?.features?.length) return [];
 
@@ -240,6 +242,8 @@ export function MapView() {
       new H3HexagonLayer({
         id: "score-cells",
         data,
+        // Out-of-date or recomputing heatmaps stay visible but recede.
+        opacity: heatmapDimmed ? 0.45 : 1,
         getHexagon: (d: (typeof data)[0]) => d.hexIndex,
         getFillColor: (d: (typeof data)[0]) => {
           if (d.weight < scoreThreshold) return [0, 0, 0, 0];
@@ -264,7 +268,6 @@ export function MapView() {
           getLineWidth: [selectedCellId],
         },
         pickable: true,
-        opacity: 1,
         stroked: true,
         filled: true,
         extruded: false,
@@ -274,7 +277,7 @@ export function MapView() {
         },
       }),
     ];
-  }, [scoreData, scoreThreshold, scoreRange, selectedCellId]);
+  }, [scoreData, scoreThreshold, scoreRange, selectedCellId, heatmapDimmed]);
 
   /**
    * Evidence overlay layers: plotted when a cell is clicked, showing the raw
@@ -599,7 +602,17 @@ export function MapView() {
       <div className="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex flex-wrap items-end justify-between gap-3">
         {scoreData ? (
           <div className="pointer-events-auto w-[260px] rounded-xl border border-white/[0.1] bg-[rgba(12,12,20,0.88)] px-3.5 py-3 shadow-2xl shadow-black/30 backdrop-blur-2xl">
-            <MapLegend visibleCount={visibleCount} totalCount={totalCount} threshold={scoreThreshold} />
+            <MapLegend
+              visibleCount={visibleCount}
+              totalCount={totalCount}
+              threshold={scoreThreshold}
+              weakCriteria={Object.entries(scoreData.criterion_status ?? {})
+                .filter(([, st]) => st !== "ok")
+                .map(([key, st]) => ({
+                  label: scoreData.criterion_labels?.[key] ?? key,
+                  status: st as "no_variation" | "empty",
+                }))}
+            />
             <div className="mt-3 border-t border-white/[0.08] pt-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-white/60">
@@ -673,29 +686,12 @@ export function MapView() {
               </SelectContent>
             </Select>
 
-          {!hasActiveCriteria ? (
-              <div className="h-11 px-6 rounded-xl bg-[rgba(16,16,28,0.85)] backdrop-blur-2xl border border-white/[0.12] shadow-lg shadow-black/20 flex items-center gap-2 whitespace-nowrap text-sm font-medium text-white/60 cursor-not-allowed select-none">
-                <Sparkles size={14} className="text-white/25" />
-                Add a criterion to score
-              </div>
-            ) : (
-              <Button
-                className="h-11 px-8 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/85 shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 border-0 text-white"
-                size="lg"
-                onClick={generate}
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles size={15} />
-                  Generate Heatmap
-                </span>
-              </Button>
-            )}
+          <ScoreAction hasCriteria={hasActiveCriteria} />
 
           <FloatingChat mode="pill" />
         </div>
       </div>
 
-      <ScoringOverlay />
     </div>
 
     <RightDock

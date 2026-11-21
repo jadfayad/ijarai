@@ -1,6 +1,7 @@
 import type {
   ScoreRequest,
   ScoreResponse,
+  ScoreProgressEvent,
   GeocodeResult,
   CityConfig,
   AgentResearchRequest,
@@ -86,6 +87,41 @@ export async function computeScores(
     body: JSON.stringify(body),
     signal,
   });
+}
+
+/**
+ * Streamed scoring: progress events as each criterion finishes, then the result.
+ * Resolves with the ScoreResponse; rejects with ApiError on error/cancel frames.
+ */
+export async function computeScoresStream(
+  body: ScoreRequest & { city?: string },
+  onProgress: (event: ScoreProgressEvent) => void,
+  signal?: AbortSignal,
+): Promise<ScoreResponse> {
+  const res = await apiFetch("/api/score/stream", {
+    method: "POST",
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw await toApiError(res);
+
+  let result: ScoreResponse | null = null;
+  let failure: ApiError | null = null;
+  await readSse(res, (type, data) => {
+    if (type === "result") result = data as ScoreResponse;
+    else if (type === "cancelled" || type === "error") {
+      const d = data as { code?: string; message?: string; retryable?: boolean };
+      failure = new ApiError(
+        d.message ?? "Scoring failed. Please try again.",
+        type === "cancelled" ? 499 : 500,
+        d.code ?? (type === "cancelled" ? "cancelled" : "server_error"),
+        d.retryable ?? true,
+      );
+    } else onProgress({ type, ...(data as object) } as ScoreProgressEvent);
+  });
+  if (failure) throw failure;
+  if (!result) throw new ApiError("The connection closed before scoring finished. Please try again.", 0, "network", true);
+  return result;
 }
 
 export async function cancelScoring(jobId: string): Promise<void> {
@@ -192,9 +228,13 @@ export async function agentResearchStream(
   });
 
   if (!res.ok) throw await toApiError(res);
+  await readSse(res, (type, data) => onEvent({ type, data } as AgentStreamEvent));
+}
 
+/** Read an SSE body of `event: <type>\ndata: <json>` frames until it closes. */
+async function readSse(res: Response, onFrame: (type: string, data: unknown) => void): Promise<void> {
   const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
+  if (!reader) throw new ApiError("The server sent an empty response.", res.status, "server_error", true);
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -202,33 +242,23 @@ export async function agentResearchStream(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-
     buffer += decoder.decode(value, { stream: true });
 
-    // Parse SSE frames: "event: <type>\ndata: <json>\n\n"
     const frames = buffer.split("\n\n");
     buffer = frames.pop() ?? "";
 
     for (const frame of frames) {
-      const lines = frame.trim().split("\n");
       let eventType = "";
       let dataStr = "";
-
-      for (const line of lines) {
-        if (line.startsWith("event: ")) {
-          eventType = line.slice(7);
-        } else if (line.startsWith("data: ")) {
-          dataStr = line.slice(6);
-        }
+      for (const line of frame.trim().split("\n")) {
+        if (line.startsWith("event: ")) eventType = line.slice(7);
+        else if (line.startsWith("data: ")) dataStr = line.slice(6);
       }
-
-      if (eventType && dataStr) {
-        try {
-          const parsed = JSON.parse(dataStr);
-          onEvent({ type: eventType, data: parsed } as AgentStreamEvent);
-        } catch {
-          // skip malformed frames
-        }
+      if (!eventType || !dataStr) continue;
+      try {
+        onFrame(eventType, JSON.parse(dataStr));
+      } catch {
+        // skip malformed frames
       }
     }
   }

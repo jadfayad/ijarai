@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { computeScores, cancelScoring, fetchCityConfig } from "@/lib/api";
+import { computeScoresStream, cancelScoring, fetchCityConfig } from "@/lib/api";
 import { GRID_RESOLUTION_CONFIG, COMMUTE_PRESETS, hasCommuteDestination } from "@/lib/types";
 import { useScenarioStore, syncActiveScenarioToCriteria } from "./scenario-store";
 import type {
@@ -373,6 +373,10 @@ interface CriteriaStore {
   cityError: string | null;
   /** Id of the in-flight scoring job; every async write is guarded against it. */
   scoringJobId: string | null;
+  /** Live progress of the in-flight job (null when idle). */
+  scoringProgress: ScoringProgress | null;
+  /** Fingerprint of the inputs `scoreData` was computed from; see useHeatmapStale. */
+  scoredInputsKey: string | null;
   selectedCellId: string | null;
   scoreThreshold: number;
   gridResolution: GridResolution;
@@ -408,12 +412,41 @@ function newJobId(): string {
     : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function isScorable(c: CriterionConfig): boolean {
+export function isScorable(c: CriterionConfig): boolean {
   if (!c.enabled || c.weight <= 0 || c.type === "apartment") return false;
   if (c.type === "commute" && !hasCommuteDestination((c.params as CommuteParams).destination)) {
     return false;
   }
   return true;
+}
+
+export interface ScoringProgress {
+  phase: "starting" | "scoring" | "assembling";
+  /** Criterion labels in request order. */
+  labels: string[];
+  /** Keys finished so far. */
+  doneKeys: string[];
+  cells: number | null;
+}
+
+function toScoringInputs(criteria: CriterionConfig[]) {
+  return criteria.filter(isScorable).map((c) => ({
+    type: c.type,
+    weight: c.weight,
+    params: c.params as Record<string, unknown>,
+  }));
+}
+
+/**
+ * Stable fingerprint of everything that changes the heatmap. Labels, icons and
+ * UI-only fields are excluded, so renaming a criterion doesn't mark it stale.
+ */
+export function scoringInputsKey(
+  criteria: CriterionConfig[],
+  gridResolution: GridResolution,
+  city: string,
+): string {
+  return JSON.stringify([city, gridResolution, toScoringInputs(criteria)]);
 }
 
 function abortScoring(jobId: string | null) {
@@ -433,6 +466,8 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   error: null,
   cityError: null,
   scoringJobId: null,
+  scoringProgress: null,
+  scoredInputsKey: null,
   selectedCellId: null,
   scoreThreshold: 0,
   gridResolution: "normal",
@@ -455,6 +490,8 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       cityError: null,
       loading: false,
       scoringJobId: null,
+      scoringProgress: null,
+      scoredInputsKey: null,
       cityLoaded: false,
       pendingFocusCriterionId: null,
     });
@@ -515,7 +552,15 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
 
   setPendingFocus: (id) => set({ pendingFocusCriterionId: id }),
 
-  setScoreData: (data) => set({ scoreData: data }),
+  // Restoring saved data (scenario switch/hydration): its inputs are the
+  // criteria + resolution in the store at that moment.
+  setScoreData: (data) =>
+    set((state) => ({
+      scoreData: data,
+      scoredInputsKey: data
+        ? scoringInputsKey(state.criteria, state.gridResolution, state.cityConfig.slug)
+        : null,
+    })),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setSelectedCellId: (cellId) => set({ selectedCellId: cellId }),
@@ -529,7 +574,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
 
   cancelGeneration: () => {
     abortScoring(get().scoringJobId);
-    set({ loading: false, error: null, scoringJobId: null });
+    set({ loading: false, error: null, scoringJobId: null, scoringProgress: null });
   },
 
   generate: async () => {
@@ -537,11 +582,8 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
     abortScoring(get().scoringJobId);
 
     const { criteria, gridResolution, cityConfig } = get();
-    const activeCriteria = criteria.filter(isScorable).map((c) => ({
-      type: c.type,
-      weight: c.weight,
-      params: c.params as Record<string, unknown>,
-    }));
+    const activeCriteria = toScoringInputs(criteria);
+    const inputsKey = scoringInputsKey(criteria, gridResolution, cityConfig.slug);
 
     if (activeCriteria.length === 0) {
       set({
@@ -555,20 +597,44 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
     const jobId = newJobId();
     const controller = new AbortController();
     _abortController = controller;
-    set({ loading: true, error: null, scoringJobId: jobId });
+    set({
+      loading: true,
+      error: null,
+      scoringJobId: jobId,
+      scoringProgress: { phase: "starting", labels: [], doneKeys: [], cells: null },
+    });
 
     // Only the job that is still current may write results or clear loading.
     const isCurrent = () => get().scoringJobId === jobId;
 
     try {
       const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
-      const data = await computeScores(
+      const data = await computeScoresStream(
         { criteria: activeCriteria, cell_size_m, city: cityConfig.slug, job_id: jobId },
+        (event) => {
+          if (!isCurrent()) return;
+          const prev = get().scoringProgress;
+          if (!prev) return;
+          if (event.type === "start") {
+            set({
+              scoringProgress: {
+                ...prev,
+                phase: "scoring",
+                labels: event.criteria.map((c) => c.label),
+                cells: event.cells,
+              },
+            });
+          } else if (event.type === "criterion_done") {
+            set({ scoringProgress: { ...prev, doneKeys: [...prev.doneKeys, event.key] } });
+          } else if (event.type === "assembling") {
+            set({ scoringProgress: { ...prev, phase: "assembling" } });
+          }
+        },
         controller.signal,
       );
       if (!isCurrent()) return;
       // A fresh heatmap starts unfiltered; the threshold is user-controlled from here.
-      set({ scoreData: data, scoreThreshold: 0 });
+      set({ scoreData: data, scoredInputsKey: inputsKey, scoreThreshold: 0 });
 
       useScenarioStore.getState().saveScenario({
         city: cityConfig.slug,
@@ -588,7 +654,20 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
         _abortController = null;
       }
       // A superseded job must not unlock the UI while its successor is running.
-      if (isCurrent()) set({ loading: false, scoringJobId: null });
+      if (isCurrent()) set({ loading: false, scoringJobId: null, scoringProgress: null });
     }
   },
 }));
+
+/**
+ * True when a heatmap is showing but the criteria/resolution have changed since
+ * it was computed. Derived on every render — never stored — so it can't drift.
+ */
+export function useHeatmapStale(): boolean {
+  return useCriteriaStore(
+    (s) =>
+      !!s.scoreData &&
+      !!s.scoredInputsKey &&
+      s.scoredInputsKey !== scoringInputsKey(s.criteria, s.gridResolution, s.cityConfig.slug),
+  );
+}

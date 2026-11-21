@@ -10,7 +10,7 @@ const scoreCalls: Deferred[] = [];
 const cityCalls: { slug: string; resolve: (c: CityConfig) => void; reject: (e: Error) => void }[] = [];
 
 vi.mock("@/lib/api", () => ({
-  computeScores: (body: Deferred["body"], signal: AbortSignal) =>
+  computeScoresStream: (body: Deferred["body"], _onProgress: unknown, signal: AbortSignal) =>
     new Promise<ScoreResponse>((resolve, reject) => {
       signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
       scoreCalls.push({ resolve, signal, body });
@@ -122,5 +122,35 @@ describe("city loading", () => {
     await flush();
     expect(useCriteriaStore.getState().cityError).toBeTruthy();
     expect(useCriteriaStore.getState().cityLoaded).toBe(false);
+  });
+});
+
+
+describe("heatmap staleness", () => {
+  it("is fresh after scoring and stale after a scoring-relevant edit only", async () => {
+    const { useHeatmapStale: _hook, scoringInputsKey } = await import("./criteria-store");
+    const stale = () => {
+      const s = useCriteriaStore.getState();
+      return !!s.scoreData && s.scoredInputsKey !== scoringInputsKey(s.criteria, s.gridResolution, s.cityConfig.slug);
+    };
+    useCriteriaStore.getState().generate();
+    await flush();
+    scoreCalls[0].resolve(scored("x"));
+    await flush();
+    expect(stale()).toBe(false);
+
+    // Renaming doesn't change the heatmap.
+    useCriteriaStore.getState().updateCriterion("c1", { label: "Rent" });
+    expect(stale()).toBe(false);
+
+    useCriteriaStore.getState().updateCriterion("c1", { weight: 9 });
+    expect(stale()).toBe(true);
+
+    useCriteriaStore.getState().updateCriterion("c1", { weight: 5 });
+    expect(stale()).toBe(false);
+
+    useCriteriaStore.getState().setGridResolution("fine");
+    expect(stale()).toBe(true);
+    expect(_hook).toBeTypeOf("function");
   });
 });

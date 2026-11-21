@@ -9,6 +9,9 @@ so the frontend can display a human-readable label for every score row.
 from __future__ import annotations
 
 import asyncio
+import inspect
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from app.city_config import CityConfig
 from app.models.schemas import (
@@ -121,12 +124,43 @@ def _criterion_label(criterion: CriterionRequest, index: int) -> str:
     return label_map.get(criterion.type, criterion.type.title())
 
 
+ProgressCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
+
+
+def _signal_status(scores: dict[str, float]) -> str:
+    """How informative a criterion's raw scores are.
+
+    "empty"        — no data at all (e.g. upstream source failed or returned nothing)
+    "no_variation" — every cell got the same score, so it can't rank areas
+    "ok"           — scores vary across cells
+    """
+    if not scores:
+        return "empty"
+    vals = scores.values()
+    return "ok" if max(vals) > min(vals) else "no_variation"
+
+
+async def _emit(on_progress: ProgressCallback | None, event: dict[str, Any]) -> None:
+    if on_progress is None:
+        return
+    result = on_progress(event)
+    if inspect.isawaitable(result):
+        await result
+
+
 async def compute_scores(
     city: CityConfig,
     request: ScoreRequest,
     cancel: asyncio.Event | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> ScoreResponse:
-    """Compute weighted scores for every grid cell."""
+    """Compute weighted scores for every grid cell.
+
+    `on_progress`, when given, receives events as work proceeds:
+      {"type": "start", "cells": n, "criteria": [{"key", "label"}]}
+      {"type": "criterion_done", "key", "label", "status"}   (completion order)
+      {"type": "assembling"}
+    """
     _check_cancel(cancel)
     centroids = get_grid_centroids(city, request.cell_size_m)
 
@@ -142,7 +176,25 @@ async def compute_scores(
         keyed_criteria.append((key, criterion))
         criterion_labels[key] = _criterion_label(criterion, idx)
 
+    await _emit(on_progress, {
+        "type": "start",
+        "cells": len(centroids),
+        "criteria": [{"key": k, "label": criterion_labels[k]} for k, _ in keyed_criteria],
+    })
+
     async def _score_one(
+        key: str, criterion: CriterionRequest,
+    ) -> tuple[str, dict[str, float], dict[str, float]] | None:
+        result = await _score_one_raw(key, criterion)
+        await _emit(on_progress, {
+            "type": "criterion_done",
+            "key": key,
+            "label": criterion_labels[key],
+            "status": _signal_status(result[1]) if result else "empty",
+        })
+        return result
+
+    async def _score_one_raw(
         key: str, criterion: CriterionRequest,
     ) -> tuple[str, dict[str, float], dict[str, float]] | None:
         _check_cancel(cancel)
@@ -226,6 +278,11 @@ async def compute_scores(
             normalized_scores[key] = {cid: lo for cid in scores}
 
     _check_cancel(cancel)
+    await _emit(on_progress, {"type": "assembling"})
+
+    criterion_status = {
+        key: _signal_status(criterion_scores.get(key, {})) for key, _ in keyed_criteria
+    }
 
     features = []
     for centroid in centroids:
@@ -263,4 +320,8 @@ async def compute_scores(
             }
         )
 
-    return ScoreResponse(features=features, criterion_labels=criterion_labels)
+    return ScoreResponse(
+        features=features,
+        criterion_labels=criterion_labels,
+        criterion_status=criterion_status,
+    )

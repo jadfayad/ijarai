@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from pathlib import Path
 
@@ -74,3 +75,62 @@ def test_resubmitting_a_job_supersedes_it(fake_scoring):
 
     r1, r2 = asyncio.run(run())
     assert (r1.status_code, r2.status_code) == (499, 200)
+
+
+def _parse_sse(text: str) -> list[tuple[str, dict]]:
+    out = []
+    for block in text.strip().split("\n\n"):
+        lines = dict(line.split(": ", 1) for line in block.splitlines() if ": " in line)
+        out.append((lines["event"], json.loads(lines["data"])))
+    return out
+
+
+def test_score_stream_reports_progress_then_result():
+    body = {
+        "criteria": [{"type": "budget", "weight": 5, "params": {"max_monthly_rent": 8000}}],
+        "cell_size_m": 2500,
+        "city": "dubai",
+    }
+    r = TestClient(app).post("/api/score/stream", json=body)
+    assert r.status_code == 200
+    events = _parse_sse(r.text)
+    names = [e for e, _ in events]
+    assert names[0] == "start" and names[-1] == "result"
+    assert names.count("criterion_done") == 1 and "assembling" in names
+    start = events[0][1]
+    assert start["cells"] > 0 and start["criteria"][0]["label"] == "Budget Match"
+    result = events[-1][1]
+    assert len(result["features"]) == start["cells"]
+    assert set(result["criterion_status"].values()) <= {"ok", "no_variation", "empty"}
+
+
+def test_score_stream_unknown_city_is_404_not_a_stream():
+    r = TestClient(app).post("/api/score/stream", json={"criteria": [], "city": "atlantis"})
+    assert r.status_code == 404
+    assert r.json()["code"] == "unknown_city"
+
+
+def test_score_stream_cancel(monkeypatch):
+    async def slow(_city, _body, cancel, on_progress=None):
+        await on_progress({"type": "start", "cells": 1, "criteria": []})
+        for _ in range(50):
+            if cancel.is_set():
+                raise scoring.ComputationCancelled()
+            await asyncio.sleep(0.02)
+        raise AssertionError("not cancelled")
+
+    monkeypatch.setattr(scoring, "compute_scores", slow)
+
+    async def run():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            stream = asyncio.create_task(
+                c.post("/api/score/stream", json={"criteria": [], "city": "dubai", "job_id": "s1"})
+            )
+            await asyncio.sleep(0.1)
+            await c.post("/api/score/cancel", params={"job_id": "s1"})
+            return await stream
+
+    r = asyncio.run(run())
+    names = [e for e, _ in _parse_sse(r.text)]
+    assert names == ["start", "cancelled"]
