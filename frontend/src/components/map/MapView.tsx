@@ -24,6 +24,7 @@ import {
   Maximize,
   Filter,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useCriteriaStore } from "@/stores/criteria-store";
 import { useRentalStore } from "@/stores/rental-store";
 import { useAgentStore, useCurrentCityAgentSlice } from "@/stores/agent-store";
@@ -112,9 +113,21 @@ export function MapView() {
     setScoreThreshold,
     gridResolution,
     setGridResolution,
-    loading,
     generate,
-  } = useCriteriaStore();
+  } = useCriteriaStore(
+    useShallow((s) => ({
+      cityConfig: s.cityConfig,
+      criteria: s.criteria,
+      scoreData: s.scoreData,
+      selectedCellId: s.selectedCellId,
+      setSelectedCellId: s.setSelectedCellId,
+      scoreThreshold: s.scoreThreshold,
+      setScoreThreshold: s.setScoreThreshold,
+      gridResolution: s.gridResolution,
+      setGridResolution: s.setGridResolution,
+      generate: s.generate,
+    })),
+  );
 
   const cityView = useMemo(
     () => ({
@@ -405,12 +418,10 @@ export function MapView() {
     clearRentals();
   }, [chatOpen, setSelectedCellId, clearRentals]);
 
+  // Previous heatmap stays visible while a new score is computing.
   const allLayers = useMemo(
-    () => loading ? [] : [
-      ...layers,
-      ...evidenceLayers,
-    ],
-    [loading, layers, evidenceLayers],
+    () => [...layers, ...evidenceLayers],
+    [layers, evidenceLayers],
   );
 
   const visibleCount = useMemo(() => {
@@ -532,7 +543,7 @@ export function MapView() {
           mapStyle="mapbox://styles/mapbox/dark-v11"
           reuseMaps
         >
-          {!loading && destinations.map((d) => {
+          {destinations.map((d) => {
             const Icon = ICON_MAP[d.icon] ?? MapPin;
             return (
               <Marker
@@ -554,7 +565,7 @@ export function MapView() {
               </Marker>
             );
           })}
-          {!loading && cellEvidence?.amenities.map((p, i) => (
+          {cellEvidence?.amenities.map((p, i) => (
             <Marker
               key={`am-${i}-${p.lat}-${p.lng}`}
               longitude={p.lng}
@@ -571,7 +582,7 @@ export function MapView() {
               />
             </Marker>
           ))}
-          {!loading && cellEvidence?.transit.map((p, i) => (
+          {cellEvidence?.transit.map((p, i) => (
             <Marker
               key={`tr-${i}-${p.lat}-${p.lng}`}
               longitude={p.lng}
@@ -588,7 +599,7 @@ export function MapView() {
               />
             </Marker>
           ))}
-          {!loading && cellEvidence?.healthcare.map((p, i) => (
+          {cellEvidence?.healthcare.map((p, i) => (
             <Marker
               key={`hc-${i}-${p.lat}-${p.lng}`}
               longitude={p.lng}
@@ -605,7 +616,7 @@ export function MapView() {
               />
             </Marker>
           ))}
-          {!loading && rentalListings.map((listing) => (
+          {rentalListings.map((listing) => (
             <Marker
               key={listing.id}
               longitude={listing.lng}
@@ -624,7 +635,7 @@ export function MapView() {
         </Map>
       </DeckGL>
 
-      {!loading && (
+      {(
         <RentalListCard
           cellProperties={selectedCellProperties}
           areaName={areaName}
@@ -633,7 +644,7 @@ export function MapView() {
         />
       )}
 
-      {!loading && scoreData && (
+      {scoreData && (
         <MapLegend
           visibleCount={visibleCount}
           totalCount={totalCount}
@@ -641,10 +652,10 @@ export function MapView() {
         />
       )}
 
-      {!loading && <FloatingChat />}
-      {!loading && <WelcomeChat />}
+      <FloatingChat />
+      <WelcomeChat />
 
-      {!loading && scoreData && (
+      {scoreData && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 min-w-[340px] max-w-[420px] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-[rgba(12,12,20,0.8)] backdrop-blur-2xl rounded-2xl px-6 py-4 shadow-2xl shadow-black/30 border border-white/[0.1]">
             <div className="flex items-center justify-between mb-3">
@@ -675,7 +686,7 @@ export function MapView() {
         </div>
       )}
 
-      {!loading && (
+      {(
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <div className="pointer-events-auto flex items-stretch gap-2.5">
             <Select

@@ -255,6 +255,8 @@ export interface ScoreRequest {
     params: Record<string, unknown>;
   }[];
   cell_size_m: number;
+  /** Client-generated id; scopes server-side cancellation to this job. */
+  job_id?: string;
 }
 
 export interface GeoJSONFeature {

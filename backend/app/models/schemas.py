@@ -206,6 +206,8 @@ class ScoreRequest(BaseModel):
     criteria: list[CriterionRequest]
     cell_size_m: int = Field(default=1000, ge=200, le=2500)
     city: str = "dubai"
+    # Client-generated id that scopes cancellation to this caller's job only.
+    job_id: str | None = Field(default=None, max_length=64)
 
 
 class ScoreResponse(BaseModel):

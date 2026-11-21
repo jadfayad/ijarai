@@ -35,9 +35,11 @@ export async function computeScores(
   });
 }
 
-export async function cancelScoring(): Promise<void> {
+export async function cancelScoring(jobId: string): Promise<void> {
   try {
-    await fetch(`${API_URL}/api/score/cancel`, { method: "POST" });
+    await fetch(`${API_URL}/api/score/cancel?job_id=${encodeURIComponent(jobId)}`, {
+      method: "POST",
+    });
   } catch {
     // best-effort — ignore network errors during cancel
   }

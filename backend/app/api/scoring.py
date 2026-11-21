@@ -1,6 +1,7 @@
 import asyncio
+import contextlib
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.city_config import get_city
@@ -9,30 +10,51 @@ from app.services.scoring import compute_scores, ComputationCancelled
 
 router = APIRouter()
 
-_current_cancel: asyncio.Event | None = None
+# Cancellation is scoped per job. Each client generates its own job_id, so one
+# user's request can never cancel another user's computation.
+_jobs: dict[str, asyncio.Event] = {}
+
+_DISCONNECT_POLL_S = 0.5
+
+
+async def _cancel_on_disconnect(request: Request, cancel: asyncio.Event) -> None:
+    while not cancel.is_set():
+        if await request.is_disconnected():
+            cancel.set()
+            return
+        await asyncio.sleep(_DISCONNECT_POLL_S)
 
 
 @router.post("/score", response_model=ScoreResponse)
-async def compute_score(request: ScoreRequest):
-    global _current_cancel
-    if _current_cancel is not None:
-        _current_cancel.set()
-
+async def compute_score(body: ScoreRequest, request: Request):
     cancel = asyncio.Event()
-    _current_cancel = cancel
+    job_id = body.job_id
+    if job_id:
+        previous = _jobs.get(job_id)
+        if previous is not None:
+            previous.set()
+        _jobs[job_id] = cancel
+
+    watcher = asyncio.create_task(_cancel_on_disconnect(request, cancel))
     try:
-        city = get_city(request.city)
-        return await compute_scores(city, request, cancel)
+        city = get_city(body.city)
+        return await compute_scores(city, body, cancel)
     except ComputationCancelled:
-        return JSONResponse(status_code=499, content={"detail": "Computation cancelled"})
+        return JSONResponse(
+            status_code=499,
+            content={"code": "cancelled", "message": "Computation cancelled", "retryable": True},
+        )
     finally:
-        if _current_cancel is cancel:
-            _current_cancel = None
+        watcher.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await watcher
+        if job_id and _jobs.get(job_id) is cancel:
+            del _jobs[job_id]
 
 
 @router.post("/score/cancel")
-async def cancel_score():
-    global _current_cancel
-    if _current_cancel is not None:
-        _current_cancel.set()
-    return {"status": "cancelled"}
+async def cancel_score(job_id: str):
+    event = _jobs.get(job_id)
+    if event is not None:
+        event.set()
+    return {"status": "cancelled" if event else "not_found"}

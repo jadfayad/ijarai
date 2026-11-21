@@ -368,6 +368,10 @@ interface CriteriaStore {
   scoreData: ScoreResponse | null;
   loading: boolean;
   error: string | null;
+  /** Set when /api/city failed for the requested slug; the UI must not pretend another city loaded. */
+  cityError: string | null;
+  /** Id of the in-flight scoring job; every async write is guarded against it. */
+  scoringJobId: string | null;
   selectedCellId: string | null;
   scoreThreshold: number;
   gridResolution: GridResolution;
@@ -394,6 +398,32 @@ interface CriteriaStore {
 }
 
 let _abortController: AbortController | null = null;
+/** Monotonic token so a late /api/city response can't overwrite a newer navigation. */
+let _cityRequestSeq = 0;
+
+function newJobId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Commute criteria use (0,0) as the "destination not chosen yet" sentinel. */
+function isScorable(c: CriterionConfig): boolean {
+  if (!c.enabled || c.weight <= 0 || c.type === "apartment") return false;
+  if (c.type === "commute") {
+    const dest = (c.params as { destination?: { lat: number; lng: number } }).destination;
+    if (!dest || (dest.lat === 0 && dest.lng === 0)) return false;
+  }
+  return true;
+}
+
+function abortScoring(jobId: string | null) {
+  if (_abortController) {
+    _abortController.abort();
+    _abortController = null;
+  }
+  if (jobId) cancelScoring(jobId);
+}
 
 export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   cityConfig: FALLBACK_CITY,
@@ -402,12 +432,19 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   scoreData: null,
   loading: false,
   error: null,
+  cityError: null,
+  scoringJobId: null,
   selectedCellId: null,
   scoreThreshold: 0,
   gridResolution: "normal",
   pendingFocusCriterionId: null,
 
   loadCityConfig: async (slug?: string) => {
+    const seq = ++_cityRequestSeq;
+
+    // A score computed for the previous city must never land on this one.
+    abortScoring(get().scoringJobId);
+
     // Reset all city-scoped transient state so the new city starts clean.
     // gridResolution is a user preference, not city-scoped, so we keep it.
     set({
@@ -416,18 +453,27 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       selectedCellId: null,
       scoreThreshold: 0,
       error: null,
+      cityError: null,
+      loading: false,
+      scoringJobId: null,
+      cityLoaded: false,
       pendingFocusCriterionId: null,
     });
 
-    let config: CityConfig | null = null;
+    let config: CityConfig;
     try {
       config = await fetchCityConfig(slug);
-      set({ cityConfig: config, cityLoaded: true });
-    } catch {
-      set({ cityLoaded: true });
+    } catch (err) {
+      if (seq !== _cityRequestSeq) return;
+      set({
+        cityError: err instanceof Error ? err.message : "Could not load this city",
+      });
+      return;
     }
+    if (seq !== _cityRequestSeq) return;
+    set({ cityConfig: config, cityLoaded: true });
 
-    const effectiveSlug = config?.slug ?? slug ?? get().cityConfig.slug;
+    const effectiveSlug = config.slug;
     const scenarioStore = useScenarioStore;
     const runSync = () =>
       syncActiveScenarioToCriteria(scenarioStore.getState(), effectiveSlug);
@@ -483,44 +529,45 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
   },
 
   cancelGeneration: () => {
-    if (_abortController) {
-      _abortController.abort();
-      _abortController = null;
-    }
-    cancelScoring();
-    set({ loading: false, error: null });
+    abortScoring(get().scoringJobId);
+    set({ loading: false, error: null, scoringJobId: null });
   },
 
   generate: async () => {
-    if (_abortController) {
-      _abortController.abort();
-    }
-
-    const controller = new AbortController();
-    _abortController = controller;
+    // Supersede any in-flight job (client abort + server-side cancel).
+    abortScoring(get().scoringJobId);
 
     const { criteria, gridResolution, cityConfig } = get();
-    set({ loading: true, error: null });
+    const activeCriteria = criteria.filter(isScorable).map((c) => ({
+      type: c.type,
+      weight: c.weight,
+      params: c.params as Record<string, unknown>,
+    }));
+
+    if (activeCriteria.length === 0) {
+      set({
+        error: "Add at least one criterion (commutes need a destination)",
+        loading: false,
+        scoringJobId: null,
+      });
+      return;
+    }
+
+    const jobId = newJobId();
+    const controller = new AbortController();
+    _abortController = controller;
+    set({ loading: true, error: null, scoringJobId: jobId });
+
+    // Only the job that is still current may write results or clear loading.
+    const isCurrent = () => get().scoringJobId === jobId;
 
     try {
-      const activeCriteria = criteria
-        .filter((c) => c.enabled && c.weight > 0 && c.type !== "apartment")
-        .map((c) => ({
-          type: c.type,
-          weight: c.weight,
-          params: c.params as Record<string, unknown>,
-        }));
-
-      if (activeCriteria.length === 0) {
-        set({ error: "Enable at least one criterion", loading: false });
-        return;
-      }
-
       const { cell_size_m } = GRID_RESOLUTION_CONFIG[gridResolution];
       const data = await computeScores(
-        { criteria: activeCriteria, cell_size_m, city: cityConfig.slug },
+        { criteria: activeCriteria, cell_size_m, city: cityConfig.slug, job_id: jobId },
         controller.signal,
       );
+      if (!isCurrent()) return;
       set({ scoreData: data });
 
       useScenarioStore.getState().saveScenario({
@@ -532,6 +579,7 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      if (!isCurrent()) return;
       set({
         error: err instanceof Error ? err.message : "Failed to compute scores",
       });
@@ -539,7 +587,8 @@ export const useCriteriaStore = create<CriteriaStore>((set, get) => ({
       if (_abortController === controller) {
         _abortController = null;
       }
-      set({ loading: false });
+      // A superseded job must not unlock the UI while its successor is running.
+      if (isCurrent()) set({ loading: false, scoringJobId: null });
     }
   },
 }));
