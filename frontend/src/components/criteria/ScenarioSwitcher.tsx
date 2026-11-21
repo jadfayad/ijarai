@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
+import { Popover } from "@base-ui/react/popover";
 import {
   Plus,
   X,
@@ -56,9 +56,14 @@ export function ScenarioSwitcher({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
+
+  // Popover handles Escape, outside clicks and focus return; closing also
+  // abandons an in-progress rename.
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setEditingId(null);
+  };
 
   useEffect(() => {
     if (editingId && editRef.current) {
@@ -66,27 +71,6 @@ export function ScenarioSwitcher({
       editRef.current.select();
     }
   }, [editingId]);
-
-  useEffect(() => {
-    if (!open) {
-      // Reset inline edit state when the menu closes.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEditingId(null);
-      return;
-    }
-    const handleClick = (e: MouseEvent) => {
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node) &&
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
 
   const commitRename = () => {
     if (editingId && editValue.trim()) {
@@ -122,33 +106,9 @@ export function ScenarioSwitcher({
   const active = scenarios.find((s) => s.id === activeId);
   const activeScore = activeId ? avgScore(activeId) : null;
 
-  const [menuPos, setMenuPos] = useState<React.CSSProperties>({});
-  useEffect(() => {
-    if (!open || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    if (variant === "compact") {
-      const menuWidth = 240;
-      setMenuPos({
-        position: "fixed",
-        top: rect.bottom + 6,
-        left: Math.max(8, rect.right - menuWidth),
-        width: menuWidth,
-      });
-    } else {
-      setMenuPos({
-        position: "fixed",
-        top: rect.bottom + 6,
-        left: rect.left,
-        width: rect.width,
-      });
-    }
-  }, [open, variant]);
-
   const trigger =
     variant === "compact" ? (
-      <button
-        ref={triggerRef}
-        onClick={() => setOpen((v) => !v)}
+      <Popover.Trigger
         aria-label="Switch scenario"
         className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-label font-medium transition-all duration-150 border ${
           open
@@ -170,11 +130,9 @@ export function ScenarioSwitcher({
             open ? "rotate-180" : ""
           }`}
         />
-      </button>
+      </Popover.Trigger>
     ) : (
-      <button
-        ref={triggerRef}
-        onClick={() => setOpen((v) => !v)}
+      <Popover.Trigger
         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 border ${
           open
             ? "bg-surface-strong border-border-strong text-fg"
@@ -207,102 +165,111 @@ export function ScenarioSwitcher({
             open ? "rotate-180" : ""
           }`}
         />
-      </button>
+      </Popover.Trigger>
     );
 
   return (
-    <div className={variant === "compact" ? "inline-block" : "w-full"}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       {trigger}
 
-      {open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={menuPos}
-            className="z-[100] bg-overlay backdrop-blur-2xl rounded-xl border border-border shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          align={variant === "compact" ? "end" : "start"}
+          sideOffset={6}
+          collisionPadding={8}
+          className="z-[100]"
+        >
+          <Popover.Popup
+            aria-label="Scenarios"
+            className={`overflow-hidden rounded-xl border border-border bg-overlay shadow-2xl shadow-black/50 outline-none backdrop-blur-2xl animate-in fade-in slide-in-from-top-1 duration-150 ${
+              variant === "compact" ? "w-[240px]" : "w-[var(--anchor-width)]"
+            }`}
           >
             {scenarios.length === 0 ? (
               <div className="px-4 py-6 text-center">
-                <FileStack
-                  size={24}
-                  className="text-fg-subtle mx-auto mb-2"
-                />
+                <FileStack size={24} className="mx-auto mb-2 text-fg-subtle" aria-hidden />
                 <p className="text-body text-fg-muted">No scenarios yet</p>
-                <p className="text-caption text-fg-subtle mt-0.5">
-                  Generate scores to save your first scenario
-                </p>
+                <p className="mt-0.5 text-caption text-fg-subtle">Generate scores to save your first scenario</p>
               </div>
             ) : (
-              <div className="max-h-[280px] overflow-y-auto py-1">
+              <ul className="max-h-[280px] overflow-y-auto py-1">
                 {scenarios.map((sc) => {
                   const isActive = sc.id === activeId;
                   const score = avgScore(sc.id);
+                  const editing = editingId === sc.id;
 
                   return (
-                    <div
+                    <li
                       key={sc.id}
-                      className={`group flex items-center gap-2.5 px-3 py-2 mx-1 rounded-lg cursor-pointer transition-all duration-150 ${
+                      className={`group mx-1 flex items-center gap-1 rounded-lg pr-1 transition-colors ${
                         isActive
                           ? "bg-primary/10 text-fg"
-                          : "text-fg-muted hover:bg-surface-raised hover:text-fg-secondary"
+                          : "text-fg-muted hover:bg-surface-raised hover:text-fg-secondary focus-within:bg-surface-raised"
                       }`}
-                      onClick={() => {
-                        if (editingId !== sc.id) {
-                          loadScenario(sc.id);
-                          setOpen(false);
-                        }
-                      }}
                     >
-                      <div
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          isActive
-                            ? "bg-primary shadow-[0_0_4px] shadow-primary/50"
-                            : "bg-fg-subtle/50"
-                        }`}
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        {editingId === sc.id ? (
+                      {editing ? (
+                        <div className="flex flex-1 items-center gap-2.5 px-3 py-2">
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-fg-subtle/50" aria-hidden />
                           <input
                             ref={editRef}
+                            aria-label={`Rename ${sc.name}`}
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={commitRename}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") commitRename();
-                              if (e.key === "Escape") setEditingId(null);
+                              if (e.key === "Escape") {
+                                // Cancel the rename, not the whole popover.
+                                e.stopPropagation();
+                                setEditingId(null);
+                              }
                             }}
-                            className="bg-surface-raised border border-border rounded-md px-2 py-0.5 text-body text-fg outline-none w-full"
-                            onClick={(e) => e.stopPropagation()}
+                            className="w-full rounded-md border border-border bg-surface-raised px-2 py-0.5 text-body text-fg outline-none focus-visible:border-primary"
                           />
-                        ) : (
-                          <>
-                            <p className="text-body font-medium truncate">
-                              {sc.name}
-                            </p>
-                            <p className="text-caption text-fg-muted font-mono tabular-nums">
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => {
+                            loadScenario(sc.id);
+                            handleOpenChange(false);
+                          }}
+                          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-left"
+                        >
+                          <span
+                            aria-hidden
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                              isActive ? "bg-primary shadow-[0_0_4px] shadow-primary/50" : "bg-fg-subtle/50"
+                            }`}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-body font-medium">{sc.name}</span>
+                            <span className="block font-mono text-caption tabular-nums text-fg-muted">
                               {score !== null && `${score}% · `}
                               {relativeTime(sc.createdAt)}
-                            </p>
-                          </>
-                        )}
-                      </div>
+                            </span>
+                          </span>
+                        </button>
+                      )}
 
-                      {editingId !== sc.id && (
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {!editing && (
+                        <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            type="button"
+                            onClick={() => {
                               setEditingId(sc.id);
                               setEditValue(sc.name);
                             }}
-                            className="p-1 rounded-md text-fg-muted hover:text-fg-muted hover:bg-surface-strong transition-all"
+                            aria-label={`Rename ${sc.name}`}
+                            className="rounded-md p-1 text-fg-muted transition-colors hover:bg-surface-strong hover:text-fg"
                           >
                             <Pencil size={11} />
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            type="button"
+                            onClick={() => {
                               const snapshot = sc;
                               const wasActive = activeId === sc.id;
                               deleteScenario(sc.id);
@@ -316,33 +283,34 @@ export function ScenarioSwitcher({
                               });
                             }}
                             aria-label={`Delete ${sc.name}`}
-                            className="p-1 rounded-md text-fg-muted hover:text-destructive hover:bg-destructive/10 transition-all"
+                            className="rounded-md p-1 text-fg-muted transition-colors hover:bg-destructive/10 hover:text-destructive"
                           >
                             <X size={11} />
                           </button>
                         </div>
                       )}
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
 
             <div className="border-t border-border p-1">
               <button
+                type="button"
                 onClick={() => {
                   startNewScenario();
-                  setOpen(false);
+                  handleOpenChange(false);
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-body text-fg-muted hover:text-fg-secondary hover:bg-surface-raised transition-all duration-150"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-body text-fg-muted transition-colors hover:bg-surface-raised hover:text-fg-secondary"
               >
-                <Plus size={13} />
+                <Plus size={13} aria-hidden />
                 New scenario
               </button>
             </div>
-          </div>,
-          document.body
-        )}
-    </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

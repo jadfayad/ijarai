@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { Menu } from "@base-ui/react/menu";
 import {
   Plus,
   Briefcase,
@@ -215,60 +214,25 @@ interface AddCriterionDialogProps {
   variant?: "default" | "compact";
 }
 
+const groupLabel = "mb-1.5 px-1 text-caption font-medium uppercase tracking-wider text-fg-muted";
+const itemBase =
+  "flex w-full cursor-default select-none items-center gap-2.5 rounded-lg px-3 py-2 text-body outline-none transition-colors";
+const addItem = `${itemBase} text-fg-secondary data-[highlighted]:bg-surface-raised data-[highlighted]:text-fg`;
+const existingItem = `${itemBase} text-fg-muted data-[highlighted]:bg-surface data-[highlighted]:text-fg-secondary`;
+
+/**
+ * "Add criterion" menu (Base UI Menu): arrow keys / typeahead, Escape closes,
+ * focus returns to the trigger. Criteria already added open their card instead.
+ */
 export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogProps = {}) {
   const { criteria, addCriterion, resolveDefaultDest, setPendingFocus } = useCriteriaStore();
-  const [open, setOpen] = useState(false);
   const openAssistant = useAgentStore((st) => st.setChatOpen);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
-
-  useEffect(() => {
-    if (!open || !buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    if (variant === "compact") {
-      // Drop down from the icon button; align the menu's right edge with the
-      // button so it stays inside the sidebar.
-      const menuWidth = 280;
-      const spaceBelow = window.innerHeight - rect.bottom - 16;
-      setMenuStyle({
-        position: "fixed",
-        top: rect.bottom + 8,
-        left: Math.max(8, rect.right - menuWidth),
-        width: menuWidth,
-        maxHeight: spaceBelow,
-        overflowY: "auto",
-      });
-    } else {
-      // Full-width empty-state button: drop menu upward.
-      setMenuStyle({
-        position: "fixed",
-        bottom: window.innerHeight - rect.top + 8,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: rect.top - 16,
-        overflowY: "auto",
-      });
-    }
-  }, [open, variant]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        buttonRef.current && !buttonRef.current.contains(e.target as Node) &&
-        menuRef.current && !menuRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
 
   const singletonsWithStatus = SINGLETON_CRITERIA.map((s) => ({
     ...s,
     existing: criteria.find((c) => c.id === s.id) ?? null,
   }));
+  const existingApartment = criteria.find((c) => c.id === APARTMENT_CRITERION.id) ?? null;
 
   const handleAddCommute = (preset: CommutePreset) => {
     const presetCfg = COMMUTE_PRESETS.find((p) => p.preset === preset)!;
@@ -282,163 +246,100 @@ export function AddCriterionDialog({ variant = "default" }: AddCriterionDialogPr
         : undefined,
     );
     addCriterion(criterion);
-    setOpen(false);
     // Auto-expand + focus address input when no usable default destination exists.
-    if (!hasResolvedDest) {
-      setPendingFocus(criterion.id);
-    }
-  };
-
-  const handleAddSingleton = (s: (typeof SINGLETON_CRITERIA)[number]) => {
-    addCriterion(s.create());
-    setOpen(false);
-  };
-
-  const handleEditExisting = (existingId: string) => {
-    setOpen(false);
-    setPendingFocus(existingId);
+    if (!hasResolvedDest) setPendingFocus(criterion.id);
   };
 
   const triggerClass =
     variant === "compact"
-      ? "inline-flex items-center justify-center rounded-md w-6 h-6 text-fg-muted hover:text-fg-secondary hover:bg-surface-strong transition-all duration-200 shrink-0"
-      : "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-fg-muted hover:text-fg-muted hover:border-border-strong hover:bg-surface transition-all duration-200 text-body font-medium";
+      ? "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-strong hover:text-fg-secondary data-[popup-open]:bg-surface-strong data-[popup-open]:text-fg"
+      : "flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-body font-medium text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg-secondary data-[popup-open]:border-border-strong data-[popup-open]:bg-surface";
+
+  const renderOption = (
+    item: { id: string; label: string; icon: React.ReactNode; iconBg: string; iconText: string },
+    existing: { id: string } | null,
+    onAdd: () => void,
+  ) =>
+    existing ? (
+      <Menu.Item key={item.id} onClick={() => setPendingFocus(existing.id)} className={existingItem}>
+        <span className={`${item.iconBg} ${item.iconText} rounded-md p-1.5 opacity-50`}>{item.icon}</span>
+        <span className="flex-1 text-left">{item.label}</span>
+        <span className="text-caption italic text-fg-subtle">Added · Edit</span>
+      </Menu.Item>
+    ) : (
+      <Menu.Item key={item.id} onClick={onAdd} className={addItem}>
+        <span className={`${item.iconBg} ${item.iconText} rounded-md p-1.5`}>{item.icon}</span>
+        {item.label}
+      </Menu.Item>
+    );
 
   return (
-    <div className={variant === "compact" ? "inline-block" : "w-full"}>
-      <button
-        ref={buttonRef}
-        onClick={() => setOpen(!open)}
+    <Menu.Root>
+      <Menu.Trigger
         aria-label="Add criterion"
         title={variant === "compact" ? "Add criterion" : undefined}
         className={triggerClass}
       >
-        <Plus size={variant === "compact" ? 14 : 14} />
+        <Plus size={14} aria-hidden />
         {variant === "default" && "Add criterion"}
-      </button>
+      </Menu.Trigger>
 
-      {open && createPortal(
-        <div
-          ref={menuRef}
-          style={menuStyle}
-          className="z-[100] bg-overlay backdrop-blur-2xl rounded-xl border border-border shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+      <Menu.Portal>
+        <Menu.Positioner
+          side={variant === "compact" ? "bottom" : "top"}
+          align={variant === "compact" ? "end" : "start"}
+          sideOffset={8}
+          collisionPadding={8}
+          className="z-[100]"
         >
-          <>
-              <div className="p-3">
-                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
-                  Apartment
-                </div>
-                {(() => {
-                  const existing = criteria.find((c) => c.id === APARTMENT_CRITERION.id) ?? null;
-                  return existing ? (
-                    <button
-                      onClick={() => handleEditExisting(existing.id)}
-                      className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg text-fg-muted hover:bg-surface hover:text-fg-muted transition-all duration-150"
-                    >
-                      <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} opacity-50 p-1.5 rounded-md`}>
-                        {APARTMENT_CRITERION.icon}
-                      </span>
-                      <span className="flex-1 text-left">{APARTMENT_CRITERION.label}</span>
-                      <span className="text-caption text-fg-subtle italic">Added · Edit</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { addCriterion(APARTMENT_CRITERION.create()); setOpen(false); }}
-                      className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
-                    >
-                      <span className={`${APARTMENT_CRITERION.iconBg} ${APARTMENT_CRITERION.iconText} p-1.5 rounded-md`}>
-                        {APARTMENT_CRITERION.icon}
-                      </span>
-                      {APARTMENT_CRITERION.label}
-                    </button>
-                  );
-                })()}
-              </div>
+          <Menu.Popup
+            className={`max-h-[var(--available-height)] overflow-y-auto rounded-xl border border-border bg-overlay shadow-2xl shadow-black/40 outline-none backdrop-blur-2xl animate-in fade-in duration-150 ${
+              variant === "compact" ? "w-[280px] slide-in-from-top-2" : "w-[var(--anchor-width)] slide-in-from-bottom-2"
+            }`}
+          >
+            <Menu.Group className="p-3">
+              <Menu.GroupLabel className={groupLabel}>Apartment</Menu.GroupLabel>
+              {renderOption(APARTMENT_CRITERION, existingApartment, () => addCriterion(APARTMENT_CRITERION.create()))}
+            </Menu.Group>
 
-              <div className="h-px bg-surface-raised mx-3" />
-              <div className="p-3">
-                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
-                  Commute
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {COMMUTE_PRESETS.map((p) => (
-                    <button
-                      key={p.preset}
-                      onClick={() => handleAddCommute(p.preset)}
-                      className="flex items-center gap-2 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
-                    >
-                      <span className="text-fg-muted">
-                        {COMMUTE_ICONS[p.icon]}
-                      </span>
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+            <Menu.Separator className="mx-3 h-px bg-border-subtle" />
+            <Menu.Group className="p-3">
+              <Menu.GroupLabel className={groupLabel}>Commute</Menu.GroupLabel>
+              <div className="grid grid-cols-2 gap-1.5">
+                {COMMUTE_PRESETS.map((p) => (
+                  <Menu.Item key={p.preset} onClick={() => handleAddCommute(p.preset)} className={`${addItem} gap-2`}>
+                    <span className="text-fg-muted">{COMMUTE_ICONS[p.icon]}</span>
+                    {p.label}
+                  </Menu.Item>
+                ))}
               </div>
+            </Menu.Group>
 
-              <div className="h-px bg-surface-raised mx-3" />
-              <div className="p-3">
-                <div className="text-caption text-fg-muted uppercase tracking-wider font-medium mb-2 px-1">
-                  Other
-                </div>
-                <div className="space-y-0.5">
-                  {singletonsWithStatus.map((s) =>
-                    s.existing ? (
-                      <button
-                        key={s.id}
-                        onClick={() => handleEditExisting(s.existing!.id)}
-                        className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg text-fg-muted hover:bg-surface hover:text-fg-muted transition-all duration-150"
-                      >
-                        <span className={`${s.iconBg} ${s.iconText} opacity-50 p-1.5 rounded-md`}>
-                          {s.icon}
-                        </span>
-                        <span className="flex-1 text-left">{s.label}</span>
-                        <span className="text-caption text-fg-subtle italic">Added · Edit</span>
-                      </button>
-                    ) : (
-                      <button
-                        key={s.id}
-                        onClick={() => handleAddSingleton(s)}
-                        className="w-full flex items-center gap-2.5 text-body px-3 py-2 rounded-lg hover:bg-surface-raised text-fg-muted hover:text-fg-secondary transition-all duration-150"
-                      >
-                        <span className={`${s.iconBg} ${s.iconText} p-1.5 rounded-md`}>
-                          {s.icon}
-                        </span>
-                        {s.label}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </div>
+            <Menu.Separator className="mx-3 h-px bg-border-subtle" />
+            <Menu.Group className="space-y-0.5 p-3">
+              <Menu.GroupLabel className={groupLabel}>Other</Menu.GroupLabel>
+              {singletonsWithStatus.map((s) => renderOption(s, s.existing, () => addCriterion(s.create())))}
+            </Menu.Group>
 
-              <div className="h-px bg-surface-raised mx-3" />
-              <div className="p-3">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpen(false);
-                    // One assistant: hand off to it rather than a separate AI flow.
-                    openAssistant(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 text-body px-3 py-2.5 rounded-lg bg-gradient-to-r from-violet-500/[0.08] to-blue-500/[0.08] border border-violet-500/[0.12] hover:border-violet-500/[0.22] hover:from-violet-500/[0.12] hover:to-blue-500/[0.12] text-fg-muted hover:text-fg-secondary transition-all duration-200 group"
-                >
-                  <span className="bg-violet-500/15 text-violet-400 p-1.5 rounded-md group-hover:scale-110 transition-transform duration-200">
-                    <Sparkles size={14} />
-                  </span>
-                  <span className="flex flex-col items-start">
-                    <span className="font-medium text-fg-secondary group-hover:text-fg">
-                      Describe a preference
-                    </span>
-                    <span className="text-caption text-fg-muted">
-                      Ask the assistant to set up criteria
-                    </span>
-                  </span>
-                </button>
-              </div>
-          </>
-        </div>,
-        document.body
-      )}
-    </div>
+            <Menu.Separator className="mx-3 h-px bg-border-subtle" />
+            <div className="p-3">
+              <Menu.Item
+                // One assistant: hand off to it rather than a separate AI flow.
+                onClick={() => openAssistant(true)}
+                className="group flex w-full cursor-default select-none items-center gap-2.5 rounded-lg border border-violet-500/[0.12] bg-gradient-to-r from-violet-500/[0.08] to-blue-500/[0.08] px-3 py-2.5 text-body text-fg-muted outline-none transition-colors data-[highlighted]:border-violet-500/[0.22] data-[highlighted]:from-violet-500/[0.12] data-[highlighted]:to-blue-500/[0.12]"
+              >
+                <span className="rounded-md bg-violet-500/15 p-1.5 text-violet-400">
+                  <Sparkles size={14} />
+                </span>
+                <span className="flex flex-col items-start">
+                  <span className="font-medium text-fg-secondary group-data-[highlighted]:text-fg">Describe a preference</span>
+                  <span className="text-caption text-fg-muted">Ask the assistant to set up criteria</span>
+                </span>
+              </Menu.Item>
+            </div>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
