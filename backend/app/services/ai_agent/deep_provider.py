@@ -28,6 +28,8 @@ from app.services.ai_agent.emit import (
 )
 from app.services.ai_agent.provider import AgentProvider
 from app.services.ai_agent.types import (
+    ChatTurn,
+    FocusArea,
     PoiResult,
     ResearchResult,
     ResearchStrategy,
@@ -301,6 +303,28 @@ def _last_ai_text(messages: list) -> str:
     return ""
 
 
+def _format_focus_area(focus: FocusArea | None) -> str:
+    """Describe the map cell the user has selected, if any."""
+    if focus is None:
+        return ""
+    name = focus.name or f"the area around {focus.lat:.4f}, {focus.lng:.4f}"
+    lines = [f"The user is looking at {name} (lat {focus.lat:.4f}, lng {focus.lng:.4f})."]
+    if focus.score is not None:
+        lines.append(f"Its overall match score is {round(focus.score * 100)}%.")
+    if focus.breakdown:
+        parts = ", ".join(f"{k} {round(v * 100)}%" for k, v in list(focus.breakdown.items())[:12])
+        lines.append(f"Per-criterion scores there: {parts}.")
+    lines.append('Questions like "here" or "this area" refer to this place.')
+    return " ".join(lines)
+
+
+def _build_messages(user_message: str, history: list[ChatTurn] | None) -> list[dict]:
+    """Prior turns (oldest first) followed by the new user message."""
+    msgs = [{"role": t.role, "content": t.content} for t in (history or [])]
+    msgs.append({"role": "user", "content": user_message})
+    return msgs
+
+
 def _format_criteria_context(existing_criteria: list[dict]) -> str:
     """Format existing criteria into a compact LLM-readable context block."""
     if not existing_criteria:
@@ -432,15 +456,22 @@ class DeepAgentProvider(AgentProvider):
         return _aggregate_ai_criteria_as_result(ai_crits, _last_ai_text(messages))
 
     async def run_stream(
-        self, prompt: str, city: CityConfig, existing_criteria: list[dict] | None = None,
+        self,
+        prompt: str,
+        city: CityConfig,
+        existing_criteria: list[dict] | None = None,
+        history: list[ChatTurn] | None = None,
+        focus_area: FocusArea | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream agent execution — yields plan, step, criterion, result events."""
         agent = self._create_agent(city)
-        ctx = _format_criteria_context(existing_criteria or [])
-        if ctx:
-            user_message = f"City: {city.name} (slug: {city.slug})\n\n{ctx}\n\nUser message: {prompt}"
-        else:
-            user_message = f"City: {city.name} (slug: {city.slug})\n\nUser question: {prompt}"
+        blocks = [f"City: {city.name} (slug: {city.slug})"]
+        if ctx := _format_criteria_context(existing_criteria or []):
+            blocks.append(ctx)
+        if focus := _format_focus_area(focus_area):
+            blocks.append(focus)
+        blocks.append(f"User message: {prompt}")
+        user_message = "\n\n".join(blocks)
         all_messages: list = []
         emitted_ai_criteria: list[dict] = []
 
@@ -448,7 +479,7 @@ class DeepAgentProvider(AgentProvider):
 
         try:
             async for chunk in agent.astream(
-                {"messages": [{"role": "user", "content": user_message}]},
+                {"messages": _build_messages(user_message, history)},
                 config={"configurable": {"thread_id": uuid.uuid4().hex}},
                 stream_mode="updates",
                 version="v2",

@@ -103,10 +103,32 @@ class ResearchResult(BaseModel):
         )
 
 
+class ChatTurn(BaseModel):
+    """One earlier turn of the conversation, so follow-ups keep their context."""
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
+class FocusArea(BaseModel):
+    """The map cell the user is looking at when they ask."""
+    name: str | None = None
+    lat: float
+    lng: float
+    score: float | None = None
+    # Criterion label -> 0..1 score for this cell.
+    breakdown: dict[str, float] = Field(default_factory=dict)
+
+
+MAX_HISTORY_TURNS = 12
+
+
 class AgentResearchRequest(BaseModel):
     prompt: str
     city: str = "dubai"
     existing_criteria: list[dict] = Field(default_factory=list)
+    # Oldest first; trimmed to the most recent MAX_HISTORY_TURNS by the endpoint.
+    history: list[ChatTurn] = Field(default_factory=list)
+    focus_area: FocusArea | None = None
 
 
 class TokenUsage(BaseModel):

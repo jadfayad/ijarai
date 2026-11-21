@@ -6,6 +6,7 @@ import type { AgentStreamEvent } from "@/lib/types";
  * test can push events into and then finish (or that rejects on abort).
  */
 type Pending = {
+  body: Record<string, unknown>;
   emit: (e: AgentStreamEvent) => void;
   finish: () => void;
   signal: AbortSignal;
@@ -14,7 +15,7 @@ const streams: Pending[] = [];
 
 vi.mock("@/lib/api", () => ({
   agentResearchStream: (
-    _body: unknown,
+    body: Record<string, unknown>,
     onEvent: (e: AgentStreamEvent) => void,
     signal: AbortSignal,
   ) =>
@@ -22,7 +23,7 @@ vi.mock("@/lib/api", () => ({
       signal.addEventListener("abort", () =>
         reject(new DOMException("aborted", "AbortError")),
       );
-      streams.push({ emit: onEvent, finish: resolve, signal });
+      streams.push({ body, emit: onEvent, finish: resolve, signal });
     }),
   computeScoresStream: vi.fn(),
   cancelScoring: vi.fn(),
@@ -154,5 +155,57 @@ describe("chat ↔ scenario binding", () => {
     useScenarioStore.getState().startNewScenario("dubai");
     const id = useScenarioStore.getState().activeScenarioIdByCity.dubai!;
     expect(slice(`dubai:${id}`).messages).toHaveLength(0);
+  });
+});
+
+
+describe("conversation context sent to the agent", () => {
+  it("sends earlier turns as history, without the new message or local notices", async () => {
+    const s = useAgentStore.getState();
+    s.sendMessage("first question");
+    await flush();
+    streams[0].emit(result("first answer"));
+    streams[0].finish();
+    await flush();
+
+    s.sendMessage("second");
+    await flush();
+    useAgentStore.getState().stopAgent(); // adds a local "Stopped." notice
+    await flush();
+
+    useAgentStore.getState().sendMessage("make it cheaper");
+    await flush();
+    const history = streams[2].body.history as { role: string; content: string }[];
+    expect(history.map((h) => h.role)).toEqual(["user", "assistant", "user"]);
+    expect(history[1].content).toContain("first answer");
+    expect(history.some((h) => h.content === "Stopped.")).toBe(false);
+    expect(history.some((h) => h.content === "make it cheaper")).toBe(false);
+  });
+
+  it("includes the selected map cell as the focus area", async () => {
+    useCriteriaStore.setState({
+      selectedCellId: "abc",
+      scoreData: {
+        type: "FeatureCollection",
+        criterion_labels: { budget: "Budget Match" },
+        features: [
+          {
+            type: "Feature",
+            properties: { cell_id: "abc", score: 0.4, s_budget: 0.3, zone_name: "Jumeirah" },
+            geometry: { type: "Point", coordinates: [55.2, 25.2] },
+          },
+        ],
+      } as never,
+    });
+    useAgentStore.getState().sendMessage("is this area good?");
+    await flush();
+    expect(streams[0].body.focus_area).toEqual({
+      name: "Jumeirah",
+      lat: 25.2,
+      lng: 55.2,
+      score: 0.4,
+      breakdown: { "Budget Match": 0.3 },
+    });
+    useCriteriaStore.setState({ selectedCellId: null, scoreData: null });
   });
 });

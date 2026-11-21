@@ -10,6 +10,8 @@ import type {
   CriterionUpdatedEvent,
   CriterionDeletedEvent,
   TokenUsage,
+  ChatTurn,
+  FocusArea,
 } from "@/lib/types";
 
 export interface EmittedCriterion {
@@ -60,6 +62,8 @@ export interface AgentMessage {
   deletedCriteria?: DeletedCriterion[];
   /** Snapshot of the agent's plan steps at completion, for transcript history. */
   plan?: AgentTodo[];
+  /** Local status line (stopped / error / dropped connection) — not sent as history. */
+  isNotice?: boolean;
 }
 
 function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
@@ -77,6 +81,45 @@ function emittedFromEvent(e: EmittedCriterionEvent): EmittedCriterion {
   };
 }
 
+const HISTORY_TURNS = 12;
+const HISTORY_CHARS = 4000;
+
+/**
+ * Earlier turns to send with a new message (oldest first), excluding the
+ * message being sent. Local-only notices ("Stopped.", errors) are skipped.
+ */
+export function historyFor(messages: AgentMessage[], excludeId: string): ChatTurn[] {
+  return messages
+    .filter((m) => m.id !== excludeId && m.content.trim() && !m.isNotice)
+    .slice(-HISTORY_TURNS)
+    .map((m) => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: m.content.slice(0, HISTORY_CHARS),
+    }));
+}
+
+/** The selected map cell, described from the current heatmap. */
+export function selectedFocusArea(): FocusArea | null {
+  const { selectedCellId, scoreData } = useCriteriaStore.getState();
+  if (!selectedCellId || !scoreData) return null;
+  const f = scoreData.features.find((x) => x.properties.cell_id === selectedCellId);
+  if (!f) return null;
+  const props = f.properties as Record<string, unknown>;
+  const labels = scoreData.criterion_labels ?? {};
+  const breakdown: Record<string, number> = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (k.startsWith("s_") && typeof v === "number") breakdown[labels[k.slice(2)] ?? k.slice(2)] = v;
+  }
+  const [lng, lat] = f.geometry.coordinates as [number, number];
+  return {
+    name: (props.zone_name as string | undefined) ?? null,
+    lat,
+    lng,
+    score: typeof props.score === "number" ? props.score : null,
+    breakdown,
+  };
+}
+
 /** Globally unique ids — safe across reloads (persisted messages never collide). */
 function newId(prefix: string): string {
   const rand =
@@ -88,6 +131,10 @@ function newId(prefix: string): string {
 
 function agentMessage(content: string, extra?: Partial<AgentMessage>): AgentMessage {
   return { id: newId("msg"), role: "agent", content, timestamp: Date.now(), ...extra };
+}
+
+function noticeMessage(content: string): AgentMessage {
+  return agentMessage(content, { isNotice: true });
 }
 
 export interface PerCityAgentState {
@@ -310,6 +357,8 @@ export const useAgentStore = create<AgentStore>()(
                 prompt: content,
                 city: cityConfig.slug,
                 existing_criteria: criteria.length > 0 ? criteria : undefined,
+                history: historyFor(get().byCtx[key]?.messages ?? [], userMsg.id),
+                focus_area: selectedFocusArea() ?? undefined,
               },
               (event) => {
                 // Events from a stopped/cleared turn are ignored.
@@ -418,7 +467,7 @@ export const useAgentStore = create<AgentStore>()(
                   case "error":
                     endTurn(
                       turnId,
-                      agentMessage(
+                      noticeMessage(
                         `${event.data.message} Please try again.`,
                       ),
                     );
@@ -432,7 +481,7 @@ export const useAgentStore = create<AgentStore>()(
             if (_turns.has(turnId)) {
               endTurn(
                 turnId,
-                agentMessage("The connection closed before I finished. Please try again."),
+                noticeMessage("The connection closed before I finished. Please try again."),
               );
             }
           } catch (err) {
@@ -444,7 +493,7 @@ export const useAgentStore = create<AgentStore>()(
             }
             endTurn(
               turnId,
-              agentMessage(
+              noticeMessage(
                 err instanceof Error ? err.message : "Something went wrong. Please try again.",
               ),
             );
@@ -457,7 +506,7 @@ export const useAgentStore = create<AgentStore>()(
           const turnId = get().byCtx[key]?.turnId;
           if (!turnId) return;
           _turns.get(turnId)?.controller.abort();
-          endTurn(turnId, agentMessage("Stopped."));
+          endTurn(turnId, noticeMessage("Stopped."));
         },
 
         addCriterionFromResult: (messageId, result, prompt) => {

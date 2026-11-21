@@ -8,7 +8,9 @@ from fastapi.responses import StreamingResponse
 
 from app.city_config import get_city
 from app.services.ai_agent.provider import get_provider
+from app.errors import error_body
 from app.services.ai_agent.types import (
+    MAX_HISTORY_TURNS,
     AgentResearchRequest,
     AgentResearchResponse,
     ResearchResult,
@@ -76,7 +78,8 @@ async def agent_research(request: AgentResearchRequest):
 
 @router.post("/agent/research/stream")
 async def agent_research_stream(request: AgentResearchRequest):
-    has_existing = bool(request.existing_criteria)
+    # Replaying a cached stream is only valid for a context-free first question.
+    has_existing = bool(request.existing_criteria or request.history or request.focus_area)
     ck = _cache_key(request.city, request.prompt)
     if not has_existing:
         cached_events = _ai_stream_cache.get(ck)
@@ -105,6 +108,8 @@ async def agent_research_stream(request: AgentResearchRequest):
             async for event in provider.run_stream(
                 request.prompt, city,
                 existing_criteria=request.existing_criteria or None,
+                history=request.history[-MAX_HISTORY_TURNS:] or None,
+                focus_area=request.focus_area,
             ):
                 event_type = event["type"]
                 payload = event["data"]
@@ -124,6 +129,12 @@ async def agent_research_stream(request: AgentResearchRequest):
                 yield f"event: {event_type}\ndata: {serialized}\n\n"
             if not has_existing:
                 _ai_stream_cache[ck] = collected
+        except Exception:
+            # Any provider failure ends the stream with an explicit error frame,
+            # never a silent close.
+            logger.exception("Agent stream failed")
+            body = json.dumps(error_body(500, "The assistant ran into a problem."))
+            yield f"event: error\ndata: {body}\n\n"
         finally:
             _AGENT_SEMAPHORE.release()
 

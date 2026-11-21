@@ -134,3 +134,58 @@ def test_score_stream_cancel(monkeypatch):
     r = asyncio.run(run())
     names = [e for e, _ in _parse_sse(r.text)]
     assert names == ["start", "cancelled"]
+
+
+class _RecordingProvider:
+    def __init__(self, fail=False):
+        self.calls = []
+        self.fail = fail
+
+    async def run_stream(self, prompt, city, existing_criteria=None, history=None, focus_area=None):
+        self.calls.append({"prompt": prompt, "history": history, "focus_area": focus_area})
+        if self.fail:
+            raise RuntimeError("boom")
+        yield {"type": "result", "data": {"summary": "ok", "zones": [], "pois": []}}
+
+
+def _agent_post(monkeypatch, provider, body):
+    import app.api.agent as agent_api
+
+    monkeypatch.setattr(agent_api, "get_provider", lambda: provider)
+    agent_api._ai_stream_cache.clear()
+    return TestClient(app).post("/api/agent/research/stream", json=body)
+
+
+def test_agent_stream_forwards_history_and_focus_area(monkeypatch):
+    provider = _RecordingProvider()
+    history = [{"role": "user", "content": f"q{i}"} for i in range(20)]
+    r = _agent_post(monkeypatch, provider, {
+        "prompt": "make it cheaper",
+        "city": "dubai",
+        "history": history,
+        "focus_area": {"name": "Jumeirah", "lat": 25.2, "lng": 55.2, "score": 0.4,
+                       "breakdown": {"Budget Match": 0.3}},
+    })
+    assert [e for e, _ in _parse_sse(r.text)] == ["result"]
+    call = provider.calls[0]
+    assert len(call["history"]) == 12 and call["history"][-1].content == "q19"
+    assert call["focus_area"].name == "Jumeirah"
+
+
+def test_agent_follow_up_is_never_served_from_cache(monkeypatch):
+    provider = _RecordingProvider()
+    body = {"prompt": "same question", "city": "dubai"}
+    _agent_post(monkeypatch, provider, body)
+    import app.api.agent as agent_api
+    monkeypatch.setattr(agent_api, "get_provider", lambda: provider)
+    TestClient(app).post("/api/agent/research/stream", json={
+        **body, "history": [{"role": "user", "content": "earlier"}],
+    })
+    assert len(provider.calls) == 2
+
+
+def test_agent_provider_crash_ends_with_error_frame(monkeypatch):
+    r = _agent_post(monkeypatch, _RecordingProvider(fail=True), {"prompt": "x", "city": "dubai"})
+    events = _parse_sse(r.text)
+    assert events[-1][0] == "error"
+    assert events[-1][1]["code"] == "server_error"

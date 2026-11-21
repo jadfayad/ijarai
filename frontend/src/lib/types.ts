@@ -170,10 +170,28 @@ export interface AiParams {
   higher_is_better?: boolean;
 }
 
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** The map cell the user is looking at, sent so "here"/"this area" make sense. */
+export interface FocusArea {
+  name: string | null;
+  lat: number;
+  lng: number;
+  score: number | null;
+  /** Criterion label -> 0..1 score for this cell. */
+  breakdown: Record<string, number>;
+}
+
 export interface AgentResearchRequest {
   prompt: string;
   city: string;
   existing_criteria?: CriterionConfig[];
+  /** Earlier turns, oldest first (the backend keeps the last 12). */
+  history?: ChatTurn[];
+  focus_area?: FocusArea;
 }
 
 export interface TokenUsage {
